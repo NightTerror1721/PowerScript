@@ -14,6 +14,15 @@ public abstract class PSFunction extends PSValue
     @Override
     public final PSDataType getPSType() { return PSDataType.FUNCTION; }
     
+    @Override
+    public final PSFunction toPSFunction() { return this; }
+    
+    @Override
+    public final boolean equals(Object o) { return this == o; }
+    
+    @Override
+    public int hashCode() { return superHashCode(); }
+    
     
     
     

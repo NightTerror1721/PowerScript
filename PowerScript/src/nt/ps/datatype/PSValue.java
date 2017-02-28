@@ -7,6 +7,7 @@ package nt.ps.datatype;
 
 import java.util.List;
 import java.util.Map;
+import nt.ps.exception.PSCastException;
 import nt.ps.exception.PSUnsupportedOperationException;
 
 /**
@@ -47,18 +48,18 @@ public abstract class PSValue extends PSVarargs
     public Map<PSValue, PSValue> toJavaMap() { throw new PSUnsupportedOperationException(this,"toJavaMap"); }
     
     /* Direct Casting */
-    /*public PSNumber toPSNumber() { throw new PSCastException(this,PSDataType.NUMBER); }
+    public PSNumber toPSNumber() { throw new PSCastException(this,PSDataType.NUMBER); }
     public PSBoolean toPSBoolean() { throw new PSCastException(this,PSDataType.BOOLEAN); }
     public PSString toPSString() { throw new PSCastException(this,PSDataType.STRING); }
-    public PSRegExp toPSRegExp() { throw new PSCastException(this,PSDataType.REGEXP); }
-    public PSArray toPSArray() { throw new PSCastException(this,PSDataType.ARRAY); }
-    public PSTuple toPSTuple() { throw new PSCastException(this,PSDataType.TUPLE); }
-    public PSMap toPSMap() { throw new PSCastException(this,PSDataType.MAP); }
-    public PSIterator toPSIterator() { throw new PSCastException(this,PSDataType.ITERATOR); }
+    //public PSRegExp toPSRegExp() { throw new PSCastException(this,PSDataType.REGEXP); }
+    //public PSArray toPSArray() { throw new PSCastException(this,PSDataType.ARRAY); }
+    //public PSTuple toPSTuple() { throw new PSCastException(this,PSDataType.TUPLE); }
+    //public PSMap toPSMap() { throw new PSCastException(this,PSDataType.MAP); }
+    //public PSIterator toPSIterator() { throw new PSCastException(this,PSDataType.ITERATOR); }
     public PSFunction toPSFunction() { throw new PSCastException(this,PSDataType.FUNCTION); }
-    public PSPrototype toPSPrototype() { throw new PSCastException(this,PSDataType.PROTOTYPE); }
-    public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
-    public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }*/
+    //public PSPrototype toPSPrototype() { throw new PSCastException(this,PSDataType.PROTOTYPE); }
+    //public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
+    //public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }
     
     
     
@@ -133,6 +134,14 @@ public abstract class PSValue extends PSVarargs
     
     
     
+    @Override public abstract boolean equals(Object o);
+    @Override public abstract int hashCode();
+    @Override public final String toString() { return toJavaString(); }
+    
+    final int superHashCode() { return super.hashCode(); }
+    
+    
+    
     
     @Override public final int numberOfArguments() { return 1; }
     @Override public final PSValue self() { return this; }
@@ -142,14 +151,22 @@ public abstract class PSValue extends PSVarargs
     {
         @Override
         public final PSDataType getPSType() { return PSDataType.UNDEFINED; }
+        
+        @Override public final boolean equals(Object o) { return this == o; }
+        @Override public final int hashCode() { return 0; }
     }
     private static final class PSNull extends PSValue
     {
         @Override
         public final PSDataType getPSType() { return PSDataType.NULL; }
+        
+        @Override public final boolean equals(Object o) { return this == o; }
+        @Override public final int hashCode() { return 0; }
     }
     
     
     public static final PSValue UNDEFINED = new PSUndefined();
     public static final PSValue NULL = new PSNull();
+    public static final PSValue TRUE = new PSBoolean(true);
+    public static final PSValue FALSE = new PSBoolean(false);
 }
