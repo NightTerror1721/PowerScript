@@ -7,7 +7,6 @@ package nt.ps.datatype;
 
 import java.util.List;
 import java.util.Map;
-import nt.ps.exception.PSCastException;
 import nt.ps.exception.PSUnsupportedOperationException;
 
 /**
@@ -16,6 +15,8 @@ import nt.ps.exception.PSUnsupportedOperationException;
  */
 public abstract class PSValue extends PSVarargs
 {
+    PSValue() {}
+    
     public abstract PSDataType getPSType();
     
     public final boolean isUndefined() { return getPSType() == PSDataType.UNDEFINED; }
@@ -36,17 +37,17 @@ public abstract class PSValue extends PSVarargs
     
     
     /* Java Casting */
-    public abstract int toJavaInt();
-    public abstract long toJavaLong();
-    public abstract float toJavaFloat();
-    public abstract double toJavaDouble();
-    public          boolean toJavaBoolean() { return true; }
-    public          String toJavaString() { return getPSType().getTypeName() + "::" + super.toString(); }
-    public abstract List<PSValue> toJavaList();
-    public abstract Map<PSValue, PSValue> toJavaMap();
+    public int toJavaInt() { throw new PSUnsupportedOperationException(this,"toJavaInt"); }
+    public long toJavaLong() { throw new PSUnsupportedOperationException(this,"toJavaLong"); }
+    public float toJavaFloat() { throw new PSUnsupportedOperationException(this,"toJavaFloat"); }
+    public double toJavaDouble() { throw new PSUnsupportedOperationException(this,"toJavaDouble"); }
+    public boolean toJavaBoolean() { return true; }
+    public String toJavaString() { return getPSType().getTypeName() + "::" + super.toString(); }
+    public List<PSValue> toJavaList() { throw new PSUnsupportedOperationException(this,"toJavaList"); }
+    public Map<PSValue, PSValue> toJavaMap() { throw new PSUnsupportedOperationException(this,"toJavaMap"); }
     
     /* Direct Casting */
-    public PSNumber toPSNumber() { throw new PSCastException(this,PSDataType.NUMBER); }
+    /*public PSNumber toPSNumber() { throw new PSCastException(this,PSDataType.NUMBER); }
     public PSBoolean toPSBoolean() { throw new PSCastException(this,PSDataType.BOOLEAN); }
     public PSString toPSString() { throw new PSCastException(this,PSDataType.STRING); }
     public PSRegExp toPSRegExp() { throw new PSCastException(this,PSDataType.REGEXP); }
@@ -57,7 +58,7 @@ public abstract class PSValue extends PSVarargs
     public PSFunction toPSFunction() { throw new PSCastException(this,PSDataType.FUNCTION); }
     public PSPrototype toPSPrototype() { throw new PSCastException(this,PSDataType.PROTOTYPE); }
     public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
-    public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }
+    public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }*/
     
     
     
@@ -99,8 +100,8 @@ public abstract class PSValue extends PSVarargs
     public PSValue get(PSValue key) { throw new PSUnsupportedOperationException(this,"[]"); }
     
     /* Object Operations */
-    public abstract PSValue setAttribute(String name, PSValue value);
-    public abstract PSValue getAttribute(String name);
+    public PSValue setProperty(String name, PSValue value) { throw new PSUnsupportedOperationException(this,"setProperty"); }
+    public PSValue getProperty(String name) { throw new PSUnsupportedOperationException(this,"getProperty"); }
     
     /* Function Operations */
     protected PSVarargs innerCall(PSValue self) { throw new PSUnsupportedOperationException(this,"()"); }
@@ -117,18 +118,18 @@ public abstract class PSValue extends PSVarargs
     public final PSVarargs call(PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3) { return innerCall(NULL,arg0,arg1,arg2,arg3); }
     public final PSVarargs call(PSVarargs args) { return innerCall(NULL,args); }
     
-    public final PSVarargs invoke(String attribute) { return getAttribute(attribute).innerCall(this); }
-    public final PSVarargs invoke(String attribute, PSValue arg0) { return getAttribute(attribute).innerCall(this,arg0); }
-    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1) { return getAttribute(attribute).innerCall(this,arg0,arg1); }
-    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1, PSValue arg2) { return getAttribute(attribute).innerCall(this,arg0,arg1,arg2); }
-    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3) { return getAttribute(attribute).innerCall(this,arg0,arg1,arg2,arg3); }
-    public final PSVarargs invoke(String attribute, PSVarargs args) { return getAttribute(attribute).innerCall(this,args); }
+    public final PSVarargs invoke(String attribute) { return getProperty(attribute).innerCall(this); }
+    public final PSVarargs invoke(String attribute, PSValue arg0) { return getProperty(attribute).innerCall(this,arg0); }
+    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1) { return getProperty(attribute).innerCall(this,arg0,arg1); }
+    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1, PSValue arg2) { return getProperty(attribute).innerCall(this,arg0,arg1,arg2); }
+    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3) { return getProperty(attribute).innerCall(this,arg0,arg1,arg2,arg3); }
+    public final PSVarargs invoke(String attribute, PSVarargs args) { return getProperty(attribute).innerCall(this,args); }
     
     
     /* Iterator Operations */
-    public abstract PSIterator createIterator();
-    public abstract boolean hasNext();
-    public abstract PSVarargs next();
+    public PSIterator createIterator() { throw new PSUnsupportedOperationException(this,"iterator"); }
+    public boolean hasNext() { throw new PSUnsupportedOperationException(this,"iteratorHasNext"); }
+    public PSVarargs next() { throw new PSUnsupportedOperationException(this,"iteratorNext"); }
     
     
     

@@ -212,6 +212,11 @@ public abstract class PSVarargs
             this.args = new PSValue[] { arg0, arg1 };
             this.rest = rest;
         }
+        public ArrayVarargs(PSValue arg0, PSValue arg1, PSValue arg2, PSVarargs rest)
+        {
+            this.args = new PSValue[] { arg0, arg1, arg2 };
+            this.rest = rest;
+        }
 
         @Override
         public final PSValue arg(int index)
