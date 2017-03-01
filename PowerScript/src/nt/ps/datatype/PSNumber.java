@@ -41,6 +41,42 @@ public abstract class PSNumber extends PSValue
     }
     
     
+    /* Properties */
+    @Override
+    public final PSValue getProperty(String name)
+    {
+        switch(name)
+        {
+            default: return UNDEFINED;
+            case "isFinite": return IS_FINITE;
+            case "isInteger": return IS_INTEGER;
+            case "isNaN": return IS_NAN;
+            case "integer": return new PSLong(toJavaLong());
+            case "float": return new PSDouble(toJavaDouble());
+            case "toString": return TO_STRING;
+        }
+    }
+    
+    private static final PSValue IS_FINITE = PSFunction.<PSNumber>method(self -> {
+        if(self.isFloat())
+            return Float.isFinite(((PSFloat)self).number) ? TRUE : FALSE;
+        if(self.isDouble())
+            return Double.isFinite(((PSDouble)self).number) ? TRUE : FALSE;
+        return FALSE;
+    });
+    private static final PSValue IS_INTEGER = PSFunction.<PSNumber>method(self -> self.isDecimal() ? FALSE : TRUE);
+    private static final PSValue IS_NAN = PSFunction.<PSNumber>method(self -> {
+        if(self.isFloat())
+            return Float.isNaN(((PSFloat)self).number) ? TRUE : FALSE;
+        if(self.isDouble())
+            return Double.isNaN(((PSDouble)self).number) ? TRUE : FALSE;
+        return FALSE;
+    });
+    private static final PSValue TO_STRING = PSFunction.<PSNumber>method(self -> new PSString(self.toJavaString()));
+    
+    
+    
+    
     public static final class PSInteger extends PSNumber
     {
         public final int number;

@@ -52,10 +52,10 @@ public abstract class PSValue extends PSVarargs
     public PSBoolean toPSBoolean() { throw new PSCastException(this,PSDataType.BOOLEAN); }
     public PSString toPSString() { throw new PSCastException(this,PSDataType.STRING); }
     //public PSRegExp toPSRegExp() { throw new PSCastException(this,PSDataType.REGEXP); }
-    //public PSArray toPSArray() { throw new PSCastException(this,PSDataType.ARRAY); }
+    public PSArray toPSArray() { throw new PSCastException(this,PSDataType.ARRAY); }
     //public PSTuple toPSTuple() { throw new PSCastException(this,PSDataType.TUPLE); }
     //public PSMap toPSMap() { throw new PSCastException(this,PSDataType.MAP); }
-    //public PSIterator toPSIterator() { throw new PSCastException(this,PSDataType.ITERATOR); }
+    public PSIterator toPSIterator() { throw new PSCastException(this,PSDataType.ITERATOR); }
     public PSFunction toPSFunction() { throw new PSCastException(this,PSDataType.FUNCTION); }
     //public PSPrototype toPSPrototype() { throw new PSCastException(this,PSDataType.PROTOTYPE); }
     //public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
