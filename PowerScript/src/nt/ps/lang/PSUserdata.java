@@ -15,6 +15,9 @@ public class PSUserdata extends PSValue
 {
     @Override
     public final PSDataType getPSType() { return PSDataType.USERDATA; }
+    
+    @Override
+    public final <U extends PSUserdata> U toPSUserdata() { return (U) this; }
 
     @Override
     public boolean equals(Object o) { return this == o; }

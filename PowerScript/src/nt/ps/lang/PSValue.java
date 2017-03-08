@@ -57,7 +57,7 @@ public abstract class PSValue extends PSVarargs
     public PSFunction toPSFunction() { throw new PSCastException(this,PSDataType.FUNCTION); }
     //public PSPrototype toPSPrototype() { throw new PSCastException(this,PSDataType.PROTOTYPE); }
     //public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
-    //public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }
+    public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }
     
     
     
