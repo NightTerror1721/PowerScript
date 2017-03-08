@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.datatype;
+package nt.ps.lang;
 
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,6 @@ public abstract class PSValue extends PSVarargs
     public final boolean isNumber() { return getPSType() == PSDataType.NUMBER; }
     public final boolean isBoolean() { return getPSType() == PSDataType.BOOLEAN; }
     public final boolean isString() { return getPSType() == PSDataType.STRING; }
-    public final boolean isRegExp() { return getPSType() == PSDataType.REGEXP; }
     public final boolean isArray() { return getPSType() == PSDataType.ARRAY; }
     public final boolean isTuple() { return getPSType() == PSDataType.TUPLE; }
     public final boolean isMap() { return getPSType() == PSDataType.MAP; }
@@ -51,9 +50,8 @@ public abstract class PSValue extends PSVarargs
     public PSNumber toPSNumber() { throw new PSCastException(this,PSDataType.NUMBER); }
     public PSBoolean toPSBoolean() { throw new PSCastException(this,PSDataType.BOOLEAN); }
     public PSString toPSString() { throw new PSCastException(this,PSDataType.STRING); }
-    //public PSRegExp toPSRegExp() { throw new PSCastException(this,PSDataType.REGEXP); }
     public PSArray toPSArray() { throw new PSCastException(this,PSDataType.ARRAY); }
-    //public PSTuple toPSTuple() { throw new PSCastException(this,PSDataType.TUPLE); }
+    public PSTuple toPSTuple() { throw new PSCastException(this,PSDataType.TUPLE); }
     //public PSMap toPSMap() { throw new PSCastException(this,PSDataType.MAP); }
     public PSIterator toPSIterator() { throw new PSCastException(this,PSDataType.ITERATOR); }
     public PSFunction toPSFunction() { throw new PSCastException(this,PSDataType.FUNCTION); }
@@ -169,4 +167,7 @@ public abstract class PSValue extends PSVarargs
     public static final PSValue NULL = new PSNull();
     public static final PSValue TRUE = new PSBoolean(true);
     public static final PSValue FALSE = new PSBoolean(false);
+    public static final PSValue MINUSONE = new PSNumber.PSInteger(-1);
+    public static final PSValue ZERO = new PSNumber.PSInteger(0);
+    public static final PSValue ONE = new PSNumber.PSInteger(1);
 }

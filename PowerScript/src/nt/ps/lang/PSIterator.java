@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.datatype;
+package nt.ps.lang;
 
 /**
  *
@@ -43,6 +43,21 @@ public abstract class PSIterator extends PSValue
     @Override public final PSIterator createIterator() { return this; }
     @Override public abstract boolean hasNext();
     @Override public abstract PSVarargs next();
+    
+    
+    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
+        switch(name)
+        {
+            default: return null;
+        }
+    }) {
+        @Override
+        protected final PSVarargs innerCall(PSValue self) { return innerCall(self,UNDEFINED); }
+        
+        @Override
+        protected final PSVarargs innerCall(PSValue self, PSValue arg0) { return arg0.createIterator(); }
+    };
+    
     
     private static final PSValue HAS_NEXT = PSFunction.method((self) -> self.hasNext() ? TRUE : FALSE);
     private static final PSValue NEXT = PSFunction.method((self) -> self.next());

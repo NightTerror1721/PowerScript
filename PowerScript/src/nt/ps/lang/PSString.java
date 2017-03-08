@@ -3,9 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.datatype;
+package nt.ps.lang;
 
 import java.util.Objects;
+import java.util.StringJoiner;
 
 /**
  *
@@ -95,11 +96,39 @@ public final class PSString extends PSValue
         }
     }
     
+    
+    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
+        switch(name)
+        {
+            default: return null;
+        }
+    }) {
+        @Override
+        protected final PSVarargs innerCall(PSValue self) { return new PSString(""); }
+        
+        @Override
+        protected final PSVarargs innerCall(PSValue self, PSValue arg0) { return new PSString(arg0.toJavaString()); }
+    };
+    
+    
     private static final PSValue CHAR_AT = PSFunction.<PSString>method((self, arg0) ->  {
         return new PSString(Character.toString(self.string.charAt(arg0.toJavaInt())));
     });
-    private static final PSValue CONCAT = PSFunction.<PSString>method((self, arg0) -> {
-        return new PSString(self.string + arg0.toJavaString());
+    private static final PSValue CONCAT = PSFunction.<PSString>method((self, args) -> {
+        switch(args.numberOfArguments())
+        {
+            case 0:
+                return self;
+            case 1:
+                return new PSString(self.string + args.self().toJavaString());
+            default: {
+                StringJoiner joiner = new StringJoiner(args.self().toJavaString());
+                int len = args.numberOfArguments();
+                for(int i=1;i<len;i++)
+                    joiner.add(args.arg(i).toString());
+                return new PSString(joiner.toString());
+            }
+        }
     });
     private static final PSValue ENDS_WITH = PSFunction.<PSString>method((self, arg0) -> {
         return self.string.endsWith(arg0.toJavaString()) ? TRUE : FALSE;
@@ -126,9 +155,6 @@ public final class PSString extends PSValue
             return new PSString(self.string.substring(arg0.toJavaInt()));
         return new PSString(self.string.substring(arg0.toJavaInt(),arg1.toJavaInt()));
     });
-    /*private static final PSValue CONCAT = PSFunction.<PSString>method((self, arg0) -> {
-        
-    });*/
     private static final PSValue STARTS_WITH = PSFunction.<PSString>method((self, arg0) -> {
         return self.string.startsWith(arg0.toJavaString()) ? TRUE : FALSE;
     });

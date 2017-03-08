@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.datatype;
+package nt.ps.lang;
 
 /**
  *
@@ -17,7 +17,6 @@ public enum PSDataType
     NUMBER,
     BOOLEAN,
     STRING,
-    REGEXP,
     
     ARRAY,
     TUPLE,
@@ -43,7 +42,6 @@ public enum PSDataType
             case "number": return NUMBER;
             case "boolean": return BOOLEAN;
             case "string": return STRING;
-            case "regexp": return REGEXP;
             case "array": return ARRAY;
             case "tuple": return TUPLE;
             case "map": return MAP;

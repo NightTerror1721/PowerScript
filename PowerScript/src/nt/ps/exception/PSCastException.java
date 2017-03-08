@@ -5,8 +5,8 @@
  */
 package nt.ps.exception;
 
-import nt.ps.datatype.PSDataType;
-import nt.ps.datatype.PSValue;
+import nt.ps.lang.PSDataType;
+import nt.ps.lang.PSValue;
 
 /**
  *

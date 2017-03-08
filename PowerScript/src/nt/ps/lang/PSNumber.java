@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.datatype;
+package nt.ps.lang;
 
 /**
  *
@@ -56,6 +56,21 @@ public abstract class PSNumber extends PSValue
             case "toString": return TO_STRING;
         }
     }
+    
+    
+    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
+        switch(name)
+        {
+            default: return null;
+        }
+    }) {
+        @Override
+        protected final PSVarargs innerCall(PSValue self) { return ZERO; }
+        
+        @Override
+        protected final PSVarargs innerCall(PSValue self, PSValue arg0) { return new PSDouble(arg0.toJavaDouble()); }
+    };
+    
     
     private static final PSValue IS_FINITE = PSFunction.<PSNumber>method(self -> {
         if(self.isFloat())
