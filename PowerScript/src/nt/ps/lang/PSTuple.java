@@ -7,11 +7,19 @@ package nt.ps.lang;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.function.Supplier;
+import nt.ps.exception.PSRuntimeException;
+import static nt.ps.lang.PSValue.FALSE;
+import static nt.ps.lang.PSValue.TRUE;
+import static nt.ps.lang.PSValue.UNDEFINED;
+import static nt.ps.lang.PSVarargs.EMPTY;
+import static nt.ps.lang.PSVarargs.varargsOf;
 
 /**
  *
@@ -125,6 +133,15 @@ public final class PSTuple extends PSValue implements Iterable<PSValue>
     @Override
     public final PSIterator createIterator() { return new PSTupleIterator(); }
     
+    @Override
+    public final PSValue get(PSValue key) { return tuple[key.toJavaInt()]; }
+    
+    @Override
+    public final PSValue set(PSValue key, PSValue value)
+    {
+        throw new PSRuntimeException("Cannot modify any value in a tuple");
+    }
+    
     
     
     public final PSVarargs expand()
@@ -160,6 +177,111 @@ public final class PSTuple extends PSValue implements Iterable<PSValue>
         public final boolean hasNext() { return it < tuple.length; }
 
         @Override
-        public final PSVarargs next() { return tuple[it++]; }
+        public final PSVarargs next() { return varargsOf(tuple[it++],new PSNumber.PSInteger(it)); }
     }
+    
+    
+    /* Properties */
+    @Override
+    public final PSValue getProperty(String name)
+    {
+        switch(name)
+        {
+            default: return UNDEFINED;
+            case "concat": return CONCAT;
+            case "getSorted": return SORT;
+            case "subTuple": return SUB_TUPLE;
+            case "expand": return EXPAND;
+            case "toString": return TO_STRING;
+        }
+    }
+    
+    
+    
+    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
+        switch(name)
+        {
+            default: return null;
+        }
+    }) {
+        @Override
+        protected final PSVarargs innerCall(PSValue self) { return new PSTuple(); }
+        
+        @Override
+        protected final PSVarargs innerCall(PSValue self, PSValue arg0)
+        {
+            return new PSTuple(arg0.toJavaList());
+        }
+    };
+    
+    private static final PSValue CONCAT = PSFunction.<PSTuple>method((self, arg0, arg1, arg2) -> {
+        List<PSValue> list = self.toJavaList();
+        String del = arg0 == UNDEFINED ? "" : arg0.toJavaString();
+        int from = arg1 == UNDEFINED ? 0 : arg1.toJavaInt();
+        int to = arg2 == UNDEFINED ? list.size() : arg2.toJavaInt();
+        if(to <= from)
+            throw new PSRuntimeException("'to' value cannot small than 'from'");
+        from = from < 0 ? 0 : from;
+        to = to > list.size() ? list.size() : to;
+        StringJoiner sj = new StringJoiner(del);
+        int count = 0;
+        for(PSValue val : list)
+        {
+            if(count++ < from)
+                continue;
+            if(count > to)
+                break;
+            sj.add(val.toJavaString());
+        }
+        return new PSString(sj.toString());
+    });
+    
+    private static final PSValue SORT = PSFunction.<PSTuple>method((self, arg0) -> {
+        PSValue[] tuple2 = new PSValue[self.tuple.length];
+        System.arraycopy(self.tuple,0,tuple2,0,self.tuple.length);
+        if(arg0 == UNDEFINED)
+        {
+            Arrays.sort(tuple2,(val1, val2) -> {
+                return val1.equals(val2).toJavaBoolean()
+                        ? 0
+                        : val1.smallerThan(val2).toJavaBoolean()
+                            ? -1
+                            : 1;
+            });
+        }
+        else
+        {
+            Arrays.sort(tuple2,(val1, val2) -> {
+                return arg0.call(val1,val2).self().toJavaInt();
+            });
+        }
+        return new PSTuple(tuple2);
+    });
+    
+    private static final PSValue SUB_TUPLE = PSFunction.<PSTuple>method((self, arg0, arg1) -> {
+        int start = arg0.toJavaInt();
+        PSValue[] tuple2;
+        if(arg1 == UNDEFINED)
+        {
+            tuple2 = new PSValue[self.tuple.length - start];
+            System.arraycopy(self.tuple,start,tuple2,0,tuple2.length);
+        }
+        else
+        {
+            int end = arg1.toJavaInt();
+            tuple2 = new PSValue[end - start];
+            System.arraycopy(self.tuple,start,tuple2,0,tuple2.length);
+        }
+        return new PSTuple(tuple2);
+    });
+    
+    private static final PSValue EXPAND = PSFunction.<PSTuple>method((self) -> {
+        return self.tuple.length == 0
+                ? PSValue.EMPTY
+                : varargsOf(self.tuple);
+    });
+    
+    private static final PSValue TO_STRING = PSFunction.<PSTuple>method((self) -> {
+        return new PSString(self.toJavaString());
+    });
 }

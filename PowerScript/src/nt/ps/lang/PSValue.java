@@ -52,11 +52,11 @@ public abstract class PSValue extends PSVarargs
     public PSString toPSString() { throw new PSCastException(this,PSDataType.STRING); }
     public PSArray toPSArray() { throw new PSCastException(this,PSDataType.ARRAY); }
     public PSTuple toPSTuple() { throw new PSCastException(this,PSDataType.TUPLE); }
-    //public PSMap toPSMap() { throw new PSCastException(this,PSDataType.MAP); }
+    public PSMap toPSMap() { throw new PSCastException(this,PSDataType.MAP); }
     public PSIterator toPSIterator() { throw new PSCastException(this,PSDataType.ITERATOR); }
     public PSFunction toPSFunction() { throw new PSCastException(this,PSDataType.FUNCTION); }
     //public PSPrototype toPSPrototype() { throw new PSCastException(this,PSDataType.PROTOTYPE); }
-    //public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
+    public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
     public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }
     
     
@@ -67,7 +67,7 @@ public abstract class PSValue extends PSVarargs
     public PSValue multiply(PSValue value) { throw new PSUnsupportedOperationException(this,"*"); }
     public PSValue divide(PSValue value) { throw new PSUnsupportedOperationException(this,"/"); }
     public PSValue module(PSValue value) { throw new PSUnsupportedOperationException(this,"%"); }
-    public PSValue negative() { throw new PSUnsupportedOperationException(this,"!"); }
+    public PSValue negative() { throw new PSUnsupportedOperationException(this,"(unary) -"); }
     public PSValue increase() { throw new PSUnsupportedOperationException(this,"++"); }
     public PSValue decrease() { throw new PSUnsupportedOperationException(this,"--"); }
     
@@ -86,7 +86,7 @@ public abstract class PSValue extends PSVarargs
     public PSValue smallerThan(PSValue value) { throw new PSUnsupportedOperationException(this,"<"); }
     public PSValue greaterOrEqualsThan(PSValue value) { throw new PSUnsupportedOperationException(this,">="); }
     public PSValue smallerOrEqualsThan(PSValue value) { throw new PSUnsupportedOperationException(this,"<="); }
-    public PSValue negate() { throw new PSUnsupportedOperationException(this,"- (unary)"); }
+    public PSValue negate() { throw new PSUnsupportedOperationException(this,"!"); }
     
     /* Data Structure Operations */
     public PSValue contains(PSValue value) { throw new PSUnsupportedOperationException(this,"in"); }

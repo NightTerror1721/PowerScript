@@ -110,6 +110,16 @@ public final class PSArray extends PSValue implements Iterable<PSValue>
     @Override
     public final PSIterator createIterator() { return new PSArrayIterator(); }
     
+    @Override
+    public final PSValue get(PSValue key) { return array.get(key.toJavaInt()); }
+    
+    @Override
+    public final PSValue set(PSValue key, PSValue value)
+    {
+        array.set(key.toJavaInt(),value);
+        return value;
+    }
+    
     
     
     public final PSVarargs expand()
@@ -159,6 +169,7 @@ public final class PSArray extends PSValue implements Iterable<PSValue>
             case "sort": return SORT;
             case "subArray": return SUB_ARRAY;
             case "expand": return EXPAND;
+            case "toString": return TO_STRING;
         }
     }
     
@@ -262,5 +273,9 @@ public final class PSArray extends PSValue implements Iterable<PSValue>
         return self.array.isEmpty()
                 ? PSValue.EMPTY
                 : varargsOf(self.array.toArray(new PSValue[self.array.size()]),EMPTY);
+    });
+    
+    private static final PSValue TO_STRING = PSFunction.<PSArray>method((self) -> {
+        return new PSString(self.toJavaString());
     });
 }
