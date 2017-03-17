@@ -72,6 +72,15 @@ public final class PSString extends PSValue
     @Override public final PSValue contains(PSValue value) { return string.contains(value.toJavaString()) ? TRUE : FALSE; }
     
     
+    @Override
+    public PSValue createNewInstance() { return new PSString(string); }
+    @Override
+    public PSValue createNewInstance(PSValue arg0)
+    {
+        return new PSString(arg0.toJavaString());
+    }
+    
+    
     /* Properties */
     @Override
     public final PSValue getProperty(String name)

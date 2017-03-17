@@ -63,6 +63,14 @@ public final class PSBoolean extends PSValue
     @Override
     public final PSValue negate() { return bool ? FALSE : TRUE; }
     
+    @Override
+    public PSValue createNewInstance() { return bool ? TRUE : FALSE; }
+    @Override
+    public PSValue createNewInstance(PSValue arg0)
+    {
+        return arg0.toJavaBoolean() ? TRUE : FALSE;
+    }
+    
     
     /* Properties */
     

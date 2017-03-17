@@ -40,6 +40,14 @@ public abstract class PSNumber extends PSValue
         return hash;
     }
     
+    @Override
+    public PSValue createNewInstance() { return new PSNumber.PSDouble(toJavaDouble()); }
+    @Override
+    public PSValue createNewInstance(PSValue arg0)
+    {
+        return new PSNumber.PSDouble(arg0.toJavaDouble());
+    }
+    
     
     /* Properties */
     @Override

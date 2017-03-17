@@ -30,7 +30,6 @@ public abstract class PSValue extends PSVarargs
     public final boolean isMap() { return getPSType() == PSDataType.MAP; }
     public final boolean isIterator() { return getPSType() == PSDataType.ITERATOR; }
     public final boolean isFunction() { return getPSType() == PSDataType.FUNCTION; }
-    public final boolean isPrototype() { return getPSType() == PSDataType.PROTOTYPE; }
     public final boolean isObject() { return getPSType() == PSDataType.OBJECT; }
     public final boolean isUserdata() { return getPSType() == PSDataType.USERDATA; }
     
@@ -55,7 +54,6 @@ public abstract class PSValue extends PSVarargs
     public PSMap toPSMap() { throw new PSCastException(this,PSDataType.MAP); }
     public PSIterator toPSIterator() { throw new PSCastException(this,PSDataType.ITERATOR); }
     public PSFunction toPSFunction() { throw new PSCastException(this,PSDataType.FUNCTION); }
-    //public PSPrototype toPSPrototype() { throw new PSCastException(this,PSDataType.PROTOTYPE); }
     public PSObject toPSObject() { throw new PSCastException(this,PSDataType.OBJECT); }
     public <U extends PSUserdata> U toPSUserdata() { throw new PSCastException(this,PSDataType.USERDATA); }
     
@@ -140,6 +138,15 @@ public abstract class PSValue extends PSVarargs
     
     
     
+    /* New Operator */
+    public PSValue createNewInstance() { throw new PSUnsupportedOperationException(this,"new"); }
+    public PSValue createNewInstance(PSValue arg0) { return createNewInstance(); }
+    public PSValue createNewInstance(PSValue arg0, PSValue arg1) { return createNewInstance(arg0); }
+    public PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2) { return createNewInstance(arg0,arg1); }
+    public PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3) { return createNewInstance(arg0,arg1,arg2); }
+    public PSValue createNewInstance(PSVarargs args) { return createNewInstance(args.self(),args.arg(1),args.arg(2),args.arg(3)); }
+    
+    
     
     @Override public final int numberOfArguments() { return 1; }
     @Override public final PSValue self() { return this; }
@@ -152,6 +159,7 @@ public abstract class PSValue extends PSVarargs
         
         @Override public final boolean equals(Object o) { return this == o; }
         @Override public final int hashCode() { return 0; }
+        @Override public final boolean toJavaBoolean() { return false; }
     }
     private static final class PSNull extends PSValue
     {
@@ -160,6 +168,7 @@ public abstract class PSValue extends PSVarargs
         
         @Override public final boolean equals(Object o) { return this == o; }
         @Override public final int hashCode() { return 0; }
+        @Override public final boolean toJavaBoolean() { return false; }
     }
     
     

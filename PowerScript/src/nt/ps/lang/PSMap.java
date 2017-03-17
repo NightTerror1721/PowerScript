@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import nt.ps.exception.PSRuntimeException;
 
 /**
@@ -103,6 +104,24 @@ public final class PSMap extends PSValue implements Iterable<Map.Entry<PSValue, 
     public final PSIterator createIterator()
     {
         return new MapIterator();
+    }
+    
+    
+    @Override
+    public PSValue createNewInstance()
+    {
+        return new PSMap(map.entrySet().stream().collect(Collectors.toMap(
+                e -> e.getKey(),
+                e -> e.getValue()
+        )));
+    }
+    @Override
+    public PSValue createNewInstance(PSValue arg0)
+    {
+        return new PSMap(arg0.toJavaMap().entrySet().stream().collect(Collectors.toMap(
+                e -> e.getKey(),
+                e -> e.getValue()
+        )));
     }
     
     

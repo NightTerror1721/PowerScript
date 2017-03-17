@@ -120,6 +120,28 @@ public final class PSArray extends PSValue implements Iterable<PSValue>
         return value;
     }
     
+    @Override
+    public PSValue createNewInstance()
+    {
+        int count = 0;
+        PSValue[] array2 = new PSValue[array.size()];
+        for(PSValue value : array)
+            array2[count++] = value;
+        return new PSArray(array2);
+    }
+    @Override
+    public PSValue createNewInstance(PSValue arg0)
+    {
+        if(arg0.isNumber())
+            return new PSArray(arg0.toJavaInt());
+        int count = 0;
+        List<PSValue> list = arg0.toJavaList();
+        PSValue[] array2 = new PSValue[list.size()];
+        for(PSValue value : list)
+            array2[count++] = value;
+        return new PSArray(array2);
+    }
+    
     
     
     public final PSVarargs expand()

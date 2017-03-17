@@ -24,7 +24,6 @@ public enum PSDataType
     
     ITERATOR,
     FUNCTION,
-    PROTOTYPE,
     OBJECT,
     
     USERDATA;
@@ -47,7 +46,6 @@ public enum PSDataType
             case "map": return MAP;
             case "iterator": return ITERATOR;
             case "function": return FUNCTION;
-            case "prototype": return PROTOTYPE;
             case "object": return OBJECT;
             case "userdata": return USERDATA;
             default: return null;

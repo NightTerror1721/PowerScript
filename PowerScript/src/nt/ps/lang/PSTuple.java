@@ -7,7 +7,6 @@ package nt.ps.lang;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -140,6 +139,26 @@ public final class PSTuple extends PSValue implements Iterable<PSValue>
     public final PSValue set(PSValue key, PSValue value)
     {
         throw new PSRuntimeException("Cannot modify any value in a tuple");
+    }
+    
+    
+    @Override
+    public PSValue createNewInstance()
+    {
+        PSValue[] tuple2 = new PSValue[tuple.length];
+        System.arraycopy(tuple,0,tuple2,0,tuple2.length);
+        return new PSTuple(tuple2);
+    }
+    
+    @Override
+    public PSValue createNewInstance(PSValue arg0)
+    {
+        int count = 0;
+        List<PSValue> list = arg0.toJavaList();
+        PSValue[] array2 = new PSValue[list.size()];
+        for(PSValue value : list)
+            array2[count++] = value;
+        return new PSTuple(array2);
     }
     
     
