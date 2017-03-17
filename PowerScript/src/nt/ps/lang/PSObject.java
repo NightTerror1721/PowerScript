@@ -388,4 +388,68 @@ public final class PSObject extends PSValue
                 : prop.innerCall(self, args).self();
     }
     
+    @Override
+    public final PSIterator createIterator()
+    {
+        PSValue prop;
+        return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
+                ? super.createIterator()
+                : prop.innerCall(this).self().toPSIterator();
+    }
+    
+    
+    @Override
+    public final PSValue createNewInstance()
+    {
+        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(init != null)
+            init.innerCall(instance);
+        return instance;
+    }
+    @Override
+    public final PSValue createNewInstance(PSValue arg0)
+    {
+        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(init != null)
+            init.innerCall(instance,arg0);
+        return instance;
+    }
+    @Override
+    public final PSValue createNewInstance(PSValue arg0, PSValue arg1)
+    {
+        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(init != null)
+            init.innerCall(instance,arg0,arg1);
+        return instance;
+    }
+    @Override
+    public final PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2)
+    {
+        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(init != null)
+            init.innerCall(instance,arg0,arg1,arg2);
+        return instance;
+    }
+    @Override
+    public final PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+    {
+        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(init != null)
+            init.innerCall(instance,arg0,arg1,arg2,arg3);
+        return instance;
+    }
+    @Override
+    public final PSValue createNewInstance(PSVarargs args)
+    {
+        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(init != null)
+            init.innerCall(instance,args);
+        return instance;
+    }
 }

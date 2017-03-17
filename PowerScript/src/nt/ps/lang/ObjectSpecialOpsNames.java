@@ -52,5 +52,7 @@ public final class ObjectSpecialOpsNames
     
     public static final String ITERATOR = "iterator";
     
+    public static final String OPERATOR_NEW = "operator::new";
+    
     public static final String HASH_CODE = "hashCode";
 }
