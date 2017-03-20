@@ -5,8 +5,12 @@
  */
 package nt.ps.lang;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import nt.ps.exception.PSCastException;
 import nt.ps.exception.PSUnsupportedOperationException;
 
@@ -136,6 +140,9 @@ public abstract class PSValue extends PSVarargs
     
     final int superHashCode() { return super.hashCode(); }
     
+    public PSValue setPointerValue(PSValue value) { throw new PSUnsupportedOperationException(this,"setPointerValue"); }
+    public PSValue getPointerValue() { throw new PSUnsupportedOperationException(this,"getPointerValue"); }
+    
     
     
     /* New Operator */
@@ -179,4 +186,184 @@ public abstract class PSValue extends PSVarargs
     public static final PSValue MINUSONE = new PSNumber.PSInteger(-1);
     public static final PSValue ZERO = new PSNumber.PSInteger(0);
     public static final PSValue ONE = new PSNumber.PSInteger(1);
+    
+    
+    
+    /* Cast and Wrap */
+    public static final PSValue valueOf(PSValue value) { return value; }
+    public static final PSValue valueOf(byte value) { return new PSNumber.PSInteger(value); }
+    public static final PSValue valueOf(short value) { return new PSNumber.PSInteger(value); }
+    public static final PSValue valueOf(int value) { return new PSNumber.PSInteger(value); }
+    public static final PSValue valueOf(long value) { return new PSNumber.PSLong(value); }
+    public static final PSValue valueOf(float value) { return new PSNumber.PSFloat(value); }
+    public static final PSValue valueOf(double value) { return new PSNumber.PSDouble(value); }
+    public static final PSValue valueOf(boolean value) { return value ? TRUE : FALSE; }
+    public static final PSValue valueOf(char value) { return new PSString(Character.toString(value)); }
+    public static final PSValue valueOf(Byte value) { return new PSNumber.PSInteger(value); }
+    public static final PSValue valueOf(Short value) { return new PSNumber.PSInteger(value); }
+    public static final PSValue valueOf(Integer value) { return new PSNumber.PSInteger(value); }
+    public static final PSValue valueOf(Long value) { return new PSNumber.PSLong(value); }
+    public static final PSValue valueOf(Float value) { return new PSNumber.PSFloat(value); }
+    public static final PSValue valueOf(Double value) { return new PSNumber.PSDouble(value); }
+    public static final PSValue valueOf(Boolean value) { return value ? TRUE : FALSE; }
+    public static final PSValue valueOf(Character value) { return new PSString(value.toString()); }
+    public static final PSValue valueOf(String value) { return new PSString(value); }
+    public static final PSValue valueOf(List<PSValue> value) { return new PSArray(value); }
+    public static final PSValue valueOf(Map<PSValue, PSValue> value) { return new PSMap(value); }
+    public static final PSValue valueOf(PSValue... values) { return new PSArray(values); }
+    
+    public static final <E> PSValue valueOf(List<E> value, Function<? super E, PSValue> caster)
+    {
+        return new PSArray(value.stream().map(caster).toArray(size -> new PSArray[size]));
+    }
+    
+    public static final <K, V> PSValue valueOf(Map<K, V> value, Function<? super K, PSValue> keyCaster, Function<? super V, PSValue> valueCaster)
+    {
+        return new PSMap(value.entrySet().stream().collect(Collectors.toMap(
+                e -> keyCaster.apply(e.getKey()),
+                e -> valueCaster.apply(e.getValue())
+        )));
+    }
+    
+    public static final PSValue valueOf(boolean mutable, PSValue... values) { return mutable ? new PSArray(values) : new PSTuple(values); }
+    
+    public static final PSValue valueOf(boolean mutable, byte... values)
+    {
+        PSValue[] array = new PSValue[values.length];
+        for(int i=0;i<array.length;i++)
+            array[i] = valueOf(values[i]);
+        return valueOf(mutable,array);
+    }
+    public static final PSValue valueOf(byte... values) { return valueOf(true,values); }
+    
+    public static final PSValue valueOf(boolean mutable, short... values)
+    {
+        PSValue[] array = new PSValue[values.length];
+        for(int i=0;i<array.length;i++)
+            array[i] = valueOf(values[i]);
+        return valueOf(mutable,array);
+    }
+    public static final PSValue valueOf(short... values) { return valueOf(true,values); }
+    
+    public static final PSValue valueOf(boolean mutable, int... values)
+    {
+        return valueOf(mutable,Arrays.stream(values).mapToObj(PSValue::valueOf).<PSValue>toArray(size -> new PSValue[size]));
+    }
+    public static final PSValue valueOf(int... values) { return valueOf(true,values); }
+    
+    public static final PSValue valueOf(boolean mutable, long... values)
+    {
+        return valueOf(mutable,Arrays.stream(values).mapToObj(PSValue::valueOf).<PSValue>toArray(size -> new PSValue[size]));
+    }
+    public static final PSValue valueOf(long... values) { return valueOf(true,values); }
+    
+    public static final PSValue valueOf(boolean mutable, float... values)
+    {
+        PSValue[] array = new PSValue[values.length];
+        for(int i=0;i<array.length;i++)
+            array[i] = valueOf(values[i]);
+        return valueOf(mutable,array);
+    }
+    public static final PSValue valueOf(float... values) { return valueOf(true,values); }
+    
+    public static final PSValue valueOf(boolean mutable, double... values)
+    {
+        return valueOf(mutable,Arrays.stream(values).mapToObj(PSValue::valueOf).<PSValue>toArray(size -> new PSValue[size]));
+    }
+    public static final PSValue valueOf(double... values) { return valueOf(true,values); }
+    
+    public static final PSValue valueOf(boolean mutable, boolean... values)
+    {
+        PSValue[] array = new PSValue[values.length];
+        for(int i=0;i<array.length;i++)
+            array[i] = valueOf(values[i]);
+        return valueOf(mutable,array);
+    }
+    public static final PSValue valueOf(boolean... values) { return valueOf(true,values); }
+    
+    public static final PSValue valueOf(boolean mutable, char... values)
+    {
+        PSValue[] array = new PSValue[values.length];
+        for(int i=0;i<array.length;i++)
+            array[i] = valueOf(values[i]);
+        return valueOf(mutable,array);
+    }
+    public static final PSValue valueOf(char... values) { return valueOf(true,values); }
+    
+    public static final <E> PSValue valueOf(boolean mutable, Function<? super E, PSValue> caster, E... values)
+    {
+        return valueOf(mutable,Arrays.stream(values).<PSValue>map(caster).<PSValue>toArray(size -> new PSValue[size]));
+    }
+    public static final <E> PSValue valueOf(Function<? super E, PSValue> caster, E... values) { return valueOf(true,caster,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Byte... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Byte... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Short... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Short... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Integer... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Integer... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Long... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Long... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Float... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Float... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Double... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Double... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Boolean... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Boolean... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, Character... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(Character... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(boolean mutable, String... values) { return valueOf(mutable,PSValue::valueOf,values); }
+    public static final PSValue valueOf(String... values) { return valueOf(true,PSValue::valueOf,values); }
+    
+    public static final PSValue valueOf(Iterator<? extends PSValue> iterator)
+    {
+        final PSValue[] itArgs = new PSValue[2];
+        final LiteralArrayVarargs res = new LiteralArrayVarargs(itArgs);
+        
+        return new PSIterator()
+        {
+            private int count = 0;
+            
+            @Override
+            public final boolean hasNext() { return iterator.hasNext(); }
+
+            @Override
+            public final PSVarargs next()
+            {
+                itArgs[0] = iterator.next();
+                itArgs[1] = new PSNumber.PSInteger(count++);
+                return res;
+            }
+        };
+    }
+    
+    public static final <E> PSValue valueOf(Iterator<E> iterator, Function<? super E, PSValue> caster)
+    {
+        final PSValue[] itArgs = new PSValue[2];
+        final LiteralArrayVarargs res = new LiteralArrayVarargs(itArgs);
+        
+        return new PSIterator()
+        {
+            private int count = 0;
+            
+            @Override
+            public final boolean hasNext() { return iterator.hasNext(); }
+
+            @Override
+            public final PSVarargs next()
+            {
+                itArgs[0] = caster.apply(iterator.next());
+                itArgs[1] = new PSNumber.PSInteger(count++);
+                return res;
+            }
+        };
+    }
 }

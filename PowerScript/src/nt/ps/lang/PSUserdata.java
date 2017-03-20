@@ -6,6 +6,7 @@
 package nt.ps.lang;
 
 import java.util.function.Function;
+import nt.ps.exception.PSUnsupportedOperationException;
 
 /**
  *
@@ -24,6 +25,15 @@ public class PSUserdata extends PSValue
 
     @Override
     public int hashCode() { return superHashCode(); }
+    
+    @Override
+    public final PSValue concat(PSValue value) { return new PSString(toJavaString().concat(value.toJavaString())); }
+    
+    @Override
+    public final PSValue setPointerValue(PSValue value) { throw new PSUnsupportedOperationException(this,"setPointerValue"); }
+    
+    @Override
+    public final PSValue getPointerValue() { throw new PSUnsupportedOperationException(this,"getPointerValue"); }
     
     
     public static class ImmutableStruct extends PSUserdata
