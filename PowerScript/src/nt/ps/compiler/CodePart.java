@@ -31,6 +31,9 @@ public abstract class CodePart
     public boolean isWord() { return false; }
     public boolean isKeyword() { return false; }
     public boolean isLiteral() { return false; }
+    public boolean isSeparator() { return false; }
+    public boolean isTuple() { return false; }
+    public boolean isBlock() { return false; }
     
     
     static final <CP extends CodePart> HashMap<String, CP> collect(Class<CP> clazz, Function<CP, String> collector)
