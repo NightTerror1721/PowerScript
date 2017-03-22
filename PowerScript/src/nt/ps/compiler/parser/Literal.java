@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.compiler;
+package nt.ps.compiler.parser;
 
 import nt.ps.lang.PSValue;
 
@@ -11,7 +11,7 @@ import nt.ps.lang.PSValue;
  *
  * @author Asus
  */
-public final class Literal extends CodePart
+public final class Literal extends CodeObject
 {
     private final PSValue value;
     

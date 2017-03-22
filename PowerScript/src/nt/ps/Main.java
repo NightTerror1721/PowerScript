@@ -5,7 +5,7 @@
  */
 package nt.ps;
 
-import nt.ps.compiler.Literal;
+import nt.ps.compiler.parser.Literal;
 
 /**
  *

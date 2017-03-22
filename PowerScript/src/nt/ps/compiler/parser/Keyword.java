@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.compiler;
+package nt.ps.compiler.parser;
 
 import java.util.HashMap;
 
@@ -30,7 +30,7 @@ public final class Keyword extends CodePart
     @Override
     public final boolean isKeyword() { return true; }
     
-    private static final Keyword
+    public static final Keyword
             VAR = new Keyword("var"),
             FUNCTION = new Keyword("function"),
             IF = new Keyword("if"),
@@ -42,6 +42,7 @@ public final class Keyword extends CodePart
             CONTINUE = new Keyword("continue"),
             BREAK = new Keyword("break"),
             GLOBAL = new Keyword("global"),
+            OPERATOR = new Keyword("operator"),
             SELF = new Keyword("self"),
             TRY = new Keyword("try"),
             CATCH = new Keyword("catch"),

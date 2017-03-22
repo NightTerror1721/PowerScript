@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.compiler;
+package nt.ps.compiler.parser;
 
 import java.util.regex.Pattern;
 
@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  *
  * @author Asus
  */
-public class Word extends CodePart
+public class Word extends CodeObject
 {
     private final String word;
     

@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.compiler;
+package nt.ps.compiler.parser;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -31,9 +31,11 @@ public abstract class CodePart
     public boolean isWord() { return false; }
     public boolean isKeyword() { return false; }
     public boolean isLiteral() { return false; }
+    public boolean isMutableLiteral() { return false; }
     public boolean isSeparator() { return false; }
-    public boolean isTuple() { return false; }
     public boolean isBlock() { return false; }
+    
+    public boolean isValidCodeObject() { return false; }
     
     
     static final <CP extends CodePart> HashMap<String, CP> collect(Class<CP> clazz, Function<CP, String> collector)

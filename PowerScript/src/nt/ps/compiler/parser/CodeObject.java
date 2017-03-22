@@ -3,19 +3,14 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.compiler;
+package nt.ps.compiler.parser;
 
 /**
  *
  * @author Asus
  */
-public abstract class Block extends CodePart
+public abstract class CodeObject extends CodePart
 {
-    public abstract int getInstructionsCount();
-    
     @Override
-    public final boolean isBlock() { return true; }
-    
-    
-    //public static class 
+    public final boolean isValidCodeObject() { return true; }
 }
