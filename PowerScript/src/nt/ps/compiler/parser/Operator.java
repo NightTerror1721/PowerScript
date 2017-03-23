@@ -38,6 +38,8 @@ public abstract class Operator extends CodeObject
         operands = new CodeObject[]{ op0 };
     }
     
+    public final OperatorSymbol getSymbol() { return symbol; }
+    
     public final int getOperandCount() { return operands.length; }
     
     public final CodeObject getOperand(int index) { return operands[index]; }
