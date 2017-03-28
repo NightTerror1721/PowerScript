@@ -20,6 +20,7 @@ public abstract class Block extends CodePart
     public boolean isScope() { return false; }
     public boolean isParenthesis() { return false; }
     public boolean isSquare() { return false; }
+    public boolean isArgumentsList() { return false; }
     
     public Tuple getFirstTuple() { return getTuple(0); }
     
@@ -30,78 +31,77 @@ public abstract class Block extends CodePart
     public final boolean isValidCodeObject() { return isParenthesis(); }
     
     
-    public static final Block fromParenthesis(Tuple tuple)
+    public static final Block parenthesis(Tuple tuple) { return new SingleBlock(tuple,false); }
+    
+    public static final Block square(Tuple tuple) { return new SingleBlock(tuple,true); }
+    
+    public final static Block arguments(Tuple tuple)
     {
-        if(tuple.has(Separator.COMMA))
-        {
-            Tuple[] tuples = tuple.splitByToken(Separator.COMMA);
-            return new DefaultImmutableBlock(tuples,BlockType.TUPLE);
-        }
-        return new SingleBlock(tuple,BlockType.PARENTHESIS);
+        Tuple[] tuples = tuple.splitByToken(Separator.COMMA);
+        return new MultipleBlock(tuples,false);
     }
     
     public static final Block scope(List<Tuple> tuples)
     {
-        if(tuples == null)
-            throw new NullPointerException();
-        return new DefaultImmutableBlock(tuples.toArray(new Tuple[tuples.size()]),BlockType.SCOPE);
-    }
-    
-    public static final Block object(Tuple tuple)
-    {
-        Tuple[] tuples = tuple.splitByToken(Separator.COMMA);
-        return new DefaultImmutableBlock(tu)
+        Tuple[] atuples = tuples.toArray(new Tuple[tuples.size()]);
+        return new MultipleBlock(atuples,true);
     }
     
     
-    private static final class DefaultImmutableBlock extends Block
+    private static final class MultipleBlock extends Block
     {
         private final Tuple[] tuples;
-        private final BlockType type;
+        private final boolean scope;
         
-        private DefaultImmutableBlock(Tuple[] tuples, BlockType type)
+        private MultipleBlock(Tuple[] tuples, boolean scope)
         {
             this.tuples = tuples;
-            this.type = type;
+            this.scope = scope;
         }
         
         @Override
         public final int getTupleCount() { return tuples.length; }
 
         @Override
-        public Tuple getTuple(int index) { return tuples[index]; }
+        public final Tuple getTuple(int index) { return tuples[index]; }
 
         @Override
-        public final BlockType getBlockType() { return type; }
+        public final boolean isScope() { return scope; }
+        
+        @Override
+        public final boolean isArgumentsList() { return !scope; }
 
         @Override
-        public String toString() { return Arrays.toString(tuples); }
+        public final String toString() { return Arrays.toString(tuples); }
     }
     
     private static final class SingleBlock extends Block
     {
         private final Tuple tuple;
-        private final BlockType type;
+        private final boolean square;
         
-        private SingleBlock(Tuple tuple, BlockType type)
+        private SingleBlock(Tuple tuple, boolean square)
         {
             this.tuple = tuple;
-            this.type = type;
+            this.square = square;
         }
         
         @Override
         public final int getTupleCount() { return 1; }
 
         @Override
-        public Tuple getTuple(int index) { return tuple; }
+        public final Tuple getTuple(int index) { return tuple; }
         
         @Override
-        public Tuple getFirstTuple() { return tuple; }
+        public final Tuple getFirstTuple() { return tuple; }
+        
+        @Override
+        public final boolean isParenthesis() { return !square; }
+        
+        @Override
+        public final boolean isSquare() { return square; }
 
         @Override
-        public final BlockType getBlockType() { return type; }
-
-        @Override
-        public String toString() { return tuple.toString(); }
+        public final String toString() { return tuple.toString(); }
     }
 }

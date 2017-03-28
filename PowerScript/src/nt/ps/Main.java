@@ -15,9 +15,6 @@ public final class Main
 {
     public static void main(String[] args)
     {
-        System.out.println(Literal.isNumber("56"));
-        System.out.println(Literal.isNumber("0x1"));
-        System.out.println(Literal.isNumber(".6"));
-        System.out.println(Literal.isNumber("6D"));
+        System.out.println(Literal.decode("Infinity"));
     }
 }

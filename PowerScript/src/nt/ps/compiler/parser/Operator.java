@@ -53,7 +53,7 @@ public abstract class Operator extends CodeObject
     @Override
     public final String toString() { return symbol.toString(); }
     
-    public boolean isUnaryOperator() { return operands.length == 1; }
+    /*public boolean isUnaryOperator() { return operands.length == 1; }
     public boolean isBinaryOperator() { return operands.length == 2; }
-    public boolean isTernaryOperator() { return operands.length == 3; }
+    public boolean isTernaryOperator() { return operands.length == 3; }*/
 }

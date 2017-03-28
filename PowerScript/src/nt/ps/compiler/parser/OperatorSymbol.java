@@ -11,80 +11,89 @@ import java.util.HashMap;
  *
  * @author Asus
  */
-public final class OperatorSymbol extends CodePart
+public abstract class OperatorSymbol extends CodePart
 {
     private final String symbol;
-    private final int priority;
-    private final int type;
     
-    private OperatorSymbol(String symbol, int type, int priority)
+    private OperatorSymbol(String symbol)
     {
         this.symbol = symbol;
-        this.priority = priority;
-        this.type = type;
     }
     
     @Override
     public final String toString() { return symbol; }
     
     public final String getSymbol() { return symbol; }
-    public final int getPriority() { return priority; }
     
-    public final boolean isUnary() { return type == UNARY_LEFT || type == UNARY_RIGHT; }
-    public final boolean isBinary() { return type == BINARY_LEFT_TO_RIGHT || type == BINARY_RIGHT_TO_LEFT; }
-    public final boolean isTernaryConditional() { return type == TERNARY_CONDITIONAL; }
-    public final boolean isUnaryLeft() { return type == UNARY_LEFT; }
-    public final boolean isUnaryRight() { return type == UNARY_RIGHT; }
-    public final boolean isBinaryLeftToRight() { return type == BINARY_LEFT_TO_RIGHT; }
-    public final boolean isBinaryRightToLeft() { return type == BINARY_RIGHT_TO_LEFT; }
+    public int getUnaryPriority() { throw new UnsupportedOperationException(); }
+    public int getBinaryPriority() { throw new UnsupportedOperationException(); }
+    public int getTernaryPriority() { throw new UnsupportedOperationException(); }
+    public int getArgumentPriority() { throw new UnsupportedOperationException(); }
     
+    public boolean canBeUnary() { return false; }
+    public boolean canBeBinary() { return false; }
+    public boolean canBeTernary() { return false; }
+    public boolean canBeArgument() { return false; }
     
-    private static final int UNARY_LEFT = 0x1;
-    private static final int UNARY_RIGHT = 0x2;
-    private static final int BINARY_LEFT_TO_RIGHT = 0x4;
-    private static final int BINARY_RIGHT_TO_LEFT = 0x8;
-    private static final int TERNARY_CONDITIONAL = 0x10;
+    public boolean hasUnaryLeftOrder() { throw new UnsupportedOperationException(); }
+    public boolean hasUnaryRightOrder() { throw new UnsupportedOperationException(); }
+    public boolean hasBinaryLeftOrder() { throw new UnsupportedOperationException(); }
+    public boolean hasBinaryRightOrder() { throw new UnsupportedOperationException(); }
+    public boolean hasTernaryLeftOrder() { throw new UnsupportedOperationException(); }
+    public boolean hasTernaryRightOrder() { throw new UnsupportedOperationException(); }
+    public final boolean hasArgumentLeftOrder() { return true; }
+    public final boolean hasArgumentRightOrder() { return false; }
     
     
     public static final OperatorSymbol
-            NEGATE = new OperatorSymbol("*",BINARY_LEFT_TO_RIGHT,12),
-            LOGIC_NOT = new OperatorSymbol("~",BINARY_LEFT_TO_RIGHT,12),
+            PROPERTY_ACCESS = new BinaryOperatorSymbol(".",Order.LEFT,14),
+            ACCESS = new ArgumentsOperatorSymbol("[]",14),
+            NEW = new ArgumentsOperatorSymbol("new",14),
             
-            MULTIPLY = new OperatorSymbol("*",BINARY_LEFT_TO_RIGHT,11),
-            DIVIDE = new OperatorSymbol("/",BINARY_LEFT_TO_RIGHT,11),
-            MODULE = new OperatorSymbol("%",BINARY_LEFT_TO_RIGHT,11),
+            CALL = new ArgumentsOperatorSymbol("()",13),
             
-            PLUS = new OperatorSymbol("+",BINARY_LEFT_TO_RIGHT,10),
-            MINUS = new OperatorSymbol("-",BINARY_LEFT_TO_RIGHT,10),
+            NEGATE = new UnaryOperatorSymbol("!",Order.LEFT,12),
+            LOGIC_NOT = new UnaryOperatorSymbol("~",Order.LEFT,12),
+            NEGATIVE = new UnaryOperatorSymbol("-",Order.LEFT,12),
+            INCREMENT = new UnaryOperatorSymbol("++",Order.BOTH,12),
+            DECREMENT = new UnaryOperatorSymbol("--",Order.BOTH,12),
+            TYPEOF = new UnaryOperatorSymbol("typeof",Order.LEFT,12),
             
-            SHIFT_LEFT = new OperatorSymbol("<<",BINARY_LEFT_TO_RIGHT,9),
-            SHIFT_RIGHT = new OperatorSymbol(">>",BINARY_LEFT_TO_RIGHT,9),
+            MULTIPLY = new BinaryOperatorSymbol("*",Order.LEFT,11),
+            DIVIDE = new BinaryOperatorSymbol("/",Order.LEFT,11),
+            MODULE = new BinaryOperatorSymbol("%",Order.LEFT,11),
             
-            LESS_THAN = new OperatorSymbol("<",BINARY_LEFT_TO_RIGHT,8),
-            LESS_THAN_EQUALS = new OperatorSymbol("<=",BINARY_LEFT_TO_RIGHT,8),
-            GREATER_THAN = new OperatorSymbol(">",BINARY_LEFT_TO_RIGHT,8),
-            GREATER_THAN_EQUALS = new OperatorSymbol(">=",BINARY_LEFT_TO_RIGHT,8),
-            CONTAINS = new OperatorSymbol("in",BINARY_LEFT_TO_RIGHT,8),
-            INSTANCEOF = new OperatorSymbol("instanceof",BINARY_LEFT_TO_RIGHT,8),
+            PLUS = new BinaryOperatorSymbol("+",Order.LEFT,10),
+            MINUS = new UnaryBinaryOperatorSymbol("-",Order.LEFT,10, Order.LEFT,12),
             
-            EQUALS = new OperatorSymbol("==",BINARY_LEFT_TO_RIGHT,7),
-            NOT_EQUALS = new OperatorSymbol("!=",BINARY_LEFT_TO_RIGHT,7),
-            EQUALS_REFERENCE = new OperatorSymbol("===",BINARY_LEFT_TO_RIGHT,7),
-            NOT_EQUALS_REFERENCE = new OperatorSymbol("!==",BINARY_LEFT_TO_RIGHT,7),
+            SHIFT_LEFT = new BinaryOperatorSymbol("<<",Order.LEFT,9),
+            SHIFT_RIGHT = new BinaryOperatorSymbol(">>",Order.LEFT,9),
             
-            LOGIC_AND = new OperatorSymbol("&",BINARY_LEFT_TO_RIGHT,6),
+            LESS_THAN = new BinaryOperatorSymbol("<",Order.LEFT,8),
+            LESS_THAN_EQUALS = new BinaryOperatorSymbol("<=",Order.LEFT,8),
+            GREATER_THAN = new BinaryOperatorSymbol(">",Order.LEFT,8),
+            GREATER_THAN_EQUALS = new BinaryOperatorSymbol(">=",Order.LEFT,8),
+            CONTAINS = new BinaryOperatorSymbol("in",Order.LEFT,8),
+            INSTANCEOF = new BinaryOperatorSymbol("instanceof",Order.LEFT,8),
             
-            LOGIC_XOR = new OperatorSymbol("^",BINARY_LEFT_TO_RIGHT,5),
+            EQUALS = new BinaryOperatorSymbol("==",Order.LEFT,7),
+            NOT_EQUALS = new BinaryOperatorSymbol("!=",Order.LEFT,7),
+            EQUALS_REFERENCE = new BinaryOperatorSymbol("===",Order.LEFT,7),
+            NOT_EQUALS_REFERENCE = new BinaryOperatorSymbol("!==",Order.LEFT,7),
             
-            LOGIC_OR = new OperatorSymbol("|",BINARY_LEFT_TO_RIGHT,4),
+            LOGIC_AND = new BinaryOperatorSymbol("&",Order.LEFT,6),
             
-            STRING_CONCAT = new OperatorSymbol("..",BINARY_LEFT_TO_RIGHT,3),
+            LOGIC_XOR = new BinaryOperatorSymbol("^",Order.LEFT,5),
             
-            AND = new OperatorSymbol("&&",BINARY_LEFT_TO_RIGHT,2),
+            LOGIC_OR = new BinaryOperatorSymbol("|",Order.LEFT,4),
             
-            OR = new OperatorSymbol("||",BINARY_LEFT_TO_RIGHT,1),
+            STRING_CONCAT = new BinaryOperatorSymbol("..",Order.LEFT,3),
             
-            TERNARY_CONDITION = new OperatorSymbol("?",TERNARY_CONDITIONAL,0);
+            AND = new BinaryOperatorSymbol("&&",Order.LEFT,2),
+            
+            OR = new BinaryOperatorSymbol("||",Order.LEFT,1),
+            
+            TERNARY_CONDITION = new TernaryOperatorSymbol("?",Order.RIGHT,0);
     
     
     private static final HashMap<String, OperatorSymbol> HASH = collect(OperatorSymbol.class,os -> os.symbol);
@@ -95,4 +104,129 @@ public final class OperatorSymbol extends CodePart
     public static final OperatorSymbol getOperator(String str) { return HASH.get(str); }
     public static final OperatorSymbol getOperator(char c) { return getOperator(String.valueOf(c)); }
     
+    
+    private enum Order { LEFT, RIGHT, BOTH }
+    
+    private static final class UnaryOperatorSymbol extends OperatorSymbol
+    {
+        private final int priority;
+        private final Order order;
+        
+        public UnaryOperatorSymbol(String symbol, Order order, int priority)
+        {
+            super(symbol);
+            this.priority = priority;
+            this.order = order;
+        }
+        
+        @Override
+        public final int getUnaryPriority() { return priority; }
+        
+        @Override
+        public final boolean canBeUnary() { return true; }
+        
+        @Override
+        public boolean hasUnaryLeftOrder() { return order == Order.LEFT || order == Order.BOTH; }
+        @Override
+        public boolean hasUnaryRightOrder() { return order == Order.RIGHT || order == Order.BOTH; }
+    }
+    
+    private static final class BinaryOperatorSymbol extends OperatorSymbol
+    {
+        private final int priority;
+        private final Order order;
+        
+        public BinaryOperatorSymbol(String symbol, Order order, int priority)
+        {
+            super(symbol);
+            this.priority = priority;
+            this.order = order;
+        }
+        
+        @Override
+        public final int getBinaryPriority() { return priority; }
+        
+        @Override
+        public final boolean canBeBinary() { return true; }
+        
+        @Override
+        public boolean hasBinaryLeftOrder() { return order == Order.LEFT || order == Order.BOTH; }
+        @Override
+        public boolean hasBinaryRightOrder() { return order == Order.RIGHT || order == Order.BOTH; }
+    }
+    
+    private static final class UnaryBinaryOperatorSymbol extends OperatorSymbol
+    {
+        private final int unaryPriority, binaryPriority;
+        private final Order unaryOrder, binaryOrder;
+        
+        public UnaryBinaryOperatorSymbol(String symbol, Order unaryOrder, int unaryPriority, Order binaryOrder, int binaryPriority)
+        {
+            super(symbol);
+            this.unaryPriority = unaryPriority;
+            this.unaryOrder = unaryOrder;
+            this.binaryPriority = binaryPriority;
+            this.binaryOrder = binaryOrder;
+        }
+        
+        @Override
+        public final int getUnaryPriority() { return unaryPriority; }
+        @Override
+        public final int getBinaryPriority() { return binaryPriority; }
+        
+        @Override
+        public final boolean canBeUnary() { return true; }
+        @Override
+        public final boolean canBeBinary() { return true; }
+        
+        @Override
+        public boolean hasUnaryLeftOrder() { return unaryOrder == Order.LEFT || unaryOrder == Order.BOTH; }
+        @Override
+        public boolean hasUnaryRightOrder() { return unaryOrder == Order.RIGHT || unaryOrder == Order.BOTH; }
+        @Override
+        public boolean hasBinaryLeftOrder() { return binaryOrder == Order.LEFT || binaryOrder == Order.BOTH; }
+        @Override
+        public boolean hasBinaryRightOrder() { return binaryOrder == Order.RIGHT || binaryOrder == Order.BOTH; }
+    }
+    
+    private static final class TernaryOperatorSymbol extends OperatorSymbol
+    {
+        private final int priority;
+        private final Order order;
+        
+        public TernaryOperatorSymbol(String symbol, Order order, int priority)
+        {
+            super(symbol);
+            this.priority = priority;
+            this.order = order;
+        }
+        
+        @Override
+        public final int getTernaryPriority() { return priority; }
+        
+        @Override
+        public final boolean canBeTernary() { return true; }
+        
+        @Override
+        public boolean hasTernaryLeftOrder() { return order == Order.LEFT || order == Order.BOTH; }
+        @Override
+        public boolean hasTernaryRightOrder() { return order == Order.RIGHT || order == Order.BOTH; }
+    }
+    
+    private static class ArgumentsOperatorSymbol extends OperatorSymbol
+    {
+        private final int priority;
+        
+        public ArgumentsOperatorSymbol(String symbol, int priority)
+        {
+            super(symbol);
+            this.priority = priority;
+        }
+        
+        @Override
+        public final int getArgumentPriority() { return priority; }
+        
+        @Override
+        public final boolean canBeArgument() { return true; }
+    }
 }
