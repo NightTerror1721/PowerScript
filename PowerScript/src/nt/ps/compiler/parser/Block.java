@@ -12,7 +12,7 @@ import java.util.List;
  *
  * @author Asus
  */
-public abstract class Block extends CodePart
+public abstract class Block extends ParsedCode
 {
     public abstract int getTupleCount();
     public abstract Tuple getTuple(int index);
@@ -25,7 +25,7 @@ public abstract class Block extends CodePart
     public Tuple getFirstTuple() { return getTuple(0); }
     
     @Override
-    public final boolean isBlock() { return true; }
+    public final CodeType getCodeType() { return CodeType.BLOCK; }
     
     @Override
     public final boolean isValidCodeObject() { return isParenthesis(); }

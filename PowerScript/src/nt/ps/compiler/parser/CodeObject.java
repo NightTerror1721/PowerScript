@@ -9,7 +9,7 @@ package nt.ps.compiler.parser;
  *
  * @author Asus
  */
-public abstract class CodeObject extends CodePart
+public abstract class CodeObject extends ParsedCode
 {
     @Override
     public final boolean isValidCodeObject() { return true; }

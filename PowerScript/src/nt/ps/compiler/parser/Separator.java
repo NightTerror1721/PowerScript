@@ -11,7 +11,7 @@ import java.util.HashMap;
  *
  * @author Asus
  */
-public class Separator extends CodePart
+public class Separator extends ParsedCode
 {
     private final String symbol;
     
@@ -21,7 +21,7 @@ public class Separator extends CodePart
     public String toString() { return symbol; }
     
     @Override
-    public final boolean isSeparator() { return true; }
+    public final CodeType getCodeType() { return CodeType.SEPARATOR; }
     
     private static final HashMap<String, Separator> HASH = collect(Separator.class,s -> s.symbol);
     

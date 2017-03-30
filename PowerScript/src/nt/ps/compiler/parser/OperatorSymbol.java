@@ -11,7 +11,7 @@ import java.util.HashMap;
  *
  * @author Asus
  */
-public abstract class OperatorSymbol extends CodePart
+public abstract class OperatorSymbol extends Code
 {
     private final String symbol;
     
@@ -19,6 +19,9 @@ public abstract class OperatorSymbol extends CodePart
     {
         this.symbol = symbol;
     }
+    
+    @Override
+    public final CodeType getCodeType() { return CodeType.OPERATOR_SYMBOL; }
     
     @Override
     public final String toString() { return symbol; }

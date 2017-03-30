@@ -8,37 +8,25 @@ package nt.ps.compiler.parser;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
  *
  * @author Asus
  */
-public abstract class CodePart
+public abstract class Code
 {
-    @Override
-    public abstract String toString();
-
-    @Override
-    public final int hashCode()
+    public abstract CodeType getCodeType();
+    
+    public boolean isParsedCode() { return false; }
+    
+    public enum CodeType
     {
-        int hash = 5;
-        hash = 29 * hash + Objects.hashCode(toString());
-        return hash;
+        WORD, COMMAND_WORD, LITERAL, MUTABLE_LITERAL, SEPARATOR, BLOCK, FUNCTION,
+        SELF, OPERATOR_SYMBOL, OPERATOR, COMPILER_WORD, COMMAND;
     }
     
-    public boolean isWord() { return false; }
-    public boolean isKeyword() { return false; }
-    public boolean isLiteral() { return false; }
-    public boolean isMutableLiteral() { return false; }
-    public boolean isSeparator() { return false; }
-    public boolean isBlock() { return false; }
-    
-    public boolean isValidCodeObject() { return false; }
-    
-    
-    static final <CP extends CodePart> HashMap<String, CP> collect(Class<CP> clazz, Function<CP, String> collector)
+    static final <CP extends Code> HashMap<String, CP> collect(Class<CP> clazz, Function<CP, String> collector)
     {
         HashMap<String, CP> map = new HashMap<>();
         for(Field field : clazz.getDeclaredFields())

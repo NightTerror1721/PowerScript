@@ -15,7 +15,7 @@ public class Word extends CodeObject
 {
     private final String word;
     
-    public Word(String word)
+    private Word(String word)
     {
         if(word == null)
             throw new NullPointerException();
@@ -35,11 +35,29 @@ public class Word extends CodeObject
     }
     
     @Override
-    public final boolean isWord() { return true; }
+    public CodeType getCodeType() { return CodeType.WORD; }
     
     private static final Pattern ID_PATTERN = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
     public static final boolean isValidIdentifier(String identifier)
     {
         return ID_PATTERN.matcher(identifier).matches();
+    }
+    
+    public static final Code create(String word)
+    {
+        if(CommandWord.isCommand(word))
+            return CommandWord.getCommandWord(word);
+        switch(word)
+        {
+            default: return new Word(word);
+            case "self": return new SelfWord();
+        }
+    }
+    
+    public static final class SelfWord extends Word
+    {
+        private SelfWord() { super("self"); }
+        @Override
+        public final CodeType getCodeType() { return CodeType.SELF; }
     }
 }

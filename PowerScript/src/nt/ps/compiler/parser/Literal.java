@@ -24,7 +24,7 @@ public final class Literal extends CodeObject
     private Literal(String string) { value = PSValue.valueOf(string); }
     
     @Override
-    public final boolean isLiteral() { return true; }
+    public final CodeType getCodeType() { return CodeType.LITERAL; }
     
     @Override
     public final String toString() { return value.toJavaString(); }

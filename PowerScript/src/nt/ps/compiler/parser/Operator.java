@@ -51,6 +51,9 @@ public abstract class Operator extends CodeObject
     }
     
     @Override
+    public final CodeType getCodeType() { return CodeType.OPERATOR; }
+    
+    @Override
     public final String toString() { return symbol.toString(); }
     
     /*public boolean isUnaryOperator() { return operands.length == 1; }

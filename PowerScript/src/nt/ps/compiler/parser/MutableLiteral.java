@@ -54,7 +54,7 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
     public String toString() { return Arrays.toString(items); }
     
     @Override
-    public final boolean isMutableLiteral() { return true; }
+    public final CodeType getCodeType() { return CodeType.MUTABLE_LITERAL; }
 
     @Override
     public final Iterator<Item> iterator()
@@ -81,19 +81,19 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
     
     public final class Item
     {
-        private final Tuple key;
-        private final Tuple value;
+        private final ParsedCode key;
+        private final ParsedCode value;
         
         private Item(Tuple key, Tuple value)
         {
             if(value == null)
                 throw new NullPointerException();
-            this.key = key;
-            this.value = value;
+            this.key = key.pack();
+            this.value = value.pack();
         }
         
-        public final Tuple getKey() { return key; }
-        public final Tuple getValue() { return value; }
+        public final ParsedCode getKey() { return key; }
+        public final ParsedCode getValue() { return value; }
         
         @Override
         public final String toString()
