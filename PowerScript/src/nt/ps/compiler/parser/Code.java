@@ -23,7 +23,7 @@ public abstract class Code
     public enum CodeType
     {
         WORD, COMMAND_WORD, LITERAL, MUTABLE_LITERAL, SEPARATOR, BLOCK, FUNCTION,
-        SELF, OPERATOR_SYMBOL, OPERATOR, COMPILER_WORD, COMMAND;
+        SELF, OPERATOR_SYMBOL, OPERATOR, COMPILER_WORD, COMMAND, ASSIGNATION, ASSIGNATION_SYMBOL;
     }
     
     static final <CP extends Code> HashMap<String, CP> collect(Class<CP> clazz, Function<CP, String> collector)

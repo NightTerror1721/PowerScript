@@ -6,6 +6,7 @@
 package nt.ps.compiler.parser;
 
 import java.util.regex.Pattern;
+import nt.ps.compiler.exception.CompilerError;
 
 /**
  *
@@ -42,11 +43,18 @@ public class Word extends CodeObject
     {
         return ID_PATTERN.matcher(identifier).matches();
     }
+    public static final void checkValidIdentifier(String identifier) throws CompilerError
+    {
+        if(!isValidIdentifier(identifier))
+            throw CompilerError.invalidIdentifier(identifier);
+    }
     
     public static final Code create(String word)
     {
         if(CommandWord.isCommand(word))
             return CommandWord.getCommandWord(word);
+        if(OperatorSymbol.isOperator(word))
+            return OperatorSymbol.getOperator(word);
         switch(word)
         {
             default: return new Word(word);

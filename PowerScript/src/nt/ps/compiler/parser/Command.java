@@ -43,5 +43,13 @@ public final class Command extends ParsedCode
         if(first.getCodeType() != CodeType.COMMAND_WORD)
             return new Command(line,null,tuple.pack());
         tuple = tuple.subTuple(1);
+        CommandWord cmdWord = (CommandWord) first;
+        switch(cmdWord.getName())
+        {
+            default: throw new IllegalStateException();
+            case VAR: {
+                
+            }
+        }
     }
 }

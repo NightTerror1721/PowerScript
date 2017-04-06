@@ -11,18 +11,19 @@ import java.util.List;
 /**
  *
  * @author Asus
+ * @param <C>
  */
-public abstract class Block extends ParsedCode
+public abstract class Block<C extends ParsedCode> extends ParsedCode
 {
-    public abstract int getTupleCount();
-    public abstract Tuple getTuple(int index);
+    public abstract int getCodeCount();
+    public abstract C getCode(int index);
     
     public boolean isScope() { return false; }
     public boolean isParenthesis() { return false; }
     public boolean isSquare() { return false; }
     public boolean isArgumentsList() { return false; }
     
-    public Tuple getFirstTuple() { return getTuple(0); }
+    public C getFirstCode() { return getCode(0); }
     
     @Override
     public final CodeType getCodeType() { return CodeType.BLOCK; }
@@ -31,69 +32,82 @@ public abstract class Block extends ParsedCode
     public final boolean isValidCodeObject() { return isParenthesis(); }
     
     
-    public static final Block parenthesis(Tuple tuple) { return new SingleBlock(tuple,false); }
+    public static final Block<ParsedCode> parenthesis(Tuple tuple) { return parenthesis(tuple.pack()); }
+    public static final Block<ParsedCode> parenthesis(ParsedCode code) { return new SingleBlock(code,false); }
     
-    public static final Block square(Tuple tuple) { return new SingleBlock(tuple,true); }
+    public static final Block<ParsedCode> square(Tuple tuple) { return square(tuple.pack()); }
+    public static final Block<ParsedCode> square(ParsedCode code) { return new SingleBlock(code,true); }
     
-    public final static Block arguments(Tuple tuple)
+    public final static Block<ParsedCode> arguments(Tuple tuple) { return arguments(tuple,Separator.COMMA); }
+    public final static Block<ParsedCode> arguments(Tuple tuple, Separator separator)
     {
-        Tuple[] tuples = tuple.splitByToken(Separator.COMMA);
-        return new MultipleBlock(tuples,false);
+        Tuple[] tuples = tuple.splitByToken(separator);
+        return arguments(Arrays.stream(tuples).map(t -> t.pack()).toArray(size -> new ParsedCode[size]));
     }
+    public final static Block<ParsedCode> arguments(ParsedCode... codes) { return new MultipleBlock(codes); }
     
-    public static final Block scope(List<Tuple> tuples)
+    public static final Scope scope(List<Command> cmds) { return new Scope(cmds.toArray(new Command[cmds.size()])); }
+    public static final Scope scope(Command... cmds) { return new Scope(cmds); }
+    
+    
+    private static class MultipleBlock<C extends ParsedCode> extends Block<C>
     {
-        Tuple[] atuples = tuples.toArray(new Tuple[tuples.size()]);
-        return new MultipleBlock(atuples,true);
-    }
-    
-    
-    private static final class MultipleBlock extends Block
-    {
-        private final Tuple[] tuples;
-        private final boolean scope;
+        private final C[] codes;
         
-        private MultipleBlock(Tuple[] tuples, boolean scope)
+        private MultipleBlock(C[] codes)
         {
-            this.tuples = tuples;
-            this.scope = scope;
+            this.codes = codes;
         }
         
         @Override
-        public final int getTupleCount() { return tuples.length; }
+        public final int getCodeCount() { return codes.length; }
 
         @Override
-        public final Tuple getTuple(int index) { return tuples[index]; }
+        public final C getCode(int index) { return codes[index]; }
 
         @Override
-        public final boolean isScope() { return scope; }
+        public boolean isScope() { return false; }
         
         @Override
-        public final boolean isArgumentsList() { return !scope; }
+        public boolean isArgumentsList() { return true; }
 
         @Override
-        public final String toString() { return Arrays.toString(tuples); }
+        public final String toString() { return Arrays.toString(codes); }
     }
     
-    private static final class SingleBlock extends Block
+    public static final class Scope extends MultipleBlock<Command>
     {
-        private final Tuple tuple;
+        private Scope(Command[] codes)
+        {
+            super(codes);
+        }
+        
+        @Override
+        public final boolean isScope() { return true; }
+        
+        @Override
+        public final boolean isArgumentsList() { return false; }
+    }
+    
+    private static final class SingleBlock extends Block<ParsedCode>
+    {
+        private final ParsedCode code;
         private final boolean square;
         
-        private SingleBlock(Tuple tuple, boolean square)
+        private SingleBlock(ParsedCode code, boolean square)
         {
-            this.tuple = tuple;
+            this.code = code;
             this.square = square;
         }
         
         @Override
-        public final int getTupleCount() { return 1; }
+        public final int getCodeCount() { return 1; }
 
         @Override
-        public final Tuple getTuple(int index) { return tuple; }
+        public final ParsedCode getCode(int index) { return code; }
         
         @Override
-        public final Tuple getFirstTuple() { return tuple; }
+        public final ParsedCode getFirstCode() { return code; }
         
         @Override
         public final boolean isParenthesis() { return !square; }
@@ -102,6 +116,6 @@ public abstract class Block extends ParsedCode
         public final boolean isSquare() { return square; }
 
         @Override
-        public final String toString() { return tuple.toString(); }
+        public final String toString() { return code.toString(); }
     }
 }

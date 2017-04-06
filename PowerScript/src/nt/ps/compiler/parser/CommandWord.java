@@ -22,6 +22,8 @@ public final class CommandWord extends Code
         this.name = name;
     }
     
+    public final CommandName getName() { return name; }
+    
     @Override
     public final String toString() { return name.name; }
     
