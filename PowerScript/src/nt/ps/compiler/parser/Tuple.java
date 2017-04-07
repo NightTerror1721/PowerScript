@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.parser.Code.CodeType;
 
 /**
  *
@@ -130,6 +132,18 @@ public final class Tuple
             if(cp.equals(codePart))
                 return true;
         return false;
+    }
+    
+    public final int findJustOneByType(CodeType type) throws CompilerError
+    {
+        int count = 0;
+        for(Code cp : code)
+        {
+            if(cp.getCodeType() == type)
+                return count;
+            count++;
+        }
+        return -1;
     }
     
     public final Tuple[] splitByToken(Code sep)

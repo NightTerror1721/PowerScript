@@ -15,7 +15,7 @@ public final class Literal extends CodeObject
 {
     private final PSValue value;
     
-    private Literal() { value = PSValue.NULL; }
+    private Literal(PSValue value) { this.value = value; }
     private Literal(boolean bool) { value = PSValue.valueOf(bool); }
     private Literal(int number) { value = PSValue.valueOf(number); }
     private Literal(long number) { value = PSValue.valueOf(number); }
@@ -39,7 +39,8 @@ public final class Literal extends CodeObject
     
     
     public static final Literal
-            NULL = new Literal(),
+            UNDEFINED = new Literal(PSValue.UNDEFINED),
+            NULL = new Literal(PSValue.NULL),
             TRUE = new Literal(true),
             FALSE = new Literal(false),
             MINUSONE = new Literal(-1),
