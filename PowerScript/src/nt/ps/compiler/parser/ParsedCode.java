@@ -27,6 +27,4 @@ public abstract class ParsedCode extends Code
         return hash;
     }
     
-    public boolean isValidCodeObject() { return false; }
-    
 }

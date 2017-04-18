@@ -21,7 +21,7 @@ public final class Tuple
 {
     private final List<Code> code;
     
-    public Tuple(List<Code> list)
+    public Tuple(ArrayList<Code> list)
     {
         if(list == null)
             throw new NullPointerException();
@@ -30,6 +30,10 @@ public final class Tuple
     public Tuple(Code... code)
     {
         this(Arrays.asList(code));
+    }
+    public Tuple(List<Code> c)
+    {
+        this(new ArrayList<>(c));
     }
     public Tuple(Collection<? extends Code> c)
     {
@@ -43,7 +47,7 @@ public final class Tuple
         this.code.set(index,code);
     }
     
-    public final Code get(int index) { return code.get(index); }
+    public final <C extends Code> C get(int index) { return (C) code.get(index); }
     
     public final int length() { return code.size(); }
     public final boolean isEmpty() { return code.isEmpty(); }
@@ -134,6 +138,15 @@ public final class Tuple
         return false;
     }
     
+    public final int count(CodeType type)
+    {
+        int count = 0;
+        for(Code cp : code)
+            if(cp.getCodeType() == type)
+                count++;
+        return count;
+    }
+    
     public final int findJustOneByType(CodeType type) throws CompilerError
     {
         int count = 0;
@@ -177,8 +190,82 @@ public final class Tuple
     @Override
     public final String toString() { return code.toString(); }
     
+    private static boolean isPostIncDec(Code code)
+    {
+        return code == OperatorSymbol.INCREMENT || code == OperatorSymbol.DECREMENT;
+    }
+    
+    private ParsedCode packPreUnary(Counter it) throws CompilerError
+    {
+        Code part = code.get(it.value);
+        it.increase();
+        if(part.is(CodeType.OPERATOR_SYMBOL))
+        {
+            if(it.end())
+                throw CompilerError.unexpectedEndOfInstruction();
+            OperatorSymbol prefix = (OperatorSymbol) part;
+            if(!prefix.canBeUnary() || !prefix.hasUnaryLeftOrder())
+                throw new CompilerError("Operator " + prefix + " cannot be an unary prefix operator");
+            part = packPreUnary(it);
+            if(!part.isValidCodeObject())
+                throw CompilerError.unexpectedCode(part);
+            return new Operator(prefix, (CodeObject) part);
+        }
+        if(!part.isParsedCode())
+            throw CompilerError.unexpectedCode(part);
+        return (ParsedCode) part;
+    }
+    
+    private ParsedCode packPostUnary(Counter it, ParsedCode pre) throws CompilerError
+    {
+        if(it.end())
+            return pre;
+        Code part = code.get(it.value);
+        
+        if(part.is(CodeType.OPERATOR_SYMBOL))
+        {
+            OperatorSymbol sufix = (OperatorSymbol) part;
+            if(!sufix.canBeUnary())
+                return pre;
+            it.increase();
+            if(!sufix.hasUnaryRightOrder())
+                throw new CompilerError("Operator " + sufix + " cannot be an unary sufix operator");
+            if(!pre.isValidCodeObject())
+                throw CompilerError.unexpectedCode(pre);
+            return packPostUnary(it, new Operator(sufix, (CodeObject) pre));
+        }
+        return pre;
+    }
+    
+    private ParsedCode packPart(Counter it) throws CompilerError
+    {
+        if(it.end())
+            throw CompilerError.unexpectedEndOfInstruction();
+        
+    }
+    
     public final ParsedCode pack()
     {
         
+    }
+    
+    private static final class Counter
+    {
+        private int value;
+        private final int limit;
+        
+        private Counter(int limit, int initialValue)
+        {
+            this.value = initialValue;
+            this.limit = limit;
+        }
+        private Counter(int limit) { this(limit,0); }
+        
+        public final int increase(int times) { return value += times; }
+        public final int increase() { return increase(1); }
+        public final int decrease(int times) { return value -= times; }
+        public final int decrease() { return decrease(1); }
+        public final int value() { return value; }
+        public final boolean end() { return value < limit; }
     }
 }

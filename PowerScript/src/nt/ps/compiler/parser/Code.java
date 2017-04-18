@@ -17,8 +17,10 @@ import java.util.function.Function;
 public abstract class Code
 {
     public abstract CodeType getCodeType();
+    public final boolean is(CodeType type) { return getCodeType() == type; }
     
     public boolean isParsedCode() { return false; }
+    public boolean isValidCodeObject() { return false; }
     
     public enum CodeType
     {
