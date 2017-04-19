@@ -82,16 +82,29 @@ public final class Assignation extends ParsedCode
     {
         private final ParsedCode location;
         private final ParsedCode[] assignations;
+        private final int special;
         
         private AssignationPart(ParsedCode location, ParsedCode... assignations)
         {
             this.location = location;
             this.assignations = assignations;
+            
+            if(location.is(CodeType.OPERATOR))
+            {
+                Operator op = (Operator) location;
+                if(op.getSymbol() == OperatorSymbol.ACCESS)
+                    special = 1;
+                else if(op.getSymbol() == OperatorSymbol.PROPERTY_ACCESS)
+                    special = 2;
+                else special = 0;
+            } else special = 0;
         }
         private AssignationPart(ParsedCode location) { this(location, Literal.UNDEFINED); }
         
         public final ParsedCode getLocation() { return location; }
         public final int getAssignationCount() { return assignations.length; }
         public final ParsedCode getAssignation(int index) { return assignations[index]; }
+        public final boolean isAccess() { return special == 1; }
+        public final boolean isPropertyAccess() { return special == 2; }
     }
 }

@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Code.CodeType;
 
@@ -241,7 +242,19 @@ public final class Tuple
     {
         if(it.end())
             throw CompilerError.unexpectedEndOfInstruction();
-        
+        return packPostUnary(it,packPreUnary(it));
+    }
+    
+    private OperatorSymbol findNextOperatorSymbol(int index)
+    {
+        ListIterator<Code> it = code.listIterator(index);
+        while(it.hasNext())
+        {
+            Code c = it.next();
+            if(c.is(CodeType.OPERATOR_SYMBOL))
+                return (OperatorSymbol) c;
+        }
+        return null;
     }
     
     public final ParsedCode pack()
