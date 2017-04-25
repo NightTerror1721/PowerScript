@@ -257,22 +257,34 @@ public final class Tuple
         return null;
     }
     
-    public final ParsedCode pack()
+    private ParsedCode packOperation(Counter it, ParsedCode operand1)
     {
-        
+        if(!code.get(it.value).is(CodeType.OPERATOR_SYMBOL))
     }
     
-    private static final class Counter
+    public final ParsedCode pack() throws CompilerError
+    {
+        Assignation a = Assignation.parse(this);
+        if(a != null)
+            return a;
+        Counter it = new Counter();
+        ParsedCode operand = packPart(it);
+        if(it.end())
+            return operand;
+        return packOperation(it, operand);
+    }
+    
+    private final class Counter
     {
         private int value;
         private final int limit;
         
-        private Counter(int limit, int initialValue)
+        private Counter(int initialValue)
         {
             this.value = initialValue;
-            this.limit = limit;
+            this.limit = code.size();
         }
-        private Counter(int limit) { this(limit,0); }
+        private Counter() { this(0); }
         
         public final int increase(int times) { return value += times; }
         public final int increase() { return increase(1); }
