@@ -5,12 +5,9 @@
  */
 package nt.ps.compiler.parser;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Code.CodeType;
 
@@ -20,84 +17,61 @@ import nt.ps.compiler.parser.Code.CodeType;
  */
 public final class Tuple
 {
-    private final List<Code> code;
+    private final Code[] code;
     
-    public Tuple(ArrayList<Code> list)
-    {
-        if(list == null)
-            throw new NullPointerException();
-        this.code = list;
-    }
     public Tuple(Code... code)
     {
-        this(Arrays.asList(code));
+        this.code = code;
     }
     public Tuple(List<Code> c)
     {
-        this(new ArrayList<>(c));
+        this(c.toArray(new Code[c.size()]));
     }
     public Tuple(Collection<? extends Code> c)
     {
-        this(new ArrayList<>(c));
+        this(c.toArray(new Code[c.size()]));
     }
     
     public final void set(int index, Code code)
     {
         if(code == null)
             throw new NullPointerException();
-        this.code.set(index,code);
+        this.code[index] = code;
     }
     
-    public final <C extends Code> C get(int index) { return (C) code.get(index); }
+    public final <C extends Code> C get(int index) { return (C) code[index]; }
     
-    public final int length() { return code.size(); }
-    public final boolean isEmpty() { return code.isEmpty(); }
+    public final int length() { return code.length; }
+    public final boolean isEmpty() { return code.length == 0; }
     
     public final Tuple subTuple(int offset, int length)
     {
-        return new Tuple(code.subList(offset,offset + length));
+        Code[] array = new Code[length];
+        System.arraycopy(code,offset,array,0,length);
+        return new Tuple(array);
     }
-    public final Tuple subTuple(int offset) { return subTuple(offset,code.size()-offset); }
-    public final Tuple copy() { return subTuple(0,code.size()); }
+    public final Tuple subTuple(int offset) { return subTuple(offset,code.length-offset); }
+    public final Tuple copy() { return subTuple(0,code.length); }
     
-    public final Tuple concat(Tuple ct)
+    public final Tuple concat(Tuple ct) { return concat(ct.code); }
+    public final Tuple concat(List<Code> code) { return concat(code.toArray(new Code[code.size()])); }
+    public final Tuple concat(Code... code)
     {
-        List<Code> newCode = new ArrayList<>(code.size() + ct.code.size());
-        newCode.addAll(code);
-        newCode.addAll(ct.code);
-        return new Tuple(newCode);
-    }
-    
-    public final Tuple concat(List<Code> code)
-    {
-        if(code.isEmpty())
-            return this;
-        List<Code> newCode = new ArrayList<>(this.code.size() + code.size());
-        newCode.addAll(this.code);
-        newCode.addAll(code);
-        return new Tuple(newCode);
-    }
-    public final Tuple concat(ParsedCode... code)
-    {
-        return concat(Arrays.asList(code));
+        Code[] array = new Code[this.code.length + code.length];
+        System.arraycopy(this.code,0,array,0,this.code.length);
+        System.arraycopy(code,0,array,this.code.length,code.length);
+        return new Tuple(array);
     }
     
-    public final Tuple wrap(Tuple start, Tuple end)
+    public final Tuple wrap(Tuple start, Tuple end) { return wrap(start.code, end.code); }
+    public final Tuple wrap(Code start, Code end) { return wrap(new Code[]{start}, new Code[]{end}); }
+    public final Tuple wrap(Code[] start, Code[] end)
     {
-        ArrayList<Code> newCode = new ArrayList<>(start.code.size() + code.size() + end.code.size());
-        newCode.addAll(start.code);
-        newCode.addAll(code);
-        newCode.addAll(end.code);
-        return new Tuple(newCode);
-    }
-    
-    public final Tuple wrap(Code start, Code end)
-    {
-        ArrayList<Code> newCode = new ArrayList<>(code.size() + 2);
-        newCode.add(start);
-        newCode.addAll(code);
-        newCode.add(end);
-        return new Tuple(newCode);
+        Code[] array = new Code[start.length + code.length + end.length];
+        System.arraycopy(start,0,array,0,start.length);
+        System.arraycopy(code,0,array,start.length,code.length);
+        System.arraycopy(end,0,array,start.length+code.length,end.length);
+        return new Tuple(array);
     }
     
     public final Tuple extract(Code start, Code end)
@@ -198,7 +172,7 @@ public final class Tuple
     
     private ParsedCode packPreUnary(Counter it) throws CompilerError
     {
-        Code part = code.get(it.value);
+        Code part = code[it.value];
         it.increase();
         if(part.is(CodeType.OPERATOR_SYMBOL))
         {
@@ -221,7 +195,7 @@ public final class Tuple
     {
         if(it.end())
             return pre;
-        Code part = code.get(it.value);
+        Code part = code[it.value];
         
         if(part.is(CodeType.OPERATOR_SYMBOL))
         {
@@ -247,19 +221,23 @@ public final class Tuple
     
     private OperatorSymbol findNextOperatorSymbol(int index)
     {
-        ListIterator<Code> it = code.listIterator(index);
-        while(it.hasNext())
-        {
-            Code c = it.next();
-            if(c.is(CodeType.OPERATOR_SYMBOL))
-                return (OperatorSymbol) c;
-        }
+        for(int i=index;i<code.length;i++)
+            if(code[i].is(CodeType.OPERATOR_SYMBOL))
+                return (OperatorSymbol) code[i];
         return null;
     }
     
-    private ParsedCode packOperation(Counter it, ParsedCode operand1)
+    private ParsedCode packOperation(Counter it, ParsedCode operand1) throws CompilerError
     {
-        if(!code.get(it.value).is(CodeType.OPERATOR_SYMBOL))
+        if(!code[it.value].is(CodeType.OPERATOR_SYMBOL))
+            throw new CompilerError("Expected a valid operator between operands. \"" + code[it.value] + "\"");
+        OperatorSymbol operator = (OperatorSymbol) code[it.value];
+        it.increase();
+        if(operator.canBeBinary())
+        {
+            OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
+        }
+        
     }
     
     public final ParsedCode pack() throws CompilerError
@@ -282,7 +260,7 @@ public final class Tuple
         private Counter(int initialValue)
         {
             this.value = initialValue;
-            this.limit = code.size();
+            this.limit = code.length;
         }
         private Counter() { this(0); }
         

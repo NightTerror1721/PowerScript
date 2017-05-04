@@ -5,6 +5,8 @@
  */
 package nt.ps.compiler.parser;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 
 /**
@@ -14,10 +16,14 @@ import java.util.HashMap;
 public abstract class OperatorSymbol extends Code
 {
     private final String symbol;
+    private final Type type;
+    private final int priority;
     
-    private OperatorSymbol(String symbol)
+    private OperatorSymbol(String symbol, Type type, int priority)
     {
         this.symbol = symbol;
+        this.type = type;
+        this.priority = priority;
     }
     
     @Override
@@ -28,10 +34,7 @@ public abstract class OperatorSymbol extends Code
     
     public final String getSymbol() { return symbol; }
     
-    public int getUnaryPriority() { throw new UnsupportedOperationException(); }
-    public int getBinaryPriority() { throw new UnsupportedOperationException(); }
-    public int getTernaryPriority() { throw new UnsupportedOperationException(); }
-    public int getArgumentPriority() { throw new UnsupportedOperationException(); }
+    public int getPriority() { return priority; }
     
     public boolean canBeUnary() { return false; }
     public boolean canBeBinary() { return false; }
@@ -46,6 +49,14 @@ public abstract class OperatorSymbol extends Code
     public boolean hasTernaryRightOrder() { throw new UnsupportedOperationException(); }
     public final boolean hasArgumentLeftOrder() { return true; }
     public final boolean hasArgumentRightOrder() { return false; }
+    
+    public final int comparePriority(OperatorSymbol os)
+    {
+        int cmp = Integer.compare(type.ordinal(), os.type.ordinal());
+        if(cmp != 0)
+            return cmp;
+        return Integer.compare(priority,os.priority);
+    }
     
     
     public static final OperatorSymbol
@@ -67,7 +78,7 @@ public abstract class OperatorSymbol extends Code
             MODULE = new BinaryOperatorSymbol("%",Order.LEFT,11),
             
             PLUS = new BinaryOperatorSymbol("+",Order.LEFT,10),
-            MINUS = new UnaryBinaryOperatorSymbol("-",Order.LEFT,10, Order.LEFT,12),
+            MINUS = new BinaryOperatorSymbol("-",Order.LEFT,10),
             
             SHIFT_LEFT = new BinaryOperatorSymbol("<<",Order.LEFT,9),
             SHIFT_RIGHT = new BinaryOperatorSymbol(">>",Order.LEFT,9),
@@ -99,31 +110,56 @@ public abstract class OperatorSymbol extends Code
             TERNARY_CONDITION = new TernaryOperatorSymbol("?",Order.RIGHT,0);
     
     
-    private static final HashMap<String, OperatorSymbol> HASH = collect(OperatorSymbol.class,os -> os.symbol);
+    private static final HashMap<String, OperatorSymbol[]> HASH;
+    static {
+        HASH = new HashMap<>();
+        for(Field field : OperatorSymbol.class.getDeclaredFields())
+        {
+            if(field.getType() != OperatorSymbol.class || !Modifier.isStatic(field.getModifiers()))
+                continue;
+            try
+            {
+                OperatorSymbol cp = (OperatorSymbol) field.get(null);
+                OperatorSymbol[] array = HASH.get(cp.symbol);
+                if(array == null)
+                {
+                    array = new OperatorSymbol[2];
+                    HASH.put(cp.symbol,array);
+                }
+                array[cp.canBeUnary() ? 1 : 0] = cp;
+            }
+            catch(IllegalAccessException | IllegalArgumentException ex)
+            {
+                ex.printStackTrace(System.err);
+            }
+        }
+    }
     
     public static final boolean isOperator(String str) { return HASH.containsKey(str); }
     public static final boolean isOperator(char c) { return isOperator(String.valueOf(c)); }
     
-    public static final OperatorSymbol getOperator(String str) { return HASH.get(str); }
-    public static final OperatorSymbol getOperator(char c) { return getOperator(String.valueOf(c)); }
+    public static final OperatorSymbol getOperator(String str, boolean isUnary)
+    {
+        OperatorSymbol[] array = HASH.get(str);
+        if(array == null)
+            return null;
+        return array[isUnary ? 1 : 0];
+    }
+    public static final OperatorSymbol getOperator(char c, boolean isUnary) { return getOperator(String.valueOf(c),isUnary); }
     
     
     private enum Order { LEFT, RIGHT, BOTH }
+    private enum Type { TERNARY, BINARY, UNARY, ARGUMENT; }
     
     private static final class UnaryOperatorSymbol extends OperatorSymbol
     {
-        private final int priority;
         private final Order order;
         
         public UnaryOperatorSymbol(String symbol, Order order, int priority)
         {
-            super(symbol);
-            this.priority = priority;
+            super(symbol, Type.UNARY, priority);
             this.order = order;
         }
-        
-        @Override
-        public final int getUnaryPriority() { return priority; }
         
         @Override
         public final boolean canBeUnary() { return true; }
@@ -141,13 +177,10 @@ public abstract class OperatorSymbol extends Code
         
         public BinaryOperatorSymbol(String symbol, Order order, int priority)
         {
-            super(symbol);
+            super(symbol, Type.BINARY, priority);
             this.priority = priority;
             this.order = order;
         }
-        
-        @Override
-        public final int getBinaryPriority() { return priority; }
         
         @Override
         public final boolean canBeBinary() { return true; }
@@ -158,54 +191,15 @@ public abstract class OperatorSymbol extends Code
         public boolean hasBinaryRightOrder() { return order == Order.RIGHT || order == Order.BOTH; }
     }
     
-    private static final class UnaryBinaryOperatorSymbol extends OperatorSymbol
-    {
-        private final int unaryPriority, binaryPriority;
-        private final Order unaryOrder, binaryOrder;
-        
-        public UnaryBinaryOperatorSymbol(String symbol, Order unaryOrder, int unaryPriority, Order binaryOrder, int binaryPriority)
-        {
-            super(symbol);
-            this.unaryPriority = unaryPriority;
-            this.unaryOrder = unaryOrder;
-            this.binaryPriority = binaryPriority;
-            this.binaryOrder = binaryOrder;
-        }
-        
-        @Override
-        public final int getUnaryPriority() { return unaryPriority; }
-        @Override
-        public final int getBinaryPriority() { return binaryPriority; }
-        
-        @Override
-        public final boolean canBeUnary() { return true; }
-        @Override
-        public final boolean canBeBinary() { return true; }
-        
-        @Override
-        public boolean hasUnaryLeftOrder() { return unaryOrder == Order.LEFT || unaryOrder == Order.BOTH; }
-        @Override
-        public boolean hasUnaryRightOrder() { return unaryOrder == Order.RIGHT || unaryOrder == Order.BOTH; }
-        @Override
-        public boolean hasBinaryLeftOrder() { return binaryOrder == Order.LEFT || binaryOrder == Order.BOTH; }
-        @Override
-        public boolean hasBinaryRightOrder() { return binaryOrder == Order.RIGHT || binaryOrder == Order.BOTH; }
-    }
-    
     private static final class TernaryOperatorSymbol extends OperatorSymbol
     {
-        private final int priority;
         private final Order order;
         
         public TernaryOperatorSymbol(String symbol, Order order, int priority)
         {
-            super(symbol);
-            this.priority = priority;
+            super(symbol, Type.TERNARY, priority);
             this.order = order;
         }
-        
-        @Override
-        public final int getTernaryPriority() { return priority; }
         
         @Override
         public final boolean canBeTernary() { return true; }
@@ -222,12 +216,9 @@ public abstract class OperatorSymbol extends Code
         
         public ArgumentsOperatorSymbol(String symbol, int priority)
         {
-            super(symbol);
+            super(symbol, Type.ARGUMENT, priority);
             this.priority = priority;
         }
-        
-        @Override
-        public final int getArgumentPriority() { return priority; }
         
         @Override
         public final boolean canBeArgument() { return true; }
