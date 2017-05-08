@@ -75,7 +75,7 @@ public class FunctionLiteral extends ParsedCode
     {
         if(name == null || name.isEmpty())
             throw new IllegalStateException();
-        Word.checkValidIdentifier(name);
+        Identifier.checkValidIdentifier(name);
         return new FunctionLiteral(null,varargs,pars,scope);
     }
     public static final FunctionLiteral function(String name, List<String> pars, boolean varargs, Scope scope) throws CompilerError

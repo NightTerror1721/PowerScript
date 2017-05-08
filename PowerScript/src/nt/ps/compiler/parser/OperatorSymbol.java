@@ -36,19 +36,13 @@ public abstract class OperatorSymbol extends Code
     
     public int getPriority() { return priority; }
     
-    public boolean canBeUnary() { return false; }
-    public boolean canBeBinary() { return false; }
-    public boolean canBeTernary() { return false; }
-    public boolean canBeArgument() { return false; }
+    public boolean isUnary() { return false; }
+    public boolean isBinary() { return false; }
+    public boolean isTernary() { return false; }
+    public boolean isCall() { return false; }
+    public boolean isNew() { return false; }
     
-    public boolean hasUnaryLeftOrder() { throw new UnsupportedOperationException(); }
-    public boolean hasUnaryRightOrder() { throw new UnsupportedOperationException(); }
-    public boolean hasBinaryLeftOrder() { throw new UnsupportedOperationException(); }
-    public boolean hasBinaryRightOrder() { throw new UnsupportedOperationException(); }
-    public boolean hasTernaryLeftOrder() { throw new UnsupportedOperationException(); }
-    public boolean hasTernaryRightOrder() { throw new UnsupportedOperationException(); }
-    public final boolean hasArgumentLeftOrder() { return true; }
-    public final boolean hasArgumentRightOrder() { return false; }
+    public boolean canBeBothUnaryOrder() { return false; }
     
     public final int comparePriority(OperatorSymbol os)
     {
@@ -60,54 +54,54 @@ public abstract class OperatorSymbol extends Code
     
     
     public static final OperatorSymbol
-            PROPERTY_ACCESS = new BinaryOperatorSymbol(".",Order.LEFT,14),
-            ACCESS = new ArgumentsOperatorSymbol("[]",14),
-            NEW = new ArgumentsOperatorSymbol("new",14),
+            PROPERTY_ACCESS = new BinaryOperatorSymbol(".",14),
+            ACCESS = new BinaryOperatorSymbol("[]",14),
+            NEW = new NewOperatorSymbol("new",14),
             
-            CALL = new ArgumentsOperatorSymbol("()",13),
+            CALL = new CallOperatorSymbol("()",13),
             
-            NEGATE = new UnaryOperatorSymbol("!",Order.LEFT,12),
-            LOGIC_NOT = new UnaryOperatorSymbol("~",Order.LEFT,12),
-            NEGATIVE = new UnaryOperatorSymbol("-",Order.LEFT,12),
-            INCREMENT = new UnaryOperatorSymbol("++",Order.BOTH,12),
-            DECREMENT = new UnaryOperatorSymbol("--",Order.BOTH,12),
-            TYPEOF = new UnaryOperatorSymbol("typeof",Order.LEFT,12),
+            NEGATE = new UnaryOperatorSymbol("!",12),
+            LOGIC_NOT = new UnaryOperatorSymbol("~",12),
+            NEGATIVE = new UnaryOperatorSymbol("-",12),
+            INCREMENT = new UnaryOperatorSymbol("++",12,true),
+            DECREMENT = new UnaryOperatorSymbol("--",12,true),
+            TYPEOF = new UnaryOperatorSymbol("typeof",12),
             
-            MULTIPLY = new BinaryOperatorSymbol("*",Order.LEFT,11),
-            DIVIDE = new BinaryOperatorSymbol("/",Order.LEFT,11),
-            MODULE = new BinaryOperatorSymbol("%",Order.LEFT,11),
+            MULTIPLY = new BinaryOperatorSymbol("*",11),
+            DIVIDE = new BinaryOperatorSymbol("/",11),
+            MODULE = new BinaryOperatorSymbol("%",11),
             
-            PLUS = new BinaryOperatorSymbol("+",Order.LEFT,10),
-            MINUS = new BinaryOperatorSymbol("-",Order.LEFT,10),
+            PLUS = new BinaryOperatorSymbol("+",10),
+            MINUS = new BinaryOperatorSymbol("-",10),
             
-            SHIFT_LEFT = new BinaryOperatorSymbol("<<",Order.LEFT,9),
-            SHIFT_RIGHT = new BinaryOperatorSymbol(">>",Order.LEFT,9),
+            SHIFT_LEFT = new BinaryOperatorSymbol("<<",9),
+            SHIFT_RIGHT = new BinaryOperatorSymbol(">>",9),
             
-            LESS_THAN = new BinaryOperatorSymbol("<",Order.LEFT,8),
-            LESS_THAN_EQUALS = new BinaryOperatorSymbol("<=",Order.LEFT,8),
-            GREATER_THAN = new BinaryOperatorSymbol(">",Order.LEFT,8),
-            GREATER_THAN_EQUALS = new BinaryOperatorSymbol(">=",Order.LEFT,8),
-            CONTAINS = new BinaryOperatorSymbol("in",Order.LEFT,8),
-            INSTANCEOF = new BinaryOperatorSymbol("instanceof",Order.LEFT,8),
+            LESS_THAN = new BinaryOperatorSymbol("<",8),
+            LESS_THAN_EQUALS = new BinaryOperatorSymbol("<=",8),
+            GREATER_THAN = new BinaryOperatorSymbol(">",8),
+            GREATER_THAN_EQUALS = new BinaryOperatorSymbol(">=",8),
+            CONTAINS = new BinaryOperatorSymbol("in",8),
+            INSTANCEOF = new BinaryOperatorSymbol("instanceof",8),
             
-            EQUALS = new BinaryOperatorSymbol("==",Order.LEFT,7),
-            NOT_EQUALS = new BinaryOperatorSymbol("!=",Order.LEFT,7),
-            EQUALS_REFERENCE = new BinaryOperatorSymbol("===",Order.LEFT,7),
-            NOT_EQUALS_REFERENCE = new BinaryOperatorSymbol("!==",Order.LEFT,7),
+            EQUALS = new BinaryOperatorSymbol("==",7),
+            NOT_EQUALS = new BinaryOperatorSymbol("!=",7),
+            EQUALS_REFERENCE = new BinaryOperatorSymbol("===",7),
+            NOT_EQUALS_REFERENCE = new BinaryOperatorSymbol("!==",7),
             
-            LOGIC_AND = new BinaryOperatorSymbol("&",Order.LEFT,6),
+            LOGIC_AND = new BinaryOperatorSymbol("&",6),
             
-            LOGIC_XOR = new BinaryOperatorSymbol("^",Order.LEFT,5),
+            LOGIC_XOR = new BinaryOperatorSymbol("^",5),
             
-            LOGIC_OR = new BinaryOperatorSymbol("|",Order.LEFT,4),
+            LOGIC_OR = new BinaryOperatorSymbol("|",4),
             
-            STRING_CONCAT = new BinaryOperatorSymbol("..",Order.LEFT,3),
+            STRING_CONCAT = new BinaryOperatorSymbol("..",3),
             
-            AND = new BinaryOperatorSymbol("&&",Order.LEFT,2),
+            AND = new BinaryOperatorSymbol("&&",2),
             
-            OR = new BinaryOperatorSymbol("||",Order.LEFT,1),
+            OR = new BinaryOperatorSymbol("||",1),
             
-            TERNARY_CONDITION = new TernaryOperatorSymbol("?",Order.RIGHT,0);
+            TERNARY_CONDITION = new TernaryOperatorSymbol("?",0);
     
     
     private static final HashMap<String, OperatorSymbol[]> HASH;
@@ -126,7 +120,7 @@ public abstract class OperatorSymbol extends Code
                     array = new OperatorSymbol[2];
                     HASH.put(cp.symbol,array);
                 }
-                array[cp.canBeUnary() ? 1 : 0] = cp;
+                array[cp.isUnary()? 1 : 0] = cp;
             }
             catch(IllegalAccessException | IllegalArgumentException ex)
             {
@@ -149,78 +143,67 @@ public abstract class OperatorSymbol extends Code
     
     
     private enum Order { LEFT, RIGHT, BOTH }
-    private enum Type { TERNARY, BINARY, UNARY, ARGUMENT; }
+    private enum Type { TERNARY, BINARY, UNARY, CALL, NEW; }
     
     private static final class UnaryOperatorSymbol extends OperatorSymbol
     {
-        private final Order order;
+        private final boolean both;
         
-        public UnaryOperatorSymbol(String symbol, Order order, int priority)
+        public UnaryOperatorSymbol(String symbol, int priority, boolean canBeBothOrder)
         {
             super(symbol, Type.UNARY, priority);
-            this.order = order;
+            this.both = canBeBothOrder;
         }
+        public UnaryOperatorSymbol(String symbol, int priority) { this(symbol,priority,false); }
         
         @Override
-        public final boolean canBeUnary() { return true; }
+        public final boolean isUnary() { return true; }
         
         @Override
-        public boolean hasUnaryLeftOrder() { return order == Order.LEFT || order == Order.BOTH; }
-        @Override
-        public boolean hasUnaryRightOrder() { return order == Order.RIGHT || order == Order.BOTH; }
+        public final boolean canBeBothUnaryOrder() { return both; }
     }
     
     private static final class BinaryOperatorSymbol extends OperatorSymbol
     {
-        private final int priority;
-        private final Order order;
-        
-        public BinaryOperatorSymbol(String symbol, Order order, int priority)
+        public BinaryOperatorSymbol(String symbol, int priority)
         {
             super(symbol, Type.BINARY, priority);
-            this.priority = priority;
-            this.order = order;
         }
         
         @Override
-        public final boolean canBeBinary() { return true; }
-        
-        @Override
-        public boolean hasBinaryLeftOrder() { return order == Order.LEFT || order == Order.BOTH; }
-        @Override
-        public boolean hasBinaryRightOrder() { return order == Order.RIGHT || order == Order.BOTH; }
+        public final boolean isBinary() { return true; }
     }
     
     private static final class TernaryOperatorSymbol extends OperatorSymbol
     {
-        private final Order order;
-        
-        public TernaryOperatorSymbol(String symbol, Order order, int priority)
+        public TernaryOperatorSymbol(String symbol, int priority)
         {
             super(symbol, Type.TERNARY, priority);
-            this.order = order;
         }
         
         @Override
-        public final boolean canBeTernary() { return true; }
-        
-        @Override
-        public boolean hasTernaryLeftOrder() { return order == Order.LEFT || order == Order.BOTH; }
-        @Override
-        public boolean hasTernaryRightOrder() { return order == Order.RIGHT || order == Order.BOTH; }
+        public final boolean isTernary() { return true; }
     }
     
-    private static class ArgumentsOperatorSymbol extends OperatorSymbol
+    private static class CallOperatorSymbol extends OperatorSymbol
     {
-        private final int priority;
-        
-        public ArgumentsOperatorSymbol(String symbol, int priority)
+        public CallOperatorSymbol(String symbol, int priority)
         {
-            super(symbol, Type.ARGUMENT, priority);
-            this.priority = priority;
+            super(symbol, Type.CALL, priority);
         }
         
         @Override
-        public final boolean canBeArgument() { return true; }
+        public final boolean isCall() { return true; }
+    }
+    
+    private static class NewOperatorSymbol extends OperatorSymbol
+    {
+        public NewOperatorSymbol(String symbol, int priority)
+        {
+            super(symbol, Type.NEW, priority);
+        }
+        
+        @Override
+        public final boolean isNew() { return true; }
     }
 }

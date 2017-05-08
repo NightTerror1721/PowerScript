@@ -170,6 +170,11 @@ public final class Tuple
         return code == OperatorSymbol.INCREMENT || code == OperatorSymbol.DECREMENT;
     }
     
+    private ParsedCode packNewOperator(Counter it)
+    {
+        
+    }
+    
     private ParsedCode packPreUnary(Counter it) throws CompilerError
     {
         Code part = code[it.value];
@@ -179,8 +184,12 @@ public final class Tuple
             if(it.end())
                 throw CompilerError.unexpectedEndOfInstruction();
             OperatorSymbol prefix = (OperatorSymbol) part;
-            if(!prefix.canBeUnary() || !prefix.hasUnaryLeftOrder())
-                throw new CompilerError("Operator " + prefix + " cannot be an unary prefix operator");
+            if(!prefix.isUnary())
+            {
+                if(!prefix.isNew())
+                    throw new CompilerError("Operator " + prefix + " cannot be an unary prefix operator");
+                return packNewOperator(it);
+            }
             part = packPreUnary(it);
             if(!part.isValidCodeObject())
                 throw CompilerError.unexpectedCode(part);
@@ -200,10 +209,10 @@ public final class Tuple
         if(part.is(CodeType.OPERATOR_SYMBOL))
         {
             OperatorSymbol sufix = (OperatorSymbol) part;
-            if(!sufix.canBeUnary())
+            if(!sufix.isUnary())
                 return pre;
             it.increase();
-            if(!sufix.hasUnaryRightOrder())
+            if(!sufix.canBeBothUnaryOrder())
                 throw new CompilerError("Operator " + sufix + " cannot be an unary sufix operator");
             if(!pre.isValidCodeObject())
                 throw CompilerError.unexpectedCode(pre);

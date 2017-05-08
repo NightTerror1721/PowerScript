@@ -12,11 +12,11 @@ import nt.ps.compiler.exception.CompilerError;
  *
  * @author Asus
  */
-public class Word extends CodeObject
+public class Identifier extends CodeObject
 {
     private final String word;
     
-    private Word(String word)
+    private Identifier(String word)
     {
         if(word == null)
             throw new NullPointerException();
@@ -31,12 +31,12 @@ public class Word extends CodeObject
     @Override
     public final boolean equals(Object o)
     {
-        return o instanceof Word &&
-                word.equals(((Word)o).word);
+        return o instanceof Identifier &&
+                word.equals(((Identifier)o).word);
     }
     
     @Override
-    public CodeType getCodeType() { return CodeType.WORD; }
+    public CodeType getCodeType() { return CodeType.IDENTIFIER; }
     
     private static final Pattern ID_PATTERN = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
     public static final boolean isValidIdentifier(String identifier)
@@ -49,20 +49,20 @@ public class Word extends CodeObject
             throw CompilerError.invalidIdentifier(identifier);
     }
     
-    public static final Code create(String word)
+    public static final Code create(String word, boolean canBeUnaryOperator)
     {
         if(CommandWord.isCommand(word))
             return CommandWord.getCommandWord(word);
         if(OperatorSymbol.isOperator(word))
-            return OperatorSymbol.getOperator(word);
+            return OperatorSymbol.getOperator(word, canBeUnaryOperator);
         switch(word)
         {
-            default: return new Word(word);
+            default: return new Identifier(word);
             case "self": return new SelfWord();
         }
     }
     
-    public static final class SelfWord extends Word
+    public static final class SelfWord extends Identifier
     {
         private SelfWord() { super("self"); }
         @Override
