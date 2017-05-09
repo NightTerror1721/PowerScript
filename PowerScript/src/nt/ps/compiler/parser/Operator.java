@@ -6,6 +6,7 @@
 package nt.ps.compiler.parser;
 
 import java.util.Objects;
+import nt.ps.compiler.exception.CompilerError;
 
 /**
  *
@@ -14,37 +15,90 @@ import java.util.Objects;
 public final class Operator extends CodeObject
 {
     private final OperatorSymbol symbol;
-    private final CodeObject[] operands;
+    private final ParsedCode[] operands;
     
-    public Operator(OperatorSymbol symbol, CodeObject op0, CodeObject op1, CodeObject op2)
+    public Operator(OperatorSymbol symbol, ParsedCode op0, ParsedCode op1, ParsedCode op2) throws CompilerError
     {
         if(symbol == null)
             throw new NullPointerException();
         this.symbol = symbol;
-        operands = new CodeObject[]{ Objects.requireNonNull(op0), Objects.requireNonNull(op1), Objects.requireNonNull(op2) };
+        operands = new ParsedCode[]{ check(op0), check(op1), check(op2) };
     }
     
-    public Operator(OperatorSymbol symbol, CodeObject op0, CodeObject op1)
+    public Operator(OperatorSymbol symbol, ParsedCode op0, ParsedCode op1) throws CompilerError
     {
         if(symbol == null)
             throw new NullPointerException();
         this.symbol = symbol;
-        operands = new CodeObject[]{ Objects.requireNonNull(op0), Objects.requireNonNull(op1) };
+        operands = new ParsedCode[]{ check(op0), check(op1) };
     }
     
-    public Operator(OperatorSymbol symbol, CodeObject op0)
+    public Operator(OperatorSymbol symbol, ParsedCode op0) throws CompilerError
     {
         if(symbol == null)
             throw new NullPointerException();
         this.symbol = symbol;
-        operands = new CodeObject[]{ Objects.requireNonNull(op0) };
+        operands = new ParsedCode[]{ check(op0) };
+    }
+    
+    private Operator(OperatorSymbol symbol, ParsedCode[] ops)
+    {
+        if(symbol == null)
+            throw new NullPointerException();
+        this.symbol = symbol;
+        if(ops == null)
+            throw new NullPointerException();
+        operands = ops;
+    }
+    
+    public static final Operator newOperator(ParsedCode identifier, Block parameters)
+    {
+        if(identifier == null)
+            throw new NullPointerException();
+        if(parameters == null)
+            throw new NullPointerException();
+        if(!parameters.isArgumentsList())
+            throw new IllegalStateException();
+        ParsedCode[] ops = new ParsedCode[parameters.getCodeCount() + 1];
+        ops[0] = identifier;
+        parameters.putInArray(ops,1);
+        return new Operator(OperatorSymbol.NEW, ops);
+    }
+    
+    public static final Operator callOperator(ParsedCode preOperand, Block parameters)
+    {
+        if(preOperand == null)
+            throw new NullPointerException();
+        if(parameters == null)
+            throw new NullPointerException();
+        if(!parameters.isArgumentsList())
+            throw new IllegalStateException();
+        ParsedCode[] ops = new ParsedCode[parameters.getCodeCount() + 1];
+        ops[0] = preOperand;
+        parameters.putInArray(ops,1);
+        return new Operator(OperatorSymbol.CALL, ops);
+    }
+    
+    public static final Operator invokeOperator(Identifier identifier, ParsedCode preOperand, Block parameters)
+    {
+        if(preOperand == null)
+            throw new NullPointerException();
+        if(parameters == null)
+            throw new NullPointerException();
+        if(!parameters.isArgumentsList())
+            throw new IllegalStateException();
+        ParsedCode[] ops = new ParsedCode[parameters.getCodeCount() + 2];
+        ops[1] = identifier;
+        ops[1] = preOperand;
+        parameters.putInArray(ops,2);
+        return new Operator(OperatorSymbol.INVOKE, ops);
     }
     
     public final OperatorSymbol getSymbol() { return symbol; }
     
     public final int getOperandCount() { return operands.length; }
     
-    public final CodeObject getOperand(int index) { return operands[index]; }
+    public final ParsedCode getOperand(int index) { return operands[index]; }
     public final void setOperand(int index, CodeObject operand)
     {
         if(operand == null)
@@ -58,7 +112,12 @@ public final class Operator extends CodeObject
     @Override
     public final String toString() { return symbol.toString(); }
     
-    /*public boolean isUnaryOperator() { return operands.length == 1; }
-    public boolean isBinaryOperator() { return operands.length == 2; }
-    public boolean isTernaryOperator() { return operands.length == 3; }*/
+    private static ParsedCode check(ParsedCode op) throws CompilerError
+    {
+        if(op == null)
+            throw new NullPointerException();
+        if(!op.isValidCodeObject())
+            throw CompilerError.unexpectedCode(op);
+        return op;
+    }
 }

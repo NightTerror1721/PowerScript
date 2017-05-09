@@ -40,6 +40,7 @@ public abstract class OperatorSymbol extends Code
     public boolean isBinary() { return false; }
     public boolean isTernary() { return false; }
     public boolean isCall() { return false; }
+    public boolean isInvoke() { return false; }
     public boolean isNew() { return false; }
     
     public boolean canBeBothUnaryOrder() { return false; }
@@ -57,6 +58,7 @@ public abstract class OperatorSymbol extends Code
             PROPERTY_ACCESS = new BinaryOperatorSymbol(".",14),
             ACCESS = new BinaryOperatorSymbol("[]",14),
             NEW = new NewOperatorSymbol("new",14),
+            INVOKE = new InvokeOperatorSymbol(".()",14),
             
             CALL = new CallOperatorSymbol("()",13),
             
@@ -143,7 +145,7 @@ public abstract class OperatorSymbol extends Code
     
     
     private enum Order { LEFT, RIGHT, BOTH }
-    private enum Type { TERNARY, BINARY, UNARY, CALL, NEW; }
+    private enum Type { TERNARY, BINARY, UNARY, CALL, INVOKE, NEW; }
     
     private static final class UnaryOperatorSymbol extends OperatorSymbol
     {
@@ -183,6 +185,17 @@ public abstract class OperatorSymbol extends Code
         
         @Override
         public final boolean isTernary() { return true; }
+    }
+    
+    private static class InvokeOperatorSymbol extends OperatorSymbol
+    {
+        public InvokeOperatorSymbol(String symbol, int priority)
+        {
+            super(symbol, Type.INVOKE, priority);
+        }
+        
+        @Override
+        public final boolean isInvoke() { return true; }
     }
     
     private static class CallOperatorSymbol extends OperatorSymbol

@@ -7,6 +7,7 @@ package nt.ps.compiler.parser;
 
 import java.util.Arrays;
 import java.util.List;
+import nt.ps.compiler.exception.CompilerError;
 
 /**
  *
@@ -17,6 +18,8 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
 {
     public abstract int getCodeCount();
     public abstract C getCode(int index);
+    public abstract ParsedCode[] toArray();
+    public abstract ParsedCode[] putInArray(ParsedCode[] array, int offset);
     
     public boolean isScope() { return false; }
     public boolean isParenthesis() { return false; }
@@ -32,17 +35,20 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
     public final boolean isValidCodeObject() { return isParenthesis(); }
     
     
-    public static final Block<ParsedCode> parenthesis(Tuple tuple) { return parenthesis(tuple.pack()); }
+    public static final Block<ParsedCode> parenthesis(Tuple tuple) throws CompilerError { return parenthesis(tuple.pack()); }
     public static final Block<ParsedCode> parenthesis(ParsedCode code) { return new SingleBlock(code,false); }
     
-    public static final Block<ParsedCode> square(Tuple tuple) { return square(tuple.pack()); }
+    public static final Block<ParsedCode> square(Tuple tuple) throws CompilerError { return square(tuple.pack()); }
     public static final Block<ParsedCode> square(ParsedCode code) { return new SingleBlock(code,true); }
     
-    public final static Block<ParsedCode> arguments(Tuple tuple) { return arguments(tuple,Separator.COMMA); }
-    public final static Block<ParsedCode> arguments(Tuple tuple, Separator separator)
+    public final static Block<ParsedCode> arguments(Tuple tuple) throws CompilerError { return arguments(tuple,Separator.COMMA); }
+    public final static Block<ParsedCode> arguments(Tuple tuple, Separator separator) throws CompilerError
     {
         Tuple[] tuples = tuple.splitByToken(separator);
-        return arguments(Arrays.stream(tuples).map(t -> t.pack()).toArray(size -> new ParsedCode[size]));
+        ParsedCode[] codes = new ParsedCode[tuples.length];
+        for(int i=0;i<codes.length;i++)
+            codes[i] = tuples[i].pack();
+        return arguments(codes);
     }
     public final static Block<ParsedCode> arguments(ParsedCode... codes) { return new MultipleBlock(codes); }
     
@@ -64,6 +70,21 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
 
         @Override
         public final C getCode(int index) { return codes[index]; }
+        
+        @Override
+        public final ParsedCode[] toArray()
+        {
+            ParsedCode[] array = new ParsedCode[codes.length];
+            System.arraycopy(codes,0,array,0,array.length);
+            return array;
+        }
+        
+        @Override
+        public final ParsedCode[] putInArray(ParsedCode[] array, int offset)
+        {
+            System.arraycopy(array,offset,codes,0,codes.length);
+            return array;
+        }
 
         @Override
         public boolean isScope() { return false; }
@@ -105,6 +126,16 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
 
         @Override
         public final ParsedCode getCode(int index) { return code; }
+        
+        @Override
+        public final ParsedCode[] toArray() { return new ParsedCode[]{ code }; }
+        
+        @Override
+        public final ParsedCode[] putInArray(ParsedCode[] array, int offset)
+        {
+            array[offset] = code;
+            return array;
+        }
         
         @Override
         public final ParsedCode getFirstCode() { return code; }

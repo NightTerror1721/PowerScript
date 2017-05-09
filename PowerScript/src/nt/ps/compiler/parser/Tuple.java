@@ -170,9 +170,32 @@ public final class Tuple
         return code == OperatorSymbol.INCREMENT || code == OperatorSymbol.DECREMENT;
     }
     
-    private ParsedCode packNewOperator(Counter it)
+    private ParsedCode packNewOperator(Counter it) throws CompilerError
     {
-        
+        Code ident = code[it.value];
+        if(!ident.isValidCodeObject())
+            throw new CompilerError("Expected a valid identifier in new operator");
+        it.increase();
+        Code cpars = code[it.value];
+        if(!cpars.is(CodeType.BLOCK))
+            throw new CompilerError("Expected a valid list of arguments in new operator");
+        Block pars = (Block) cpars;
+        if(!pars.isArgumentsList())
+            throw new CompilerError("Expected a valid list of arguments in new operator");
+        it.increase();
+        return Operator.newOperator(pars, pars);
+    }
+    
+    private ParsedCode packCallOperator(Counter it, ParsedCode idOperand) throws CompilerError
+    {
+        Code cpars = code[it.value];
+        if(!cpars.is(CodeType.BLOCK))
+            throw new CompilerError("Expected a valid list of arguments in call operator");
+        Block pars = (Block) cpars;
+        if(!pars.isArgumentsList())
+            throw new CompilerError("Expected a valid list of arguments in call operator");
+        it.increase();
+        return Operator.callOperator(idOperand, pars);
     }
     
     private ParsedCode packPreUnary(Counter it) throws CompilerError
@@ -193,7 +216,7 @@ public final class Tuple
             part = packPreUnary(it);
             if(!part.isValidCodeObject())
                 throw CompilerError.unexpectedCode(part);
-            return new Operator(prefix, (CodeObject) part);
+            return new Operator(prefix, (ParsedCode) part);
         }
         if(!part.isParsedCode())
             throw CompilerError.unexpectedCode(part);
@@ -216,7 +239,7 @@ public final class Tuple
                 throw new CompilerError("Operator " + sufix + " cannot be an unary sufix operator");
             if(!pre.isValidCodeObject())
                 throw CompilerError.unexpectedCode(pre);
-            return packPostUnary(it, new Operator(sufix, (CodeObject) pre));
+            return packPostUnary(it, new Operator(sufix, pre));
         }
         return pre;
     }
@@ -242,10 +265,19 @@ public final class Tuple
             throw new CompilerError("Expected a valid operator between operands. \"" + code[it.value] + "\"");
         OperatorSymbol operator = (OperatorSymbol) code[it.value];
         it.increase();
-        if(operator.canBeBinary())
+        if(operator.isBinary())
         {
             OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
         }
+        else if(operator.isCall())
+        {
+            
+        }
+        else if(operator.isTernary())
+        {
+            
+        }
+        else throw new CompilerError("Invalid operator type: " + operator);
         
     }
     
