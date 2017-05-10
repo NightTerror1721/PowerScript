@@ -259,26 +259,82 @@ public final class Tuple
         return null;
     }
     
+    private Tuple getSuperOperatorScope(Counter it, OperatorSymbol opBase)
+    {
+        int start = it.value;
+        for(;!it.end();it.increase())
+        {
+            if(!code[it.value].is(CodeType.OPERATOR_SYMBOL))
+                continue;
+            OperatorSymbol op = (OperatorSymbol) code[it.value];
+            if(opBase.comparePriority(op) > 0)
+            {
+                it.decrease();
+                return subTuple(start,start - it.value);
+            }
+        }
+        return subTuple(start);
+    }
+    
     private ParsedCode packOperation(Counter it, ParsedCode operand1) throws CompilerError
     {
         if(!code[it.value].is(CodeType.OPERATOR_SYMBOL))
             throw new CompilerError("Expected a valid operator between operands. \"" + code[it.value] + "\"");
         OperatorSymbol operator = (OperatorSymbol) code[it.value];
         it.increase();
-        if(operator.isBinary())
+        Operator operation;
+        
+        if(operator.isInvoke())
         {
-            OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
+            Code identifier = code[it.value];
+            if(!identifier.is(CodeType.IDENTIFIER))
+                throw new CompilerError("Expected a valid identifier in invoke operator: " + identifier);
+            it.increase();
+            Code cpars = code[it.value];
+            if(!cpars.is(CodeType.BLOCK))
+                throw new CompilerError("Expected a valid list of arguments in call operator");
+            Block pars = (Block) cpars;
+            if(!pars.isArgumentsList())
+                throw new CompilerError("Expected a valid list of arguments in call operator");
+            it.increase();
+            operation = Operator.invokeOperator((Identifier) identifier, operand1, pars);
         }
         else if(operator.isCall())
         {
-            
+            Code cpars = code[it.value];
+            if(!cpars.is(CodeType.BLOCK))
+                throw new CompilerError("Expected a valid list of arguments in call operator");
+            Block pars = (Block) cpars;
+            if(!pars.isArgumentsList())
+                throw new CompilerError("Expected a valid list of arguments in call operator");
+            it.increase();
+            operation = Operator.callOperator(operand1, pars);
         }
-        else if(operator.isTernary())
+        else
         {
+            OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
+            if(nextOperator != null && operator.comparePriority(nextOperator) > 0 &&
+                    (!operator.isTernary() || (operator.isTernary() && !nextOperator.isTernary())))
+                nextOperator = null;
             
+            if(operator.isTernary())
+            {
+                if(nextOperator != null && nextOperator.isTernary())
+                {
+                    
+                }
+            }
+            else if(operator.isBinary())
+            {
+
+            }
+            else throw new CompilerError("Invalid operator type: " + operator);
         }
-        else throw new CompilerError("Invalid operator type: " + operator);
         
+        
+        if(it.end())
+            return operation;
+        return packOperation(it, operation);
     }
     
     public final ParsedCode pack() throws CompilerError
