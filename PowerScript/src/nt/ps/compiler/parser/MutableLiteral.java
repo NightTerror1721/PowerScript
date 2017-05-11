@@ -7,6 +7,7 @@ package nt.ps.compiler.parser;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import nt.ps.compiler.exception.CompilerError;
 
 /**
  *
@@ -17,23 +18,23 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
     private final Item[] items;
     private final int type;
     
-    private MutableLiteral(Tuple tuple, int type)
+    private MutableLiteral(Tuple tuple, int type) throws CompilerError
     {
         Tuple[] tuples = tuple.splitByToken(Separator.COMMA);
         switch (type)
         {
             case TYPE_ARRAY:
             case TYPE_TUPLE:
-                items = Arrays.stream(tuples).map(t -> new Item(null,t)).toArray(size -> new Item[size]);
+                items = Tuple.mapArray(tuples,t -> new Item(null,t), new Item[tuples.length]);
                 break;
             case TYPE_MAP:
             case TYPE_OBJECT:
-                items = Arrays.stream(tuples).map(t -> {
+                items = Tuple.mapArray(tuples, t -> {
                     Tuple[] parts = t.splitByToken(Separator.TWO_POINTS);
                     if(parts.length != 2)
                         throw new IllegalArgumentException();
                     return new Item(parts[0], parts[1]);
-                }).toArray(size -> new Item[size]);
+                }, new Item[tuples.length]);
                 break;
             default:
                 throw new IllegalStateException();
@@ -73,10 +74,10 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
     }
     
     
-    public static final MutableLiteral array(Tuple tuple) { return new MutableLiteral(tuple,TYPE_ARRAY); }
-    public static final MutableLiteral tuple(Tuple tuple) { return new MutableLiteral(tuple,TYPE_TUPLE); }
-    public static final MutableLiteral map(Tuple tuple) { return new MutableLiteral(tuple,TYPE_MAP); }
-    public static final MutableLiteral object(Tuple tuple) { return new MutableLiteral(tuple,TYPE_OBJECT); }
+    public static final MutableLiteral array(Tuple tuple)   throws CompilerError { return new MutableLiteral(tuple,TYPE_ARRAY); }
+    public static final MutableLiteral tuple(Tuple tuple)   throws CompilerError { return new MutableLiteral(tuple,TYPE_TUPLE); }
+    public static final MutableLiteral map(Tuple tuple)     throws CompilerError { return new MutableLiteral(tuple,TYPE_MAP); }
+    public static final MutableLiteral object(Tuple tuple)  throws CompilerError { return new MutableLiteral(tuple,TYPE_OBJECT); }
     
     
     public final class Item
@@ -84,7 +85,7 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
         private final ParsedCode key;
         private final ParsedCode value;
         
-        private Item(Tuple key, Tuple value)
+        private Item(Tuple key, Tuple value) throws CompilerError
         {
             if(value == null)
                 throw new NullPointerException();

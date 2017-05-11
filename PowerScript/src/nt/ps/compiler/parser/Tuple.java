@@ -259,7 +259,7 @@ public final class Tuple
         return null;
     }
     
-    private Tuple getSuperOperatorScope(Counter it, OperatorSymbol opBase)
+    private ParsedCode getSuperOperatorScope(Counter it, OperatorSymbol opBase) throws CompilerError
     {
         int start = it.value;
         for(;!it.end();it.increase())
@@ -270,10 +270,10 @@ public final class Tuple
             if(opBase.comparePriority(op) > 0)
             {
                 it.decrease();
-                return subTuple(start,start - it.value);
+                return subTuple(start,start - it.value).pack();
             }
         }
-        return subTuple(start);
+        return subTuple(start).pack();
     }
     
     private ParsedCode packOperation(Counter it, ParsedCode operand1) throws CompilerError
@@ -310,26 +310,43 @@ public final class Tuple
             it.increase();
             operation = Operator.callOperator(operand1, pars);
         }
-        else
+        else if(operator.isTernary())
         {
-            OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
-            if(nextOperator != null && operator.comparePriority(nextOperator) > 0 &&
-                    (!operator.isTernary() || (operator.isTernary() && !nextOperator.isTernary())))
-                nextOperator = null;
-            
-            if(operator.isTernary())
+            int start = it.value;
+            int terOp = 0;
+            for(;!it.end();it.increase())
             {
-                if(nextOperator != null && nextOperator.isTernary())
+                Code c = code[it.value];
+                if(c == OperatorSymbol.TERNARY_CONDITION)
+                    terOp++;
+                else if(c == Separator.TWO_POINTS)
                 {
-                    
+                    if(terOp == 0)
+                        break;
+                    terOp--;
                 }
             }
-            else if(operator.isBinary())
-            {
-
-            }
-            else throw new CompilerError("Invalid operator type: " + operator);
+            if(it.end())
+                throw new CompilerError("Expected a : in ternary operator");
+            ParsedCode response1 = subTuple(start,it.value - 1).pack();
+            it.increase();
+            ParsedCode response2 = subTuple(it.value).pack();
+            it.value = it.limit;
+            return new Operator(OperatorSymbol.TERNARY_CONDITION, operand1, response1, response2);
         }
+        else if(operator.isBinary())
+        {
+            OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
+            if(nextOperator != null && operator.comparePriority(nextOperator) > 0)
+                nextOperator = null;
+            
+            ParsedCode operand2;
+            if(nextOperator != null)
+                operand2 = getSuperOperatorScope(it, operator);
+            else operand2 = packPart(it);
+            operation = new Operator(operator, operand1, operand2);
+        }
+        else throw new CompilerError("Invalid operator type: " + operator);
         
         
         if(it.end())
@@ -367,5 +384,24 @@ public final class Tuple
         public final int decrease() { return decrease(1); }
         public final int value() { return value; }
         public final boolean end() { return value < limit; }
+    }
+    
+    @FunctionalInterface
+    interface Mapper<I, O> { O map(I input) throws CompilerError; }
+    
+    static final <IT, OT> OT[] mapArray(IT[] input, Mapper<IT, OT> mapper, OT[] output) throws CompilerError
+    {
+        int end = input.length > output.length ? output.length : input.length;
+        for(int i=0;i<end;i++)
+            output[i] = mapper.map(input[i]);
+        return output;
+    }
+    
+    static final <IT, OT> OT[] mapArray(int offset, IT[] input, Mapper<IT, OT> mapper, OT[] output) throws CompilerError
+    {
+        int end = input.length > output.length ? output.length : input.length;
+        for(int i=offset;i<end;i++)
+            output[i] = mapper.map(input[i]);
+        return output;
     }
 }

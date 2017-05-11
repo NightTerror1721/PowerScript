@@ -5,7 +5,6 @@
  */
 package nt.ps.compiler.parser;
 
-import java.util.Arrays;
 import nt.ps.compiler.exception.CompilerError;
 
 /**
@@ -66,10 +65,7 @@ public final class Assignation extends ParsedCode
                 ap = new AssignationPart(locations[i].pack(), assignations[i].pack());
             else
             {
-                ParsedCode[] passignations = Arrays.stream(assignations)
-                        .skip(i)
-                        .map(t -> t.pack())
-                        .toArray(size -> new ParsedCode[size]);
+                ParsedCode[] passignations = Tuple.mapArray(i, assignations, t -> t.pack(), new ParsedCode[assignations.length]);
                 ap = new AssignationPart(locations[i].pack(), passignations);
             }
             aparts[i] = ap;
