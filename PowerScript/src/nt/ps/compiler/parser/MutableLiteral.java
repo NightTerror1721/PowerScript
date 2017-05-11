@@ -21,7 +21,7 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
     private MutableLiteral(Tuple tuple, int type) throws CompilerError
     {
         Tuple[] tuples = tuple.splitByToken(Separator.COMMA);
-        switch (type)
+        switch(type)
         {
             case TYPE_ARRAY:
             case TYPE_TUPLE:

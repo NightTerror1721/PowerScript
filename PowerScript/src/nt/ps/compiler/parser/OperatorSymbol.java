@@ -42,6 +42,7 @@ public abstract class OperatorSymbol extends Code
     public boolean isCall() { return false; }
     public boolean isInvoke() { return false; }
     public boolean isNew() { return false; }
+    public boolean isFunction() { return false; }
     
     public boolean canBeBothUnaryOrder() { return false; }
     
@@ -59,8 +60,9 @@ public abstract class OperatorSymbol extends Code
             ACCESS = new BinaryOperatorSymbol("[]",14),
             NEW = new NewOperatorSymbol("new",14),
             INVOKE = new InvokeOperatorSymbol(".()",14),
+            CALL = new CallOperatorSymbol("()",14),
             
-            CALL = new CallOperatorSymbol("()",13),
+            FUNCTION = new FunctionOperatorSymbol("function",13),
             
             NEGATE = new UnaryOperatorSymbol("!",12),
             LOGIC_NOT = new UnaryOperatorSymbol("~",12),
@@ -145,7 +147,7 @@ public abstract class OperatorSymbol extends Code
     
     
     private enum Order { LEFT, RIGHT, BOTH }
-    private enum Type { TERNARY, BINARY, UNARY, CALL, INVOKE, NEW; }
+    private enum Type { TERNARY, BINARY, UNARY, CALL, INVOKE, NEW, FUNCTION; }
     
     private static final class UnaryOperatorSymbol extends OperatorSymbol
     {
@@ -218,5 +220,16 @@ public abstract class OperatorSymbol extends Code
         
         @Override
         public final boolean isNew() { return true; }
+    }
+    
+    private static class FunctionOperatorSymbol extends OperatorSymbol
+    {
+        public FunctionOperatorSymbol(String symbol, int priority)
+        {
+            super(symbol, Type.FUNCTION, priority);
+        }
+        
+        @Override
+        public final boolean isFunction() { return true; }
     }
 }

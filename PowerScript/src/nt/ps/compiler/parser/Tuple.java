@@ -165,11 +165,6 @@ public final class Tuple
     @Override
     public final String toString() { return code.toString(); }
     
-    private static boolean isPostIncDec(Code code)
-    {
-        return code == OperatorSymbol.INCREMENT || code == OperatorSymbol.DECREMENT;
-    }
-    
     private ParsedCode packNewOperator(Counter it) throws CompilerError
     {
         Code ident = code[it.value];
@@ -186,16 +181,13 @@ public final class Tuple
         return Operator.newOperator(pars, pars);
     }
     
-    private ParsedCode packCallOperator(Counter it, ParsedCode idOperand) throws CompilerError
+    private ParsedCode packFunctionOperator(Counter it)
     {
-        Code cpars = code[it.value];
-        if(!cpars.is(CodeType.BLOCK))
-            throw new CompilerError("Expected a valid list of arguments in call operator");
-        Block pars = (Block) cpars;
-        if(!pars.isArgumentsList())
-            throw new CompilerError("Expected a valid list of arguments in call operator");
-        it.increase();
-        return Operator.callOperator(idOperand, pars);
+        int start = it.value;
+        for(;!it.end();it.increase())
+        {
+            
+        }
     }
     
     private ParsedCode packPreUnary(Counter it) throws CompilerError
@@ -209,9 +201,11 @@ public final class Tuple
             OperatorSymbol prefix = (OperatorSymbol) part;
             if(!prefix.isUnary())
             {
-                if(!prefix.isNew())
-                    throw new CompilerError("Operator " + prefix + " cannot be an unary prefix operator");
-                return packNewOperator(it);
+                if(prefix.isNew())
+                    return packNewOperator(it);
+                if(prefix.isFunction())
+                    return packFunctionOperator(it);
+                throw new CompilerError("Operator " + prefix + " cannot be a non unary prefix operator");
             }
             part = packPreUnary(it);
             if(!part.isValidCodeObject())
@@ -344,6 +338,9 @@ public final class Tuple
             if(nextOperator != null)
                 operand2 = getSuperOperatorScope(it, operator);
             else operand2 = packPart(it);
+            if(operator == OperatorSymbol.PROPERTY_ACCESS &&
+                    !operand2.is(CodeType.IDENTIFIER))
+                throw new CompilerError("Expected a valid identifier in PropertyAccess operator: " + operand2);
             operation = new Operator(operator, operand1, operand2);
         }
         else throw new CompilerError("Invalid operator type: " + operator);
