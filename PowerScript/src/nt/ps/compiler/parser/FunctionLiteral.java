@@ -5,8 +5,6 @@
  */
 package nt.ps.compiler.parser;
 
-import java.util.Arrays;
-import java.util.List;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Block.Scope;
 
@@ -23,7 +21,7 @@ public class FunctionLiteral extends ParsedCode
     private final String[] pars;
     private final Scope scope;
     
-    private FunctionLiteral(ParsedCode assignation, boolean varargs, String[] parNames, Scope scope) throws CompilerError
+    private FunctionLiteral(ParsedCode assignation, Block<?> pars, Scope scope) throws CompilerError
     {
         if(assignation == null)
         {
@@ -61,18 +59,43 @@ public class FunctionLiteral extends ParsedCode
             }
             else throw new CompilerError("Invalid statement in function name: " + assignation);
         }
-        if(varargs)
+        if(pars == null)
+            throw new NullPointerException();
+        if(!pars.isArgumentsList())
+            throw new CompilerError("Expected a valid arguments list in function definition");
+        
+        boolean isVarargs = false;
+        int count = -1;
+        String[] spars = new String[pars.getCodeCount()];
+        for(ParsedCode c : pars)
         {
-            if(parNames.length < 1)
-                throw new IllegalStateException();
-            this.varargs = parNames[parNames.length-1];
-            pars = Arrays.copyOf(parNames,parNames.length-1);
+            count++;
+            switch(c.getCodeType())
+            {
+                case IDENTIFIER: {
+                    spars[count] = c.toString();
+                } break;
+                case VARARGS_IDENTIFIER: {
+                    if(count != pars.getCodeCount() - 1)
+                        throw new CompilerError("Varargs Identifier is valid only in last position of arguments list");
+                    isVarargs = true;
+                    spars[count] = ((VarargsIdentifier)c).getIdentifier().toString();
+                } break;
+                default: throw new CompilerError("Unexpected code. Expected only a valid identifier or varargs identifier");
+            }
+        }
+        if(isVarargs)
+        {
+            varargs = spars[spars.length - 1];
+            this.pars = new String[spars.length - 1];
+            System.arraycopy(spars,0,this.pars,0,this.pars.length);
         }
         else
         {
-            this.varargs = null;
-            pars = parNames == null ? new String[]{} : parNames;
+            varargs = null;
+            this.pars = spars;
         }
+
         if(scope == null)
             throw new NullPointerException();
         this.scope = scope;
@@ -104,23 +127,15 @@ public class FunctionLiteral extends ParsedCode
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     
-    public static final FunctionLiteral closure(String[] pars, boolean varargs, Scope scope) throws CompilerError
+    public static final FunctionLiteral closure(Block<?> pars, Scope scope) throws CompilerError
     {
-        return new FunctionLiteral(null,varargs,pars,scope);
-    }
-    public static final FunctionLiteral closure(List<String> pars, boolean varargs, Scope scope) throws CompilerError
-    {
-        return closure(pars.toArray(new String[pars.size()]),varargs,scope);
+        return new FunctionLiteral(null,pars,scope);
     }
     
-    public static final FunctionLiteral function(ParsedCode assignation, String[] pars, boolean varargs, Scope scope) throws CompilerError
+    public static final FunctionLiteral function(ParsedCode assignation, Block<?> pars, Scope scope) throws CompilerError
     {
         if(assignation == null)
             throw new IllegalStateException();
-        return new FunctionLiteral(assignation,varargs,pars,scope);
-    }
-    public static final FunctionLiteral function(ParsedCode assignation, List<String> pars, boolean varargs, Scope scope) throws CompilerError
-    {
-        return function(assignation,pars.toArray(new String[pars.size()]),varargs,scope);
+        return new FunctionLiteral(assignation,pars,scope);
     }
 }

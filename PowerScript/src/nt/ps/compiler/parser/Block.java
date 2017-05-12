@@ -6,6 +6,7 @@
 package nt.ps.compiler.parser;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import nt.ps.compiler.exception.CompilerError;
 
@@ -14,12 +15,15 @@ import nt.ps.compiler.exception.CompilerError;
  * @author Asus
  * @param <C>
  */
-public abstract class Block<C extends ParsedCode> extends ParsedCode
+public abstract class Block<C extends ParsedCode>
+        extends ParsedCode
+        implements Iterable<C>
 {
     public abstract int getCodeCount();
     public abstract C getCode(int index);
     public abstract ParsedCode[] toArray();
     public abstract ParsedCode[] putInArray(ParsedCode[] array, int offset);
+    public abstract void forEach(Consumer<C> consumer) throws CompilerError;
     
     public boolean isScope() { return false; }
     public boolean isParenthesis() { return false; }
@@ -70,7 +74,7 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
 
         @Override
         public final C getCode(int index) { return codes[index]; }
-        
+           
         @Override
         public final ParsedCode[] toArray()
         {
@@ -84,6 +88,28 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
         {
             System.arraycopy(array,offset,codes,0,codes.length);
             return array;
+        }
+        
+        @Override
+        public final void forEach(Consumer<C> consumer) throws CompilerError
+        {
+            for(int i=0;i<codes.length;i++)
+                consumer.apply(codes[i], i);
+        }
+        
+        @Override
+        public final Iterator<C> iterator()
+        {
+            return new Iterator<C>()
+            {
+                private int it = 0;
+                
+                @Override
+                public final boolean hasNext() { return it < codes.length; }
+
+                @Override
+                public final C next() { return codes[it++]; }
+            };
         }
 
         @Override
@@ -138,6 +164,31 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
         }
         
         @Override
+        public final void forEach(Consumer<ParsedCode> consumer) throws CompilerError
+        {
+            consumer.apply(code, 1);
+        }
+        
+        @Override
+        public final Iterator<ParsedCode> iterator()
+        {
+            return new Iterator<ParsedCode>()
+            {
+                private int it = 0;
+                
+                @Override
+                public final boolean hasNext() { return it < 1; }
+
+                @Override
+                public final ParsedCode next()
+                {
+                    it++;
+                    return code;
+                }
+            };
+        }
+        
+        @Override
         public final ParsedCode getFirstCode() { return code; }
         
         @Override
@@ -149,4 +200,7 @@ public abstract class Block<C extends ParsedCode> extends ParsedCode
         @Override
         public final String toString() { return code.toString(); }
     }
+    
+    @FunctionalInterface
+    public interface Consumer<T> { void apply(T obj, int index) throws CompilerError ; }
 }

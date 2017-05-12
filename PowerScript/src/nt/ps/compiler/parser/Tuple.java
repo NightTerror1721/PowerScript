@@ -5,10 +5,12 @@
  */
 package nt.ps.compiler.parser;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.parser.Block.Scope;
 import nt.ps.compiler.parser.Code.CodeType;
 
 /**
@@ -163,7 +165,7 @@ public final class Tuple
     public final boolean isTuple() { return true; }
     
     @Override
-    public final String toString() { return code.toString(); }
+    public final String toString() { return Arrays.toString(code); }
     
     private ParsedCode packNewOperator(Counter it) throws CompilerError
     {
@@ -181,13 +183,39 @@ public final class Tuple
         return Operator.newOperator(pars, pars);
     }
     
-    private ParsedCode packFunctionOperator(Counter it)
+    private ParsedCode packFunctionOperator(Counter it) throws CompilerError
     {
         int start = it.value;
+        Block<?> pars = null;
         for(;!it.end();it.increase())
         {
-            
+            Code c = code[it.value];
+            if(!c.is(CodeType.BLOCK))
+                continue;
+            pars = (Block) c;
+            if(!pars.isArgumentsList())
+                continue;
+            break;
         }
+        if(it.end() || pars == null)
+            throw new CompilerError("Expected arguments list in function definition");
+        ParsedCode identifier = subTuple(start, it.value - 1).pack();
+        
+        it.increase();
+        if(it.end())
+            throw new CompilerError("Expected a function implementation after function definition");
+        Code cscope = code[it.value];
+        if(!cscope.is(CodeType.BLOCK) || !((Block)cscope).isScope())
+            throw new CompilerError("Expected a function implementation after function definition");
+        it.increase();
+        Scope scope = (Scope) cscope;
+        
+        FunctionLiteral function;
+        if(start == it.value)
+            function = FunctionLiteral.closure(pars, scope);
+        else function = FunctionLiteral.function(identifier, pars, scope);
+        
+        return function;
     }
     
     private ParsedCode packPreUnary(Counter it) throws CompilerError
