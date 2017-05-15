@@ -5,6 +5,8 @@
  */
 package nt.ps.compiler.parser;
 
+import nt.ps.compiler.exception.CompilerError;
+
 /**
  *
  * @author Asus
@@ -35,7 +37,10 @@ public final class Command extends ParsedCode
     @Override
     public final CodeType getCodeType() { return CodeType.COMMAND; }
     
-    public static final Command decode(int line, Tuple tuple)
+    @Override
+    public String toString() { return command.getName().name().toLowerCase() + " " + code; }
+    
+    public static final Command decode(int line, Tuple tuple) throws CompilerError
     {
         if(tuple == null || tuple.isEmpty())
             return null;
@@ -47,9 +52,32 @@ public final class Command extends ParsedCode
         switch(cmdWord.getName())
         {
             default: throw new IllegalStateException();
-            case VAR: {
-                
-            }
+            case VAR: return VAR(line, tuple);
+            case IF: return IF(line, tuple);
         }
+    }
+    
+    private static Command VAR(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.VAR);
+        ParsedCode code = tuple.pack();
+        if(!code.is(CodeType.ASSIGNATION))
+            throw new CompilerError("Expected a valid assignation in \"var\" command");
+        Assignation a = (Assignation) code;
+        if(!a.hasIdentifiersOnly())
+            throw new CompilerError("In \"var\" can put only identifier in left part");
+        
+        return new Command(line, CommandWord.VAR, a);
+    }
+    
+    private static Command IF(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.IF);
+        ParsedCode code = tuple.pack();
+        if(!code.isValidCodeObject())
+            throw new CompilerError("Expected a valid code object in \"if\" command");
+        return new Command(line, CommandWord.IF, code);
     }
 }

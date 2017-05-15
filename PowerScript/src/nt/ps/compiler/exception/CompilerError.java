@@ -6,6 +6,7 @@
 package nt.ps.compiler.exception;
 
 import nt.ps.compiler.parser.Code;
+import nt.ps.compiler.parser.CommandWord;
 import nt.ps.exception.PSException;
 
 /**
@@ -35,5 +36,13 @@ public class CompilerError extends PSException
     public static final CompilerError unexpectedCode(Code code)
     {
         return new CompilerError("Unexpected \"" + code + "\"");
+    }
+    public static final CompilerError expectedAny(CommandWord name)
+    {
+        return new CompilerError("Expected any code after \"" + name.getName().name().toLowerCase() + "\" command");
+    }
+    public static final CompilerError varAlreadyExists(String name)
+    {
+        return new CompilerError("Variable \"" + name + "\" has already exists");
     }
 }

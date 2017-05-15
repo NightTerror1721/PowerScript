@@ -30,6 +30,14 @@ public final class Assignation extends ParsedCode
     public final int getPartCount() { return parts.length; }
     public final AssignationPart getPart(int index) { return parts[index]; }
     
+    public final boolean hasIdentifiersOnly()
+    {
+        for(int i=0;i<parts.length;i++)
+            if(!parts[i].isIdentifier())
+                return false;
+        return true;
+    }
+    
     @Override
     public String toString() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
@@ -80,7 +88,7 @@ public final class Assignation extends ParsedCode
         private final ParsedCode[] assignations;
         private final int special;
         
-        private AssignationPart(ParsedCode location, ParsedCode... assignations)
+        private AssignationPart(ParsedCode location, ParsedCode... assignations) throws CompilerError
         {
             this.location = location;
             this.assignations = assignations;
@@ -92,14 +100,18 @@ public final class Assignation extends ParsedCode
                     special = 1;
                 else if(op.getSymbol() == OperatorSymbol.PROPERTY_ACCESS)
                     special = 2;
-                else special = 0;
-            } else special = 0;
+                else throw new CompilerError("Invalid operator in left assignation part: " + location);
+            }
+            else if(location.is(CodeType.IDENTIFIER))
+                special = 0;
+            else throw new CompilerError("Invalid code in left assignation part: " + location);
         }
-        private AssignationPart(ParsedCode location) { this(location, Literal.UNDEFINED); }
+        private AssignationPart(ParsedCode location) throws CompilerError { this(location, Literal.UNDEFINED); }
         
         public final ParsedCode getLocation() { return location; }
         public final int getAssignationCount() { return assignations.length; }
         public final ParsedCode getAssignation(int index) { return assignations[index]; }
+        public final boolean isIdentifier() { return special == 0; }
         public final boolean isAccess() { return special == 1; }
         public final boolean isPropertyAccess() { return special == 2; }
     }
