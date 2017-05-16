@@ -20,7 +20,7 @@ public abstract class ParsedCode extends Code
     public final boolean isParsedCode() { return true; }
 
     @Override
-    public final int hashCode()
+    public int hashCode()
     {
         int hash = 5;
         hash = 29 * hash + Objects.hashCode(toString());

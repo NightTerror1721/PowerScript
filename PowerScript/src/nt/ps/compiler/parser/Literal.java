@@ -5,6 +5,7 @@
  */
 package nt.ps.compiler.parser;
 
+import java.util.Objects;
 import nt.ps.lang.PSValue;
 
 /**
@@ -34,6 +35,14 @@ public final class Literal extends CodeObject
     {
         return o instanceof Literal &&
                 value.equals(((Literal)o).value).toJavaBoolean();
+    }
+
+    @Override
+    public final int hashCode()
+    {
+        int hash = 7;
+        hash = 71 * hash + Objects.hashCode(this.value);
+        return hash;
     }
     
     
