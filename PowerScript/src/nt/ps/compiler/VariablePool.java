@@ -36,7 +36,7 @@ public final class VariablePool
     }
     public VariablePool(Stack stack) { this(null, stack); }
     
-    public final VariablePool createChild() { return new VariablePool(this, stack); }
+    public final VariablePool createChild(Stack stack) { return new VariablePool(this, stack); }
     
     public final Stack getStack() { return stack; }
     

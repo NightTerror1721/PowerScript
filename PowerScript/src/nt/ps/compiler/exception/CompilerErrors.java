@@ -21,6 +21,8 @@ public final class CompilerErrors
         errors.add(new Error(command,error.getMessage(),error.getCause()));
     }
     
+    public final boolean hasErrors() { return !errors.isEmpty(); }
+    
     public static final class Error
     {
         final Command command;

@@ -11,5 +11,5 @@ package nt.ps.compiler;
  */
 public abstract class BytecodeGenerator
 {
-    
+    public abstract boolean isFunction();
 }
