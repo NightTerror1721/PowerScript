@@ -18,6 +18,24 @@ public abstract class Code
 {
     public abstract CodeType getCodeType();
     public final boolean is(CodeType type) { return getCodeType() == type; }
+    public final boolean is(CodeType type0, CodeType type1)
+    {
+        CodeType c = getCodeType();
+        return c == type0 || c == type1;
+    }
+    public final boolean is(CodeType type0, CodeType type1, CodeType type2)
+    {
+        CodeType c = getCodeType();
+        return c == type0 || c == type1 || c == type2;
+    }
+    public final boolean is(CodeType... types)
+    {
+        CodeType c = getCodeType();
+        for(int i=0;i<types.length;i++)
+            if(c == types[i])
+                return true;
+        return false;
+    }
     
     public boolean isParsedCode() { return false; }
     public boolean isValidCodeObject() { return false; }

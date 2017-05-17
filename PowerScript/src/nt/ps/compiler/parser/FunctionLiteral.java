@@ -6,6 +6,7 @@
 package nt.ps.compiler.parser;
 
 import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.parser.Assignation.AssignationPart;
 import nt.ps.compiler.parser.Block.Scope;
 
 /**
@@ -19,6 +20,7 @@ public class FunctionLiteral extends ParsedCode
     private int assignationMode;
     private final String varargs;
     private final String[] pars;
+    private final Literal[] defs;
     private final Scope scope;
     
     private FunctionLiteral(ParsedCode assignation, Block<?> pars, Scope scope) throws CompilerError
@@ -66,6 +68,7 @@ public class FunctionLiteral extends ParsedCode
         
         boolean isVarargs = false;
         int count = -1;
+        Literal[] ldefs = null;
         String[] spars = new String[pars.getCodeCount()];
         for(ParsedCode c : pars)
         {
@@ -73,13 +76,36 @@ public class FunctionLiteral extends ParsedCode
             switch(c.getCodeType())
             {
                 case IDENTIFIER: {
+                    if(ldefs != null)
+                        throw new CompilerError("Invalid identifier after default parameter in function definition");
                     spars[count] = c.toString();
                 } break;
                 case VARARGS_IDENTIFIER: {
+                    if(ldefs != null)
+                        throw new CompilerError("Invalid identifier after default parameter in function definition");
                     if(count != pars.getCodeCount() - 1)
                         throw new CompilerError("Varargs Identifier is valid only in last position of arguments list");
                     isVarargs = true;
                     spars[count] = ((VarargsIdentifier)c).getIdentifier().toString();
+                } break;
+                case ASSIGNATION: {
+                    if(isVarargs)
+                        throw new CompilerError("Cannot combine varargs identifier with defualt identifiers in function definition");
+                    if(ldefs == null)
+                        ldefs = new Literal[spars.length - count];
+                    Assignation a = (Assignation) c;
+                    if(!a.hasIdentifiersOnly())
+                        throw new CompilerError("Only is valid a identifier in left part of default identifier in function definition. <identifier = literal>");
+                    if(a.getPartCount() != 1)
+                        throw new CompilerError("Only is valid a single literal in right part of default identifier in function definition. <identifier = literal>");
+                    AssignationPart ap = a.getPart(0);
+                    if(ap.getAssignationCount() != 1)
+                        throw new CompilerError("Only is valid a single literal in right part of default identifier in function definition. <identifier = literal>");
+                    ParsedCode plit = ap.getAssignation(0);
+                    if(!plit.is(CodeType.LITERAL))
+                        throw new CompilerError("Only is valid a single literal in right part of default identifier in function definition. <identifier = literal>");
+                    spars[count] = ap.getLocation().toString();
+                    ldefs[count - (spars.length - ldefs.length)] = (Literal) plit;
                 } break;
                 default: throw new CompilerError("Unexpected code. Expected only a valid identifier or varargs identifier");
             }
@@ -89,11 +115,13 @@ public class FunctionLiteral extends ParsedCode
             varargs = spars[spars.length - 1];
             this.pars = new String[spars.length - 1];
             System.arraycopy(spars,0,this.pars,0,this.pars.length);
+            this.defs = null;
         }
         else
         {
             varargs = null;
             this.pars = spars;
+            this.defs = ldefs;
         }
 
         if(scope == null)
@@ -103,6 +131,7 @@ public class FunctionLiteral extends ParsedCode
     
     public final boolean isClosure() { return name.isEmpty(); }
     public final boolean hasAssignation() { return assignationMode >= 0; }
+    public final boolean hasDefaults() { return defs != null; }
     
     public final String getName() { return name; }
     public final boolean isVarargs() { return varargs != null; }
@@ -111,6 +140,9 @@ public class FunctionLiteral extends ParsedCode
     public final String getParameterName(int index) { return pars[index]; }
     
     public final String getVarargsParameterName() { return isClosure() ? null : varargs; }
+    
+    public final int getDefaultCount() { return defs == null ? 0 : defs.length; }
+    public final Literal getDefault(int index) { return defs[index]; }
     
     public final Scope getScope() { return scope; }
     

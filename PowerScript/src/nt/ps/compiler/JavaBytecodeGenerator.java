@@ -10,7 +10,13 @@ import java.util.LinkedList;
 import nt.ps.PSGlobals;
 import nt.ps.PSScript;
 import nt.ps.lang.*;
+import org.apache.bcel.Constants;
 import org.apache.bcel.generic.ArrayType;
+import org.apache.bcel.generic.ClassGen;
+import org.apache.bcel.generic.ConstantPoolGen;
+import org.apache.bcel.generic.InstructionFactory;
+import org.apache.bcel.generic.InstructionList;
+import org.apache.bcel.generic.MethodGen;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.Type;
 
@@ -71,6 +77,7 @@ public final class JavaBytecodeGenerator extends BytecodeGenerator
     public static final String
             STR_FUNC_CALL = "call",
             STR_FUNC_SELF = "self",
+            STR_FUNC_NAME = "innerCall",
             STR_FUNC_SET_GLOBALS = "setGlobals",
             STR_GLOBALS_ATTRIBUTE = "__G";
     
@@ -80,15 +87,29 @@ public final class JavaBytecodeGenerator extends BytecodeGenerator
             ARGS_VALUE_2 = { TYPE_VALUE, TYPE_VALUE },
             ARGS_VALUE_3 = { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
             ARGS_VALUE_4 = { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
+            ARGS_VALUE_5 = { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
             ARGS_VARARGS = { TYPE_VARARGS },
-            ARGS_STRING = { TYPE_STRING },
-            ARGS_STRING_VALUE_1 = { TYPE_STRING, TYPE_VALUE },
-            ARGS_STRING_VALUE_2 = { TYPE_STRING, TYPE_VALUE, TYPE_VALUE },
-            ARGS_STRING_VALUE_3 = { TYPE_STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
-            ARGS_STRING_VALUE_4 = { TYPE_STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
-            ARGS_STRING_VARARGS = { TYPE_STRING, TYPE_VARARGS },
             ARGS_VALUE_VARARGS = { TYPE_VALUE, TYPE_VARARGS },
             ARGS_A_VALUE = { new ArrayType(TYPE_VALUE,1) };
+    
+    public static final String
+            STR_VAR_PREFIX = "var",
+            STR_CONSTANT_PREFIX = "cnt",
+            STR_SELF = "self";
+    
+    
+    private final ClassGen mainClass;
+    private final ConstantPoolGen constantPool;
+    private final InstructionList mainInst;
+    private final InstructionList constInst;
+    private final InstructionFactory factory;
+    private final MethodGen mainMethod;
+    
+    public JavaBytecodeGenerator()
+    {
+        
+    }
+    
     
     
     
@@ -99,35 +120,52 @@ public final class JavaBytecodeGenerator extends BytecodeGenerator
     
     public enum FunctionId
     {
-        FUNC0(0,   PSFunction.PSZeroArgsFunction.class,         NO_ARGS,      ARGS_STRING),
-        FUNC1(1,   PSFunction.PSOneArgFunction.class,           ARGS_VALUE_1, ARGS_STRING_VALUE_1),
-        FUNC2(2,   PSFunction.PSTwoArgsFunction.class,          ARGS_VALUE_2, ARGS_STRING_VALUE_2),
-        FUNC3(3,   PSFunction.PSThreeArgsFunction.class,        ARGS_VALUE_3, ARGS_STRING_VALUE_3),
-        FUNC4(4,   PSFunction.PSFourArgsFunction.class,         ARGS_VALUE_4, ARGS_STRING_VALUE_4),
-        FUNCV(-1,  PSFunction.PSVarargsFunction.class,          ARGS_VARARGS, ARGS_STRING_VARARGS),
-        FUNC1D(1,  PSFunction.PSDefaultOneArgFunction.class,    ARGS_VALUE_1, ARGS_STRING_VALUE_1),
-        FUNC2D(2,  PSFunction.PSDefaultTwoArgsFunction.class,   ARGS_VALUE_2, ARGS_STRING_VALUE_2),
-        FUNC3D(3,  PSFunction.PSDefaultThreeArgsFunction.class, ARGS_VALUE_3, ARGS_STRING_VALUE_3),
-        FUNC4D(4,  PSFunction.PSDefaultFourArgsFunction.class,  ARGS_VALUE_4, ARGS_STRING_VALUE_4),
-        FUNCVD(-1, PSFunction.PSDefaultVarargsFunction.class,   ARGS_VARARGS, ARGS_STRING_VARARGS),
-        SCRIPT(0,  PSScript.class,                              NO_ARGS,      ARGS_STRING);
+        FUNC0(0,   PSFunction.PSZeroArgsFunction.class,         ARGS_VALUE_1),
+        FUNC1(1,   PSFunction.PSOneArgFunction.class,           ARGS_VALUE_2),
+        FUNC2(2,   PSFunction.PSTwoArgsFunction.class,          ARGS_VALUE_3),
+        FUNC3(3,   PSFunction.PSThreeArgsFunction.class,        ARGS_VALUE_4),
+        FUNC4(4,   PSFunction.PSFourArgsFunction.class,         ARGS_VALUE_5),
+        FUNCV(-1,  PSFunction.PSVarargsFunction.class,          ARGS_VALUE_VARARGS),
+        FUNC1D(1,  PSFunction.PSDefaultOneArgFunction.class,    ARGS_VALUE_2),
+        FUNC2D(2,  PSFunction.PSDefaultTwoArgsFunction.class,   ARGS_VALUE_3),
+        FUNC3D(3,  PSFunction.PSDefaultThreeArgsFunction.class, ARGS_VALUE_4),
+        FUNC4D(4,  PSFunction.PSDefaultFourArgsFunction.class,  ARGS_VALUE_5),
+        FUNCVD(-1, PSFunction.PSDefaultVarargsFunction.class,   ARGS_VALUE_VARARGS),
+        SCRIPT(0,  PSScript.class,                              ARGS_VALUE_1);
         
         private final String name;
         private final int numArgs;
-        private final Type[] callArgs, invokeArgs;
+        private final Type[] typeArgs;
+        private final String[] nameArgs;
         
-        private FunctionId(int numArgs, Class<? extends PSFunction> clazz, Type[] callArgs, Type[] invokeArgs)
+        private FunctionId(int numArgs, Class<? extends PSFunction> clazz, Type[] typeArgs)
         {
             name = clazz.getName();
             this.numArgs = numArgs;
-            this.callArgs = callArgs;
-            this.invokeArgs = invokeArgs;
+            this.typeArgs = typeArgs;
+            this.nameArgs = new String[typeArgs.length];
+            for(int i=0;i<this.nameArgs.length-1;i++)
+                this.nameArgs[i+1] = STR_VAR_PREFIX + i;
+            this.nameArgs[0] = STR_SELF;
+            
         }
         
         private String getName() { return name; }
         private int getNumArgs() { return numArgs; }
         private boolean isVarargs() { return numArgs < 0; }
-        private Type[] getCallArgs() { return callArgs; }
-        private Type[] getInvokeArgs() { return invokeArgs; }
+        
+        private MethodGen createMethod(String className, InstructionList instructionsList, ConstantPoolGen constantPool)
+        {
+            return new MethodGen(
+                    Constants.ACC_PUBLIC | Constants.ACC_FINAL,
+                    TYPE_VARARGS,
+                    typeArgs,
+                    nameArgs,
+                    STR_FUNC_NAME,
+                    className,
+                    instructionsList,
+                    constantPool
+            );
+        }
     }
 }
