@@ -25,12 +25,12 @@ public abstract class PSVarargs
     public abstract PSValue arg(int index);
     
     /* Varargs Operations */
-    /*public static final PSValue varargsAsLPLArray(PSVarargs args, int start)
+    public static final PSValue varargsAsPSArray(PSVarargs args, int start)
     {
         if(start >= args.numberOfArguments())
             return new PSArray();
         return new PSArray(new VarargsList(args,start));
-    }*/
+    }
     
     public static final List<PSValue> varargsAsList(PSVarargs args, int start)
     {

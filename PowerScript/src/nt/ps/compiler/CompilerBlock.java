@@ -35,4 +35,6 @@ final class CompilerBlock
     {
         vars.createScope();
     }
+    
+    public static enum CompilerBlockType { SCRIPT, FUNCTION }
 }

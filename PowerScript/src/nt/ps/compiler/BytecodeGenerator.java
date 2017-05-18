@@ -5,11 +5,16 @@
  */
 package nt.ps.compiler;
 
+import nt.ps.compiler.CompilerBlock.CompilerBlockType;
+import nt.ps.lang.PSFunction;
+
 /**
  *
  * @author Asus
  */
 public abstract class BytecodeGenerator
 {
-    public abstract boolean isFunction();
+    public abstract BytecodeGenerator createInstance(String name, int argsLen, int defaultValues, boolean packExtraArgs);
+    public abstract PSFunction build(CompilerBlockType type);
+    
 }
