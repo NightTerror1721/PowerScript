@@ -5,9 +5,15 @@
  */
 package nt.ps.compiler;
 
+import java.io.EOFException;
+import java.util.LinkedList;
 import nt.ps.PSScript;
+import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.CompilerErrors;
 import nt.ps.compiler.exception.PSCompilerException;
+import nt.ps.compiler.parser.Block.Scope;
+import nt.ps.compiler.parser.Code;
+import nt.ps.compiler.parser.Command;
 
 /**
  *
@@ -30,5 +36,80 @@ public final class CompilerUnit
         
         if(errors.hasErrors())
             throw new PSCompilerException(errors);
+    }
+    
+    private Scope parseAllInstructions()
+    {
+        
+    }
+    
+    private Scope parseScope()
+    {
+        
+    }
+    
+    private Command parseInstruction(int limit, boolean validEnd) throws CompilerError
+    {
+        InstructionBuilder sb = new InstructionBuilder();
+        LinkedList<Code> codes = new LinkedList<>();
+        boolean canend = false;
+        
+        base_loop:
+        try
+        {
+            for(;;)
+            {
+                char c = source.next();
+                if(limit >= 0 && source.getCurrentIndex() >= limit)
+                {
+                    sb.decode(codes);
+                    break;
+                }
+                
+                if(c == '/')
+                {
+                    if(!source.canPeek(1))
+                        throw CompilerError.invalidEndChar('/');
+                    switch(source.peek(1))
+                    {
+                        case '/': {
+                            skipUntil('\n', true);
+                        } break;
+                        case '*': {
+                            for(;;)
+                            {
+                                skipUntil('*', true);
+                                c = source.next();
+                                
+                            }
+                        } break;
+                    }
+                    
+                }
+            }
+        }
+        catch(EOFException ex)
+        {
+            if(!validEnd)
+                throw new CompilerError("Unexpected End of File");
+        }
+    }
+    
+    private void skipUntil(char end, boolean isEndOfFileValid) throws EOFException
+    {
+        try
+        {
+            for(;;)
+            {
+                char c = source.next();
+                if(c == end)
+                    return;
+            }
+        }
+        catch(EOFException ex)
+        {
+            if(!isEndOfFileValid)
+                throw ex;
+        }
     }
 }

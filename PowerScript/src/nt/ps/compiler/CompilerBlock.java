@@ -14,21 +14,21 @@ import nt.ps.compiler.exception.CompilerErrors;
  */
 final class CompilerBlock
 {
-    private final CodeReader source;
     private final ScopeStack scopes;
     private final Stack stack;
     private final VariablePool vars;
     private final BytecodeGenerator bytecode;
     private final CompilerErrors errors;
     
-    public CompilerBlock(CodeReader source, BytecodeGenerator bytecode, CompilerErrors errors, VariablePool parentVars) throws CompilerError
+    public CompilerBlock(ScopeInfo source, BytecodeGenerator bytecode, CompilerErrors errors, VariablePool parentVars) throws CompilerError
     {
-        this.source = source;
         scopes = new ScopeStack();
         stack = new Stack();
         vars = parentVars != null ? parentVars.createChild(stack) : new VariablePool(stack);
         this.bytecode = bytecode;
         this.errors = errors;
+        
+        scopes.push(source);
     }
     
     private void compile() throws CompilerError

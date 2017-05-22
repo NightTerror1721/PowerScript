@@ -45,4 +45,8 @@ public class CompilerError extends PSException
     {
         return new CompilerError("Variable \"" + name + "\" has already exists");
     }
+    public static final CompilerError invalidEndChar(char c)
+    {
+        return new CompilerError("Invalid end of line with character '" + c + "'");
+    }
 }
