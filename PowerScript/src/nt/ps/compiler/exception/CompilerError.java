@@ -49,4 +49,17 @@ public class CompilerError extends PSException
     {
         return new CompilerError("Invalid end of line with character '" + c + "'");
     }
+    public static final CompilerError invalidChar(char c)
+    {
+        switch(c)
+        {
+            case '(': return new CompilerError("Expected ')' after '('");
+            case ')': return new CompilerError("Expected '(' before ')'");
+            case '[': return new CompilerError("Expected ']' after '['");
+            case ']': return new CompilerError("Expected '[' before ']'");
+            case '{': return new CompilerError("Expected '}' after '{'");
+            case '}': return new CompilerError("Expected '{' before '}'");
+            default:  return new CompilerError("Invalid character '" + c + "'");
+        }
+    }
 }

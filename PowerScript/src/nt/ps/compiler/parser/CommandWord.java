@@ -30,6 +30,9 @@ public final class CommandWord extends Code
     @Override
     public final CodeType getCodeType() { return CodeType.COMMAND_WORD; }
     
+    @Override
+    public final boolean isValidCodeObject() { return true; }
+    
     public static final CommandWord
             VAR = new CommandWord(CommandName.VAR),
             IF = new CommandWord(CommandName.IF),

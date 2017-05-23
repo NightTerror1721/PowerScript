@@ -94,7 +94,7 @@ public final class Literal extends CodeObject
         return null;
     }
     
-    public final Literal valueOf(int value)
+    public static final Literal valueOf(int value)
     {
         switch(value)
         {
@@ -104,10 +104,10 @@ public final class Literal extends CodeObject
             default: return new Literal(value);
         }
     }
-    public final Literal valueOf(long value) { return new Literal(value); }
-    public final Literal valueOf(float value) { return new Literal(value); }
-    public final Literal valueOf(double value) { return new Literal(value); }
-    public final Literal valueOf(boolean value) { return value ? TRUE : FALSE; }
-    public final Literal valueOf(char value) { return new Literal(Character.toString(value)); }
-    public final Literal valueOf(String value) { return value.isEmpty() ? EMPTY_STRING : new Literal(value); }
+    public static final Literal valueOf(long value) { return new Literal(value); }
+    public static final Literal valueOf(float value) { return new Literal(value); }
+    public static final Literal valueOf(double value) { return new Literal(value); }
+    public static final Literal valueOf(boolean value) { return value ? TRUE : FALSE; }
+    public static final Literal valueOf(char value) { return new Literal(Character.toString(value)); }
+    public static final Literal valueOf(String value) { return value.isEmpty() ? EMPTY_STRING : new Literal(value); }
 }

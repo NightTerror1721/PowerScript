@@ -10,6 +10,7 @@ import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Identifier;
+import nt.ps.compiler.parser.Tuple;
 
 /**
  *
@@ -18,6 +19,7 @@ import nt.ps.compiler.parser.Identifier;
 final class InstructionBuilder
 {
     private final StringBuilder sb = new StringBuilder(16);
+    private final LinkedList<Code> codes = new LinkedList<>();
     
     public final InstructionBuilder append(byte value) { sb.append(value); return this; }
     public final InstructionBuilder append(short value) { sb.append(value); return this; }
@@ -45,7 +47,16 @@ final class InstructionBuilder
     @Override public final String toString() { return sb.toString(); }
     public final boolean equals(String str) { return sb.toString().equals(str); }
     
-    public final InstructionBuilder decode(LinkedList<Code> codes) throws CompilerError
+    public final InstructionBuilder addCode(Code code)
+    {
+        if(code == null)
+            throw new NullPointerException();
+        codes.add(code);
+        
+        return this;
+    }
+    
+    public final InstructionBuilder decode() throws CompilerError
     {
         if(!isEmpty())
         {
@@ -60,4 +71,13 @@ final class InstructionBuilder
         }
         return this;
     }
+    
+    public final int getCodeCount() { return codes.size(); }
+    public final boolean hasCodes() { return !codes.isEmpty(); }
+    
+    public final Code getCode(int index) { return codes.get(index); }
+    public final Code getFirstCode() { return codes.getFirst(); }
+    public final Code getLastCode() { return codes.getLast(); }
+    
+    public final Tuple build() { return new Tuple(codes); }
 }
