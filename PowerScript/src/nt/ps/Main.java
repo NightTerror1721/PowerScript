@@ -5,6 +5,7 @@
  */
 package nt.ps;
 
+import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Literal;
 
 /**
@@ -13,7 +14,7 @@ import nt.ps.compiler.parser.Literal;
  */
 public final class Main
 {
-    public static void main(String[] args)
+    public static void main(String[] args) throws CompilerError
     {
         System.out.println(Literal.decode("Infinity"));
     }

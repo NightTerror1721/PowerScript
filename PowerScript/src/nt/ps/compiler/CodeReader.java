@@ -138,6 +138,14 @@ public final class CodeReader
         return lcur.chars[offset];
     }
     
+    public final char[] nextArray(int count) throws EOFException
+    {
+        char[] array = new char[count];
+        for(int i=0;i<count;i++)
+            array[i] = next();
+        return array;
+    }
+    
     private char move(int to, boolean fix) throws IllegalArgumentException
     {
         if(to < start || to >= size) throw new IllegalArgumentException("Out of range 'to' offset");

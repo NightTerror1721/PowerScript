@@ -8,6 +8,7 @@ package nt.ps.compiler.parser;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import nt.ps.compiler.exception.CompilerError;
 
 /**
  *
@@ -144,6 +145,22 @@ public abstract class OperatorSymbol extends Code
         return array[isUnary ? 1 : 0];
     }
     public static final OperatorSymbol getOperator(char c, boolean isUnary) { return getOperator(String.valueOf(c),isUnary); }
+    
+    public static final OperatorSymbol decodeOperator(String op, boolean isUnary) throws CompilerError
+    {
+        OperatorSymbol[] array = HASH.get(op);
+        if(array == null)
+            throw new CompilerError("Invalid operator: " + op);
+        OperatorSymbol s = array[isUnary ? 1 : 0];
+        if(s == null) throw isUnary
+                ? new CompilerError("Invalid unary operator: " + op)
+                : new CompilerError("Invalid binary operator: " + op);
+        return s;
+    }
+    public static final OperatorSymbol decodeOperator(char c, )
+    {
+        if(c == '-')
+    }
     
     
     private enum Order { LEFT, RIGHT, BOTH }

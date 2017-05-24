@@ -56,7 +56,6 @@ public final class CompilerUnit
     private Tuple parseInstruction(CodeReader source, boolean validEnd, ColonMode colonMode) throws CompilerError
     {
         final InstructionBuilder sb = new InstructionBuilder();
-        final int currentLine = source.getCurrentLine();
         boolean canend = true;
         
         try
@@ -159,7 +158,30 @@ public final class CompilerUnit
                             c = source.next();
                             if(c == cend)
                                 break;
+                            if(c == '\\')
+                            {
+                                c = source.next();
+                                switch(c)
+                                {
+                                    case 'n': sb.append('\n'); break;
+                                    case 'r': sb.append('\r'); break;
+                                    case 't': sb.append('\t'); break;
+                                    case 'u': {
+                                        if(!source.canPeek(4))
+                                            throw new CompilerError("Invalid unicode scape");
+                                        String hexCode = new String(source.nextArray(4));
+                                        sb.append(HexadecimalDecoder.decodeUnicode(hexCode));
+                                    } break;
+                                    case '\\': sb.append('\\'); break;
+                                    case '$': sb.append('$'); break;
+                                    case '\'': sb.append('\''); break;
+                                    case '\"': sb.append('\"'); break;
+                                }
+                                continue;
+                            }
+                            sb.append(c);
                         }
+                        canend = true;
                         sb.addCode(Literal.valueOf(sb.getAndClear()));
                     } continue;
                     
@@ -173,10 +195,202 @@ public final class CompilerUnit
                         sb.addCode(Separator.TWO_POINTS);
                     } continue;
                     
+                    case '?': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('?');
+                        sb.decode();
+                        sb.addCode(OperatorSymbol.TERNARY_CONDITION);
+                    } continue;
+                    
+                    case '|': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('|');
+                        sb.decode();
+                        c = source.next();
+                        switch(c)
+                        {
+                            default: {
+                                sb.addCode(OperatorSymbol.LOGIC_OR);
+                                source.move(-1);
+                            } break;
+                            case '|': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('|');
+                                sb.addCode(OperatorSymbol.OR);
+                            } break;
+                            case '=': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('|');
+                                sb.addCode(AssignationSymbol.ASSIGNATION_LOGIC_OR);
+                            } break;
+                        }
+                    } continue;
+                    
+                    case '&': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('&');
+                        sb.decode();
+                        c = source.next();
+                        switch(c)
+                        {
+                            default: {
+                                sb.addCode(OperatorSymbol.LOGIC_AND);
+                                source.move(-1);
+                            } break;
+                            case '&': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('&');
+                                sb.addCode(OperatorSymbol.AND);
+                            } break;
+                            case '=': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('&');
+                                sb.addCode(AssignationSymbol.ASSIGNATION_LOGIC_AND);
+                            } break;
+                        }
+                    } continue;
+                    
+                    case '^': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('^');
+                        sb.decode();
+                        c = source.next();
+                        if(c == '=')
+                        {
+                            if(!source.canPeek(1))
+                                throw CompilerError.invalidEndChar('=');
+                            sb.addCode(AssignationSymbol.ASSIGNATION_LOGIC_XOR);
+                        }
+                        else
+                        {
+                            sb.addCode(OperatorSymbol.LOGIC_XOR);
+                            source.move(-1);
+                        }
+                    } continue;
+                    
+                    case '.': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('.');
+                        sb.decode();
+                        c = source.next();
+                        if(c == '.')
+                        {
+                            if(!source.canPeek(1))
+                                throw CompilerError.invalidEndChar('.');
+                            sb.addCode(OperatorSymbol.STRING_CONCAT);
+                        }
+                        else
+                        {
+                            sb.addCode(OperatorSymbol.PROPERTY_ACCESS);
+                            source.move(-1);
+                        }
+                    } continue;
+                    
+                    case '!': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('!');
+                        sb.decode();
+                        c = source.next();
+                        if(c == '=')
+                        {
+                            if(!source.canPeek(1))
+                                throw CompilerError.invalidEndChar('=');
+                            c = source.next();
+                            if(c == '=')
+                            {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('=');
+                                sb.addCode(OperatorSymbol.NOT_EQUALS_REFERENCE);
+                            }
+                            else
+                            {
+                                sb.addCode(OperatorSymbol.NOT_EQUALS);
+                                source.move(-1);
+                            }
+                        }
+                        else
+                        {
+                            sb.addCode(OperatorSymbol.NEGATE);
+                            source.move(-1);
+                        }
+                    } continue;
+                    
+                    case '=': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('=');
+                        sb.decode();
+                        c = source.next();
+                        if(c == '=')
+                        {
+                            if(!source.canPeek(1))
+                                throw CompilerError.invalidEndChar('=');
+                            c = source.next();
+                            if(c == '=')
+                            {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('=');
+                                sb.addCode(OperatorSymbol.EQUALS_REFERENCE);
+                            }
+                            else
+                            {
+                                sb.addCode(OperatorSymbol.EQUALS);
+                                source.move(-1);
+                            }
+                        }
+                        else sb.addCode(AssignationSymbol.ASSIGNATION);
+                    } continue;
+                    
+                    case '>': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('>');
+                        c = source.next();
+                        switch(c)
+                        {
+                            default: {
+                                sb.addCode(OperatorSymbol.GREATER_THAN);
+                                source.move(-1);
+                            } break;
+                            case '=': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('>');
+                                sb.addCode(OperatorSymbol.GREATER_THAN_EQUALS);
+                            } break;
+                            case '>': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('>');
+                                sb.addCode(OperatorSymbol.SHIFT_RIGHT);
+                            } break;
+                        }
+                    } continue;
+                    
+                    case '<': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('<');
+                        c = source.next();
+                        switch(c)
+                        {
+                            default: {
+                                sb.addCode(OperatorSymbol.GREATER_THAN);
+                                source.move(-1);
+                            } break;
+                            case '=': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('<');
+                                sb.addCode(OperatorSymbol.GREATER_THAN_EQUALS);
+                            } break;
+                            case '<': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('<');
+                                sb.addCode(OperatorSymbol.SHIFT_RIGHT);
+                            } break;
+                        }
+                    } continue;
+                    
                     case '/': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('/');
-                        switch(source.peek(1))
+                        c = source.next();
+                        switch(c)
                         {
                             case '/': {
                                 canend = true;
@@ -203,6 +417,7 @@ public final class CompilerUnit
                             default: {
                                 sb.decode();
                                 sb.addCode(OperatorSymbol.DIVIDE);
+                                source.move(-1);
                             } break;
                         }
                     } continue;
