@@ -14,6 +14,7 @@ import nt.ps.PSClassLoader;
 import nt.ps.PSGlobals;
 import nt.ps.PSScript;
 import nt.ps.compiler.CompilerBlock.CompilerBlockType;
+import nt.ps.compiler.exception.CompilerError;
 import nt.ps.lang.*;
 import org.apache.bcel.Constants;
 import org.apache.bcel.classfile.JavaClass;
@@ -23,7 +24,7 @@ import org.apache.bcel.generic.*;
  *
  * @author mpasc
  */
-public final class BytecodeGenerator
+final class BytecodeGenerator
 {
     public static final String
             STR_TYPE_VALUE = PSValue.class.getName(),
@@ -49,7 +50,7 @@ public final class BytecodeGenerator
             STR_TYPE_HASHMAP = HashMap.class.getName(),
             STR_TYPE_LINKEDLIST = LinkedList.class.getName();
     
-    public static final Type
+    public static final ObjectType
             TYPE_VALUE = new ObjectType(STR_TYPE_VALUE),
             TYPE_UNDEFINED = new ObjectType(STR_TYPE_UNDEFINED),
             TYPE_NULL = new ObjectType(STR_TYPE_NULL),
@@ -71,7 +72,9 @@ public final class BytecodeGenerator
             TYPE_GLOBALS = new ObjectType(STR_TYPE_GLOBALS),
             TYPE_VARARGS = new ObjectType(STR_TYPE_VARARGS),
             TYPE_HASHMAP = new ObjectType(STR_TYPE_HASHMAP),
-            TYPE_LINKEDLIST = new ObjectType(STR_TYPE_LINKEDLIST),
+            TYPE_LINKEDLIST = new ObjectType(STR_TYPE_LINKEDLIST);
+    
+    public static final ArrayType
             TYPE_ARRAY_VALUE = new ArrayType(TYPE_VALUE, 1);
     
     public static final String
@@ -95,6 +98,10 @@ public final class BytecodeGenerator
             ARGS_A_VALUE = { new ArrayType(TYPE_VALUE,1) },
             ARGS_GLOBALS = { TYPE_GLOBALS },
             ARGS_INT = { Type.INT },
+            ARGS_LONG = { Type.LONG },
+            ARGS_FLOAT = { Type.FLOAT },
+            ARGS_DOUBLE = { Type.DOUBLE },
+            ARGS_STRING = { Type.STRING },
             ARGS_VARARGS_INT = { TYPE_VARARGS, Type.INT },
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT };
     
@@ -109,6 +116,8 @@ public final class BytecodeGenerator
     private static final int LOCAL_FIRST_REFERENCE = 1;
     private static final int SELF_REFERENCE = 0;
     
+    
+    private CompilerBlock compiler;
     
     private final PSClassLoader classLoader;
     private final ClassGen mainClass;
@@ -130,6 +139,7 @@ public final class BytecodeGenerator
     
     private final HashSet<Integer> pointerVars = new HashSet<>();
     private final LinkedList<BranchInfo> branchInfo = new LinkedList<>();
+    private final HashMap<PSValue,String> constants = new HashMap<>();
     
     public BytecodeGenerator(PSClassLoader classLoader, String name, int argsLen, int defaultValues, boolean packExtraArgs)
     {
@@ -176,6 +186,15 @@ public final class BytecodeGenerator
         
         initLocalVariables();
         createGlobalsSetter();
+    }
+    
+    final void setCompiler(CompilerBlock compiler)
+    {
+        if(compiler == null)
+            throw new NullPointerException();
+        if(this.compiler != null)
+            throw new IllegalStateException();
+        this.compiler = compiler;
     }
     
     private void createGlobalsSetter()
@@ -326,7 +345,26 @@ public final class BytecodeGenerator
         instr.dispose();
     }
     
+    public final void initiateUpPointersArray(int count)
+    {
+        InstructionList il = new InstructionList();
+        il.append(InstructionConstants.THIS);
+        il.append(new INVOKESPECIAL(constantPool.addMethodref(mainClass.getSuperclassName(),"<init>","()V")));
+        il.append(InstructionConstants.THIS);
+        il.append(new PUSH(constantPool,count));
+        il.append(new ANEWARRAY(constantPool.addClass(TYPE_VALUE)));
+        il.append(factory.createPutField(className,"__upptrs",TYPE_ARRAY_VALUE));
+        il.append(InstructionConstants.RETURN);
+        MethodGen mg = new MethodGen(Constants.ACC_PUBLIC, Type.VOID, Type.NO_ARGS,
+                new String[]{},"<init>",className,il,constantPool);
+        mg.setMaxStack();
+        mainClass.addMethod(mg.getMethod());
+    }
     
+    
+    
+    
+    /* VARIABLES */
     private InstructionHandle loadLocal(int reference)
     {
         Integer id = localVars.get(reference);
@@ -356,7 +394,179 @@ public final class BytecodeGenerator
     }
     
     
+    /* CONSTANTS */
+    public final InstructionHandle dup()
+    {
+        return mainInst.append(InstructionConstants.DUP);
+    }
+
+    public final InstructionHandle pop()
+    {
+        return mainInst.append(InstructionConstants.POP);
+    }
     
+    public final InstructionHandle swap()
+    {
+        return mainInst.append(InstructionConstants.SWAP);
+    }
+    
+    public final InstructionHandle loadUndefined()
+    {
+        return mainInst.append(factory.createFieldAccess(STR_TYPE_VALUE,"UNDEFINED",TYPE_VALUE,Constants.GETSTATIC));
+    }
+    
+    public final InstructionHandle loadNull()
+    {
+        return mainInst.append(factory.createFieldAccess(STR_TYPE_VALUE,"NULL",TYPE_VALUE,Constants.GETSTATIC));
+    }
+    
+    public final InstructionHandle loadEmpty()
+    {
+        return mainInst.append(factory.createFieldAccess(STR_TYPE_VARARGS,"EMPTY",TYPE_VARARGS,Constants.GETSTATIC));
+    }
+    
+    public final InstructionHandle loadBoolean(boolean b)
+    {
+        return mainInst.append(factory.createFieldAccess(STR_TYPE_VALUE,
+                (b ? "TRUE" : "FALSE"),TYPE_VALUE, Constants.GETSTATIC));
+    }
+    
+    private String createConstant()
+    {
+        String name = STR_CONSTANT_PREFIX + constants.size();
+        FieldGen field = new FieldGen(
+                Constants.ACC_PRIVATE | Constants.ACC_STATIC | Constants.ACC_FINAL,
+                TYPE_VALUE,
+                name,
+                constantPool
+        );
+        mainClass.addField(field.getField());
+        return name;
+    }
+    
+    private String createIntConstant(int value)
+    {
+        String name = createConstant();
+        constInst.append(factory.createNew(TYPE_INTEGER));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool, value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_INTEGER,
+                "<init>",
+                Type.VOID,
+                ARGS_INT,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+        return name;
+    }
+    
+    private String createLongConstant(long value)
+    {
+        String name = createConstant();
+        constInst.append(factory.createNew(TYPE_LONG));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_LONG,
+                "<init>",
+                Type.VOID,
+                ARGS_LONG,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+        return name;
+    }
+    
+    private String createFloatConstant(float value)
+    {
+        String name = createConstant();
+        constInst.append(factory.createNew(TYPE_FLOAT));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_FLOAT,
+                "<init>",
+                Type.VOID,
+                ARGS_FLOAT,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+        return name;
+    }
+    
+    private String createDoubleConstant(double value)
+    {
+        String name = createConstant();
+        constInst.append(factory.createNew(TYPE_DOUBLE));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_DOUBLE,
+                "<init>",
+                Type.VOID,
+                ARGS_DOUBLE,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+        return name;
+    }
+    
+    private String createStringConstant(String value)
+    {
+        String name = createConstant();
+        constInst.append(factory.createNew(TYPE_STRING));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_STRING,
+                "<init>",
+                Type.VOID,
+                ARGS_STRING,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+        return name;
+    }
+    
+    public final InstructionHandle loadConstant(PSValue value)
+    {
+        switch(value.getPSType())
+        {
+            case UNDEFINED:
+                return loadUndefined();
+            case NULL:
+                return loadNull();
+            case BOOLEAN:
+                return loadBoolean(value.toJavaBoolean());
+            case NUMBER:
+                String name = constants.get(value);
+                if(name == null)
+                {
+                    PSNumber n = (PSNumber) value;
+                    if(n.isInteger())
+                        constants.put(value,name = createIntConstant(value.toJavaInt()));
+                    else if(n.isLong())
+                        constants.put(value,name = createLongConstant(value.toJavaLong()));
+                    else if(n.isFloat())
+                        constants.put(value,name = createFloatConstant(value.toJavaFloat()));
+                    else if(n.isDouble())
+                        constants.put(value,name = createDoubleConstant(value.toJavaDouble()));
+                    else throw new IllegalStateException();
+                }
+                return __GetConstant(name);
+            case STRING:
+                name = constants.get(value);
+                if(name == null)
+                    constants.put(value,name = createStringConstant(value.toString()));
+                return __GetConstant(name);
+            default:
+                throw new IllegalArgumentException("Bad constant value");
+        }
+    }
+    private InstructionHandle __GetConstant(String constName)
+    {
+        return mainInst.append(factory.createGetStatic(className,constName,TYPE_VALUE));
+    }
+    
+    
+    
+    /* BRANCHES */
     private void markBranch(InstructionHandle igoto, int line)
     {
         Instruction i = igoto.getInstruction();
@@ -378,11 +588,25 @@ public final class BytecodeGenerator
     
     
     
+    private InstructionHandle doReturn(boolean returnAnything)
+    {
+        if(!returnAnything)
+            loadEmpty();
+        return mainInst.append(InstructionConstants.ARETURN);
+    }
+    public final InstructionHandle Return() throws CompilerError
+    {
+        if(compiler.getStack().getTempUsed() == 0)
+            return doReturn(false);
+        compiler.getStack().pop();
+        return doReturn(true);
+    }
+    
     
     
 
     
-    public BytecodeGenerator createInstance(String name, int argsLen, int defaultValues, boolean packExtraArgs)
+    BytecodeGenerator createInstance(String name, int argsLen, int defaultValues, boolean packExtraArgs)
     {
         return new BytecodeGenerator(classLoader, name, argsLen, defaultValues, packExtraArgs);
     }

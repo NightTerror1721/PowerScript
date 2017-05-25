@@ -6,19 +6,27 @@
 package nt.ps.compiler;
 
 import java.io.EOFException;
+import java.io.InputStream;
+import java.util.LinkedList;
+import java.util.Objects;
+import nt.ps.PSClassLoader;
+import nt.ps.PSGlobals;
 import nt.ps.PSScript;
+import nt.ps.compiler.CompilerBlock.CompilerBlockType;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.CompilerErrors;
 import nt.ps.compiler.exception.PSCompilerException;
 import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Block.Scope;
+import nt.ps.compiler.parser.Command;
 import nt.ps.compiler.parser.CommandWord;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.compiler.parser.OperatorSymbol;
 import nt.ps.compiler.parser.Separator;
 import nt.ps.compiler.parser.Tuple;
+import nt.ps.lang.PSFunction;
 
 /**
  *
@@ -27,33 +35,69 @@ import nt.ps.compiler.parser.Tuple;
 public final class CompilerUnit
 {
     private final CodeReader source;
+    private final PSClassLoader classLoader;
+    private final String name;
+    private final PSGlobals globals;
     
-    private CompilerUnit(CodeReader source)
+    private CompilerUnit(CodeReader source, PSClassLoader classLoader, String name, PSGlobals globals)
     {
-        if(source == null)
-            throw new NullPointerException();
-        this.source = source;
+        this.source = Objects.requireNonNull(source);
+        this.classLoader = Objects.requireNonNull(classLoader);
+        this.name = Objects.requireNonNull(name);
+        this.globals = Objects.requireNonNull(globals);
+    }
+    
+    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name) throws PSCompilerException
+    {
+        CodeReader sourceBase = new CodeReader(input);
+        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals);
+        
+        PSScript script = compiler.compile();
+        return script;
     }
     
     private PSScript compile() throws PSCompilerException
     {
         CompilerErrors errors = new CompilerErrors();
         
+        Scope base = parseAllInstructions(errors);
         if(errors.hasErrors())
             throw new PSCompilerException(errors);
-    }
-    
-    private Scope parseAllInstructions()
-    {
         
-    }
-    
-    private Scope parseScope(CodeReader source)
-    {
+        ScopeInfo baseInfo = new ScopeInfo(base, ScopeInfo.ScopeType.BASE);
+        BytecodeGenerator bytecode = new BytecodeGenerator(classLoader, name);
+        CompilerBlock compilerBlock = new CompilerBlock(baseInfo, globals, CompilerBlockType.SCRIPT, bytecode, errors, null);
         
+        compilerBlock.compile();
+        if(errors.hasErrors())
+            throw new PSCompilerException(errors);
+        
+        Class<? extends PSFunction> baseClass = compilerBlock.getCompiledClass();
+        return (PSScript) CompilerBlock.buildFunctionInstance(baseClass, globals);
     }
     
-    private Tuple parseInstruction(CodeReader source, boolean validEnd, ColonMode colonMode) throws CompilerError
+    private Scope parseAllInstructions(final CompilerErrors errors) { return parseScope(errors, source); }
+    
+    private Scope parseScope(final CompilerErrors errors, CodeReader source)
+    {
+        LinkedList<Command> commands = new LinkedList<>();
+        
+        while(source.hasNext())
+        {
+            int currentLine = source.getCurrentLine();
+            try
+            {
+                Tuple tuple = parseInstruction(errors, source, false, ColonMode.ENDS);
+                Command command = Command.decode(currentLine, tuple);
+                commands.add(command);
+            }
+            catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(currentLine)); }
+        }
+        
+        return Block.scope(commands);
+    }
+    
+    private Tuple parseInstruction(final CompilerErrors errors, CodeReader source, boolean validEnd, ColonMode colonMode) throws CompilerError
     {
         final InstructionBuilder sb = new InstructionBuilder();
         boolean canend = true;
@@ -72,13 +116,13 @@ public final class CompilerUnit
                     case '\n':
                     case ' ': {
                         sb.decode();
-                    } continue;
+                    } break;
                     
                     case ';': {
                         switch(colonMode)
                         {
                             case ENDS: break base_loop;
-                            case IGNORE: continue;
+                            case IGNORE: break;
                             case ERROR: throw new CompilerError("Unexpected End of Instruction ';'");
                             default: throw new IllegalStateException();
                         }
@@ -88,13 +132,13 @@ public final class CompilerUnit
                         CodeReader scopeSource = extractScope(source, '(', ')');
                         if(!sb.isEmpty() && sb.getLastCode() == CommandWord.FOR)
                         {
-                            Tuple tuple = parseInstruction(scopeSource, true, ColonMode.IGNORE);
+                            Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.IGNORE);
                             sb.decode();
                             sb.addCode(Block.arguments(tuple, Separator.COLON));
                         }
                         else
                         {
-                            Tuple tuple = parseInstruction(scopeSource, true, ColonMode.ERROR);
+                            Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                             sb.decode();
 
                             if(sb.isEmpty() || !sb.getLastCode().isValidCodeObject()) //Parenthesis or Tuple
@@ -106,13 +150,13 @@ public final class CompilerUnit
                             else //Arguments list
                                 sb.addCode(Block.arguments(tuple, Separator.COMMA));
                         }
-                    } continue;
+                    } break;
                     
                     case ')': throw CompilerError.invalidChar(')');
                     
                     case '[': {
                         CodeReader scopeSource = extractScope(source, '[', ']');
-                        Tuple tuple = parseInstruction(scopeSource, true, ColonMode.ERROR);
+                        Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                         sb.decode();
                         
                         if(sb.isEmpty() || !sb.getLastCode().isValidCodeObject()) //Array or Map
@@ -124,7 +168,7 @@ public final class CompilerUnit
                         else //Access Operator
                             sb.addCode(OperatorSymbol.ACCESS)
                               .addCode(tuple.pack());
-                    } continue;
+                    } break;
                     
                     case ']': throw CompilerError.invalidChar(']');
                     
@@ -133,17 +177,17 @@ public final class CompilerUnit
                         
                         if(sb.isEmpty() || !sb.getLastCode().isValidCodeObject()) //Object
                         {
-                            Tuple tuple = parseInstruction(scopeSource, true, ColonMode.ERROR);
+                            Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                             sb.decode();
                             sb.addCode(MutableLiteral.object(tuple));
                         }
                         else //Scope
                         {
-                            Scope scope = parseScope(scopeSource);
+                            Scope scope = parseScope(errors, scopeSource);
                             sb.decode();
                             sb.addCode(scope);
                         }
-                    } continue;
+                    } break;
                     
                     case '}': throw CompilerError.invalidChar('}');
                     
@@ -183,113 +227,107 @@ public final class CompilerUnit
                         }
                         canend = true;
                         sb.addCode(Literal.valueOf(sb.getAndClear()));
-                    } continue;
+                    } break;
                     
                     case ',': {
                         sb.decode();
                         sb.addCode(Separator.COMMA);
-                    } continue;
+                    } break;
                     
                     case ':': {
                         sb.decode();
                         sb.addCode(Separator.TWO_POINTS);
-                    } continue;
+                    } break;
                     
                     case '?': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('?');
-                        sb.decode();
-                        sb.addCode(OperatorSymbol.TERNARY_CONDITION);
-                    } continue;
+                        sb.addOperator(OperatorSymbol.TERNARY_CONDITION);
+                    } break;
                     
                     case '|': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('|');
-                        sb.decode();
                         c = source.next();
                         switch(c)
                         {
                             default: {
-                                sb.addCode(OperatorSymbol.LOGIC_OR);
+                                sb.addOperator(OperatorSymbol.LOGIC_OR);
                                 source.move(-1);
                             } break;
                             case '|': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('|');
-                                sb.addCode(OperatorSymbol.OR);
+                                sb.addOperator(OperatorSymbol.OR);
                             } break;
                             case '=': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('|');
-                                sb.addCode(AssignationSymbol.ASSIGNATION_LOGIC_OR);
+                                sb.addAssignation(AssignationSymbol.ASSIGNATION_LOGIC_OR);
                             } break;
                         }
-                    } continue;
+                    } break;
                     
                     case '&': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('&');
-                        sb.decode();
                         c = source.next();
                         switch(c)
                         {
                             default: {
-                                sb.addCode(OperatorSymbol.LOGIC_AND);
+                                sb.addOperator(OperatorSymbol.LOGIC_AND);
                                 source.move(-1);
                             } break;
                             case '&': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('&');
-                                sb.addCode(OperatorSymbol.AND);
+                                sb.addOperator(OperatorSymbol.AND);
                             } break;
                             case '=': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('&');
-                                sb.addCode(AssignationSymbol.ASSIGNATION_LOGIC_AND);
+                                sb.addAssignation(AssignationSymbol.ASSIGNATION_LOGIC_AND);
                             } break;
                         }
-                    } continue;
+                    } break;
                     
                     case '^': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('^');
-                        sb.decode();
                         c = source.next();
                         if(c == '=')
                         {
                             if(!source.canPeek(1))
                                 throw CompilerError.invalidEndChar('=');
-                            sb.addCode(AssignationSymbol.ASSIGNATION_LOGIC_XOR);
+                            sb.addAssignation(AssignationSymbol.ASSIGNATION_LOGIC_XOR);
                         }
                         else
                         {
-                            sb.addCode(OperatorSymbol.LOGIC_XOR);
+                            sb.addOperator(OperatorSymbol.LOGIC_XOR);
                             source.move(-1);
                         }
-                    } continue;
+                    } break;
                     
                     case '.': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('.');
-                        sb.decode();
                         c = source.next();
                         if(c == '.')
                         {
                             if(!source.canPeek(1))
                                 throw CompilerError.invalidEndChar('.');
-                            sb.addCode(OperatorSymbol.STRING_CONCAT);
+                            sb.addOperator(OperatorSymbol.STRING_CONCAT);
                         }
                         else
                         {
-                            sb.addCode(OperatorSymbol.PROPERTY_ACCESS);
+                            sb.addOperator(OperatorSymbol.PROPERTY_ACCESS);
                             source.move(-1);
                         }
-                    } continue;
+                    } break;
                     
                     case '!': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('!');
-                        sb.decode();
                         c = source.next();
                         if(c == '=')
                         {
@@ -300,25 +338,24 @@ public final class CompilerUnit
                             {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('=');
-                                sb.addCode(OperatorSymbol.NOT_EQUALS_REFERENCE);
+                                sb.addOperator(OperatorSymbol.NOT_EQUALS_REFERENCE);
                             }
                             else
                             {
-                                sb.addCode(OperatorSymbol.NOT_EQUALS);
+                                sb.addOperator(OperatorSymbol.NOT_EQUALS);
                                 source.move(-1);
                             }
                         }
                         else
                         {
-                            sb.addCode(OperatorSymbol.NEGATE);
+                            sb.addOperator(OperatorSymbol.NEGATE);
                             source.move(-1);
                         }
-                    } continue;
+                    } break;
                     
                     case '=': {
                         if(!source.canPeek(1))
                             throw CompilerError.invalidEndChar('=');
-                        sb.decode();
                         c = source.next();
                         if(c == '=')
                         {
@@ -329,16 +366,16 @@ public final class CompilerUnit
                             {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('=');
-                                sb.addCode(OperatorSymbol.EQUALS_REFERENCE);
+                                sb.addOperator(OperatorSymbol.EQUALS_REFERENCE);
                             }
                             else
                             {
-                                sb.addCode(OperatorSymbol.EQUALS);
+                                sb.addOperator(OperatorSymbol.EQUALS);
                                 source.move(-1);
                             }
                         }
-                        else sb.addCode(AssignationSymbol.ASSIGNATION);
-                    } continue;
+                        else sb.addAssignation(AssignationSymbol.ASSIGNATION);
+                    } break;
                     
                     case '>': {
                         if(!source.canPeek(1))
@@ -347,21 +384,21 @@ public final class CompilerUnit
                         switch(c)
                         {
                             default: {
-                                sb.addCode(OperatorSymbol.GREATER_THAN);
+                                sb.addOperator(OperatorSymbol.GREATER_THAN);
                                 source.move(-1);
                             } break;
                             case '=': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('>');
-                                sb.addCode(OperatorSymbol.GREATER_THAN_EQUALS);
+                                sb.addOperator(OperatorSymbol.GREATER_THAN_EQUALS);
                             } break;
                             case '>': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('>');
-                                sb.addCode(OperatorSymbol.SHIFT_RIGHT);
+                                sb.addOperator(OperatorSymbol.SHIFT_RIGHT);
                             } break;
                         }
-                    } continue;
+                    } break;
                     
                     case '<': {
                         if(!source.canPeek(1))
@@ -370,21 +407,84 @@ public final class CompilerUnit
                         switch(c)
                         {
                             default: {
-                                sb.addCode(OperatorSymbol.GREATER_THAN);
+                                sb.addOperator(OperatorSymbol.LESS_THAN);
                                 source.move(-1);
                             } break;
                             case '=': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('<');
-                                sb.addCode(OperatorSymbol.GREATER_THAN_EQUALS);
+                                sb.addOperator(OperatorSymbol.LESS_THAN_EQUALS);
                             } break;
                             case '<': {
                                 if(!source.canPeek(1))
                                     throw CompilerError.invalidEndChar('<');
-                                sb.addCode(OperatorSymbol.SHIFT_RIGHT);
+                                sb.addOperator(OperatorSymbol.SHIFT_LEFT);
                             } break;
                         }
-                    } continue;
+                    } break;
+                    
+                    case '-': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('-');
+                        c = source.next();
+                        switch(c)
+                        {
+                            default: {
+                                sb.addOperator("-");
+                                source.move(-1);
+                            } break;
+                            case '-': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('-');
+                                sb.addOperator(OperatorSymbol.DECREMENT);
+                            } break;
+                            case '=': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('=');
+                                sb.addAssignation(AssignationSymbol.ASSIGNATION_MINUS);
+                            } break;
+                        }
+                    } break;
+                    
+                    case '+': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('+');
+                        c = source.next();
+                        switch(c)
+                        {
+                            default: {
+                                sb.addOperator(OperatorSymbol.PLUS);
+                                source.move(-1);
+                            } break;
+                            case '-': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('+');
+                                sb.addOperator(OperatorSymbol.INCREMENT);
+                            } break;
+                            case '=': {
+                                if(!source.canPeek(1))
+                                    throw CompilerError.invalidEndChar('=');
+                                sb.addAssignation(AssignationSymbol.ASSIGNATION_PLUS);
+                            } break;
+                        }
+                    } break;
+                    
+                    case '%': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('%');
+                        c = source.next();
+                        if(c == '=')
+                        {
+                            sb.addOperator(OperatorSymbol.MODULE);
+                            source.move(-1);
+                        }
+                        else
+                        {
+                            if(!source.canPeek(1))
+                                throw CompilerError.invalidEndChar('=');
+                            sb.addAssignation(AssignationSymbol.ASSIGNATION_MODULE);
+                        }
+                    } break;
                     
                     case '/': {
                         if(!source.canPeek(1))
@@ -411,16 +511,42 @@ public final class CompilerUnit
                                 }
                             }
                             case '=': {
-                                sb.decode();
-                                sb.addCode(AssignationSymbol.ASSIGNATION_DIVIDE);
+                                sb.addAssignation(AssignationSymbol.ASSIGNATION_DIVIDE);
                             } break;
                             default: {
-                                sb.decode();
-                                sb.addCode(OperatorSymbol.DIVIDE);
+                                sb.addOperator(OperatorSymbol.DIVIDE);
                                 source.move(-1);
                             } break;
                         }
-                    } continue;
+                    } break;
+                    
+                    case '*': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('*');
+                        c = source.next();
+                        if(c == '=')
+                        {
+                            sb.addOperator(OperatorSymbol.MULTIPLY);
+                            source.move(-1);
+                        }
+                        else
+                        {
+                            if(!source.canPeek(1))
+                                throw CompilerError.invalidEndChar('=');
+                            sb.addAssignation(AssignationSymbol.ASSIGNATION_MULTIPLY);
+                        }
+                    } break;
+                    
+                    case '~': {
+                        if(!source.canPeek(1))
+                            throw CompilerError.invalidEndChar('~');
+                        sb.addOperator(OperatorSymbol.LOGIC_NOT);
+                    } break;
+                    
+                    
+                    default: {
+                        sb.append(c);
+                    } break;
                 }
             }
             

@@ -7,9 +7,11 @@ package nt.ps.compiler;
 
 import java.util.LinkedList;
 import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Identifier;
+import nt.ps.compiler.parser.OperatorSymbol;
 import nt.ps.compiler.parser.Tuple;
 
 /**
@@ -70,6 +72,28 @@ final class InstructionBuilder
             clear();
         }
         return this;
+    }
+    
+    public final InstructionBuilder addOperator(String operator) throws CompilerError
+    {
+        decode();
+        boolean unary = !codes.isEmpty() && !codes.getLast().isValidCodeObject();
+        OperatorSymbol symbol = OperatorSymbol.getOperator(operator, unary);
+        if(symbol == null)
+            throw new CompilerError("Invalid operator: " + symbol);
+        return addCode(symbol);
+    }
+    
+    public final InstructionBuilder addOperator(OperatorSymbol operator) throws CompilerError
+    {
+        decode();
+        return addCode(operator);
+    }
+    
+    public final InstructionBuilder addAssignation(AssignationSymbol assignator) throws CompilerError
+    {
+        decode();
+        return addCode(assignator);
     }
     
     public final int getCodeCount() { return codes.size(); }

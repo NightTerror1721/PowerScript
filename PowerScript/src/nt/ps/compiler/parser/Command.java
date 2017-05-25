@@ -6,6 +6,7 @@
 package nt.ps.compiler.parser;
 
 import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.parser.CommandWord.CommandName;
 
 /**
  *
@@ -34,11 +35,15 @@ public final class Command extends ParsedCode
     
     public final ParsedCode getCode(int index) { return code[index]; }
     
+    public final CommandName getName() { return command.getName(); }
+    
     @Override
     public final CodeType getCodeType() { return CodeType.COMMAND; }
     
     @Override
     public String toString() { return command.getName().name().toLowerCase() + " " + code; }
+    
+    public static final Command parseErrorCommand(int line) { return new Command(line, null); }
     
     public static final Command decode(int line, Tuple tuple) throws CompilerError
     {
