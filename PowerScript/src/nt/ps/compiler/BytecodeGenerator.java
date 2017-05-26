@@ -14,7 +14,10 @@ import nt.ps.PSClassLoader;
 import nt.ps.PSGlobals;
 import nt.ps.PSScript;
 import nt.ps.compiler.CompilerBlock.CompilerBlockType;
+import nt.ps.compiler.VariablePool.Variable;
 import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.parser.Literal;
+import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.lang.*;
 import org.apache.bcel.Constants;
 import org.apache.bcel.classfile.JavaClass;
@@ -95,7 +98,7 @@ final class BytecodeGenerator
             ARGS_VALUE_5 = { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
             ARGS_VARARGS = { TYPE_VARARGS },
             ARGS_VALUE_VARARGS = { TYPE_VALUE, TYPE_VARARGS },
-            ARGS_A_VALUE = { new ArrayType(TYPE_VALUE,1) },
+            ARGS_A_VALUE = { new ArrayType(TYPE_VALUE, 1) },
             ARGS_GLOBALS = { TYPE_GLOBALS },
             ARGS_INT = { Type.INT },
             ARGS_LONG = { Type.LONG },
@@ -361,6 +364,23 @@ final class BytecodeGenerator
         mainClass.addMethod(mg.getMethod());
     }
     
+    public final InstructionHandle insertUpPointer(BytecodeGenerator closure, boolean fromUp, int fromReference, int toReference)
+    {
+        mainInst.append(InstructionConstants.DUP);
+        if(fromUp)
+        {
+            mainInst.append(InstructionConstants.THIS);
+            mainInst.append(factory.createGetField(className, STR_UP_POINTERS, TYPE_ARRAY_VALUE));
+            mainInst.append(new PUSH(constantPool,fromReference));
+            mainInst.append(InstructionConstants.AALOAD);
+        }
+        else
+            loadLocal(fromReference);
+        mainInst.append(new PUSH(constantPool,toReference));
+        return mainInst.append(factory.createInvoke(closure.className,"insertUpPointer",
+                Type.VOID,new Type[] { TYPE_VALUE, Type.INT },Constants.INVOKEVIRTUAL));
+    }
+    
     
     
     
@@ -392,6 +412,151 @@ final class BytecodeGenerator
         LocalVariableGen local = mainMethod.addLocalVariable(name, TYPE_VALUE, null, null);
         localVars.put(reference, local.getIndex());
     }
+    
+    private InstructionHandle loadLocalPointer(int reference)
+    {
+        if(!localVars.containsKey(reference) || !pointerVars.contains(reference))
+            throw new IllegalStateException();
+        loadLocal(reference);
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE,"getPointerValue",
+                TYPE_VALUE,NO_ARGS,Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle storeLocalPointer(int reference)
+    {
+        if(!localVars.containsKey(reference) || !pointerVars.contains(reference))
+            throw new IllegalStateException();
+        loadLocal(reference);
+        mainInst.append(InstructionConstants.SWAP);
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE,"setPointerValue",
+                Type.VOID,ARGS_VALUE_1,Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle loadUpPointer(int reference)
+    {
+        /*if(!localVars.containsKey(slot) || !pointerVars.contains(slot))
+            throw new IllegalStateException();*/
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className,STR_UP_POINTERS,TYPE_ARRAY_VALUE));
+        mainInst.append(new PUSH(constantPool,reference));
+        mainInst.append(InstructionConstants.AALOAD);
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE,"getPointerValue",
+                TYPE_VALUE,NO_ARGS,Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle storeUpPointer(int reference)
+    {
+        /*if(!localVars.containsKey(slot) || !pointerVars.contains(slot))
+            throw new IllegalStateException();*/
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className,STR_UP_POINTERS,TYPE_ARRAY_VALUE));
+        mainInst.append(new PUSH(constantPool,reference));
+        mainInst.append(InstructionConstants.AALOAD);
+        mainInst.append(InstructionConstants.SWAP);
+        
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE,"setPointerValue",
+                Type.VOID,ARGS_VALUE_1,Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle loadGlobal(String namevar)
+    {
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className,STR_GLOBALS_ATTRIBUTE,TYPE_GLOBALS));
+        mainInst.append(new PUSH(constantPool,namevar));
+        return mainInst.append(factory.createInvoke(STR_TYPE_GLOBALS,"getGlobalValue",
+                TYPE_VALUE,new Type[] { Type.STRING },
+                Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle storeGlobal(String namevar)
+    {
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className,STR_GLOBALS_ATTRIBUTE,TYPE_GLOBALS));
+        mainInst.append(InstructionConstants.SWAP);
+        mainInst.append(new PUSH(constantPool,namevar));
+        mainInst.append(InstructionConstants.SWAP);
+        return mainInst.append(factory.createInvoke(STR_TYPE_GLOBALS,"setGlobalValue",
+                Type.VOID,new Type[] { Type.STRING, TYPE_VALUE },
+                Constants.INVOKEVIRTUAL));
+    }
+    
+    public final InstructionHandle load(Variable var) throws CompilerError
+    {
+        compiler.getStack().push();
+        switch(var.getVariableType())
+        {
+            case LOCAL: return loadLocal(var.getReference());
+            case LOCAL_POINTER: return loadLocalPointer(var.getReference());
+            case UP_POINTER: return loadUpPointer(var.getReference());
+            case GLOBAL: return loadGlobal(var.getName());
+            default: throw new IllegalStateException();
+        }
+    }
+    
+    public final InstructionHandle store(Variable var) throws CompilerError
+    {
+        compiler.getStack().pop();
+        switch(var.getVariableType())
+        {
+            case LOCAL: return storeLocal(var.getReference());
+            case LOCAL_POINTER: return storeLocalPointer(var.getReference());
+            case UP_POINTER: return storeUpPointer(var.getReference());
+            case GLOBAL: return storeGlobal(var.getName());
+            default: throw new IllegalStateException();
+        }
+    }
+    
+    public final InstructionHandle storeUndefined(Variable var) throws CompilerError
+    {
+        loadUndefined();
+        return store(var);
+    }
+    
+    public final InstructionHandle storeNull(Variable var) throws CompilerError
+    {
+        loadNull();
+        return store(var);
+    }
+    
+    public final InstructionHandle storeLiteral(Variable var, Literal literal) throws CompilerError
+    {
+        loadLiteral(literal);
+        return store(var);
+    }
+    
+    public final InstructionHandle storeLiteral(Variable var, boolean literal) throws CompilerError
+    {
+        loadBoolean(literal);
+        return store(var);
+    }
+    
+    public final InstructionHandle storeLiteral(Variable var, int literal) throws CompilerError
+    {
+        loadConstant(PSValue.valueOf(literal));
+        return store(var);
+    }
+    public final InstructionHandle storeLiteral(Variable var, long literal) throws CompilerError
+    {
+        loadConstant(PSValue.valueOf(literal));
+        return store(var);
+    }
+    public final InstructionHandle storeLiteral(Variable var, float literal) throws CompilerError
+    {
+        loadConstant(PSValue.valueOf(literal));
+        return store(var);
+    }
+    public final InstructionHandle storeLiteral(Variable var, double literal) throws CompilerError
+    {
+        loadConstant(PSValue.valueOf(literal));
+        return store(var);
+    }
+    
+    public final InstructionHandle storeLiteral(Variable var, String literal) throws CompilerError
+    {
+        loadConstant(PSValue.valueOf(literal));
+        return store(var);
+    }
+    
     
     
     /* CONSTANTS */
@@ -524,7 +689,7 @@ final class BytecodeGenerator
         return name;
     }
     
-    public final InstructionHandle loadConstant(PSValue value)
+    private InstructionHandle loadConstant(PSValue value)
     {
         switch(value.getPSType())
         {
@@ -563,6 +728,75 @@ final class BytecodeGenerator
     {
         return mainInst.append(factory.createGetStatic(className,constName,TYPE_VALUE));
     }
+    
+    public final InstructionHandle loadLiteral(Literal literal) throws CompilerError
+    {
+        compiler.getStack().push();
+        return loadConstant(literal.getValue());
+    }
+    
+    
+    
+    
+    
+    /* ARRAY LITERAL */
+    public final InstructionHandle initArrayLiteral(MutableLiteral literal) throws CompilerError
+    {
+        compiler.getStack().push();
+        mainInst.append(factory.createNew(TYPE_ARRAY));
+        mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+    }
+    
+    public final InstructionHandle insertArrayLiteralItem(int index) throws CompilerError
+    {
+        compiler.getStack().pop();
+        mainInst.append(InstructionConstants.DUP);
+        mainInst.append(new PUSH(constantPool, index));
+        return mainInst.append(new AASTORE());
+    }
+    
+    public final InstructionHandle endArrayLiteral()
+    {
+        return mainInst.append(factory.createInvoke(
+                STR_TYPE_ARRAY,
+                "<init>",
+                Type.VOID,
+                ARGS_A_VALUE,
+                Constants.INVOKESPECIAL));
+    }
+    
+    /* TUPLE LITERAL */
+    public final InstructionHandle initTupleLiteral(MutableLiteral literal) throws CompilerError
+    {
+        compiler.getStack().push();
+        mainInst.append(factory.createNew(TYPE_TUPLE));
+        mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+    }
+    
+    public final InstructionHandle insertTupleLiteralItem(int index) throws CompilerError
+    {
+        compiler.getStack().pop();
+        mainInst.append(InstructionConstants.DUP);
+        mainInst.append(new PUSH(constantPool, index));
+        return mainInst.append(new AASTORE());
+    }
+    
+    public final InstructionHandle endTupleLiteral()
+    {
+        return mainInst.append(factory.createInvoke(
+                STR_TYPE_TUPLE,
+                "<init>",
+                Type.VOID,
+                ARGS_A_VALUE,
+                Constants.INVOKESPECIAL));
+    }
+    
+    
+    
+    
+    
     
     
     

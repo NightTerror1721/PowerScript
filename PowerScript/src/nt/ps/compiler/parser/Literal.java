@@ -24,6 +24,8 @@ public final class Literal extends CodeObject
     private Literal(double number) { value = PSValue.valueOf(number); }
     private Literal(String string) { value = PSValue.valueOf(string); }
     
+    public final PSValue getValue() { return value; }
+    
     @Override
     public final CodeType getCodeType() { return CodeType.LITERAL; }
     

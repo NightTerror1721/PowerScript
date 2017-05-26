@@ -8,9 +8,12 @@ package nt.ps.compiler;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import nt.ps.PSGlobals;
+import nt.ps.compiler.VariablePool.Variable;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.CompilerErrors;
 import nt.ps.compiler.parser.Command;
+import nt.ps.compiler.parser.Literal;
+import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.compiler.parser.ParsedCode;
 import nt.ps.lang.PSFunction;
 
@@ -94,9 +97,47 @@ final class CompilerBlock
         
     }
     
-    private void compileOperation(ParsedCode code)
+    private void compileOperation(ParsedCode code) throws CompilerError
     {
-        
+        switch(code.getCodeType())
+        {
+            case IDENTIFIER: {
+                Variable var = checkAndGetVar(code.toString(), false);
+                bytecode.load(var);
+            } break;
+            case LITERAL: {
+                bytecode.loadLiteral((Literal) code);
+            } break;
+            case MUTABLE_LITERAL: {
+                compileMutableLiteral((MutableLiteral) code);
+            } break;
+        }
+    }
+    
+    private void compileMutableLiteral(MutableLiteral literal) throws CompilerError
+    {
+        if(literal.isLiteralArray())
+        {
+            bytecode.initArrayLiteral(literal);
+            int count = 0;
+            for(MutableLiteral.Item item : literal)
+            {
+                compileOperation(item.getValue());
+                bytecode.insertArrayLiteralItem(count++);
+            }
+            bytecode.endArrayLiteral();
+        }
+        else if(literal.isLiteralTuple())
+        {
+            bytecode.initTupleLiteral(literal);
+            int count = 0;
+            for(MutableLiteral.Item item : literal)
+            {
+                compileOperation(item.getValue());
+                bytecode.insertTupleLiteralItem(count++);
+            }
+            bytecode.endTupleLiteral();
+        }
     }
     
     
@@ -106,6 +147,13 @@ final class CompilerBlock
     
     
     
+    
+    private Variable checkAndGetVar(String nameVar, boolean globalModifier) throws CompilerError
+    {
+        if(!vars.exists(nameVar))
+            throw new CompilerError("Identifier \"" + nameVar + "\" not found");
+        return vars.get(nameVar, globalModifier);
+    }
     
     public final Class<? extends PSFunction> getCompiledClass() { return compiledClass; }
     

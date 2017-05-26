@@ -202,6 +202,8 @@ public final class VariablePool
         public final String getName() { return name; }
         public final int getReference() { return ref; }
         public final Variable getUpPointerReference() { return upPointerRef; }
+        
+        public final VariableType getVariableType() { return type; }
 
         public final boolean isLocal() { return type == VariableType.LOCAL; }
         public final boolean isGlobal() { return type == VariableType.GLOBAL; }
@@ -218,5 +220,5 @@ public final class VariablePool
         
     }
     
-    private static enum VariableType { LOCAL, GLOBAL, LOCAL_POINTER, UP_POINTER };
+    public static enum VariableType { LOCAL, GLOBAL, LOCAL_POINTER, UP_POINTER };
 }
