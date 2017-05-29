@@ -11,7 +11,9 @@ import nt.ps.PSGlobals;
 import nt.ps.compiler.VariablePool.Variable;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.CompilerErrors;
+import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Command;
+import nt.ps.compiler.parser.FunctionLiteral;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.compiler.parser.ParsedCode;
@@ -111,6 +113,15 @@ final class CompilerBlock
             case MUTABLE_LITERAL: {
                 compileMutableLiteral((MutableLiteral) code);
             } break;
+            case BLOCK: {
+                Block b = (Block) code;
+                if(!b.isParenthesis())
+                    throw CompilerError.unexpectedCode(code);
+                compileOperation(b.getFirstCode());
+            } break;
+            case FUNCTION: {
+                compileFunction((FunctionLiteral) code);
+            } break;
         }
     }
     
@@ -119,25 +130,55 @@ final class CompilerBlock
         if(literal.isLiteralArray())
         {
             bytecode.initArrayLiteral(literal);
-            int count = 0;
+            int count = 0, max = literal.getItemCount();
             for(MutableLiteral.Item item : literal)
             {
                 compileOperation(item.getValue());
-                bytecode.insertArrayLiteralItem(count++);
+                bytecode.insertArrayLiteralItem(count++, count >= max);
             }
             bytecode.endArrayLiteral();
         }
         else if(literal.isLiteralTuple())
         {
             bytecode.initTupleLiteral(literal);
-            int count = 0;
+            int count = 0, max = literal.getItemCount();
             for(MutableLiteral.Item item : literal)
             {
                 compileOperation(item.getValue());
-                bytecode.insertTupleLiteralItem(count++);
+                bytecode.insertTupleLiteralItem(count++, count >= max);
             }
             bytecode.endTupleLiteral();
         }
+        else if(literal.isLiteralMap())
+        {
+            bytecode.initMapLiteral(literal);
+            int count = 0, max = literal.getItemCount();
+            for(MutableLiteral.Item item : literal)
+            {
+                compileOperation(item.getKey());
+                compileOperation(item.getValue());
+                bytecode.insertMapLiteralItem(count++, count >= max);
+            }
+            bytecode.endMapLiteral();
+        }
+        else if(literal.isLiteralObject())
+        {
+            bytecode.initObjectLiteral(literal);
+            int count = 0, max = literal.getItemCount();
+            for(MutableLiteral.Item item : literal)
+            {
+                compileOperation(item.getKey());
+                compileOperation(item.getValue());
+                bytecode.insertObjectLiteralItem(count++, count >= max);
+            }
+            bytecode.endObjectLiteral();
+        }
+        else throw new IllegalStateException();
+    }
+    
+    private void compileFunction(FunctionLiteral function)
+    {
+        function.
     }
     
     

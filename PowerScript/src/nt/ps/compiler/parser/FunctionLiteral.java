@@ -136,6 +136,8 @@ public class FunctionLiteral extends ParsedCode
     public final String getName() { return name; }
     public final boolean isVarargs() { return varargs != null; }
     
+    public final ParsedCode getAssignation() { return assignation; }
+    
     public final int getParameterCount() { return pars.length; }
     public final String getParameterName(int index) { return pars[index]; }
     

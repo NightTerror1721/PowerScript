@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
 import nt.ps.PSClassLoader;
 import nt.ps.PSGlobals;
 import nt.ps.PSScript;
@@ -51,7 +52,9 @@ final class BytecodeGenerator
             STR_TYPE_GLOBALS = PSGlobals.class.getName(),
             STR_TYPE_VARARGS = PSVarargs.class.getName(),
             STR_TYPE_HASHMAP = HashMap.class.getName(),
-            STR_TYPE_LINKEDLIST = LinkedList.class.getName();
+            STR_TYPE_LINKEDLIST = LinkedList.class.getName(),
+            STR_TYPE_PROTOMAP = LangUtils.ProtoMap.class.getName(),
+            STR_TYPE_PROTOOBJECT = LangUtils.ProtoObject.class.getName();
     
     public static final ObjectType
             TYPE_VALUE = new ObjectType(STR_TYPE_VALUE),
@@ -75,7 +78,9 @@ final class BytecodeGenerator
             TYPE_GLOBALS = new ObjectType(STR_TYPE_GLOBALS),
             TYPE_VARARGS = new ObjectType(STR_TYPE_VARARGS),
             TYPE_HASHMAP = new ObjectType(STR_TYPE_HASHMAP),
-            TYPE_LINKEDLIST = new ObjectType(STR_TYPE_LINKEDLIST);
+            TYPE_LINKEDLIST = new ObjectType(STR_TYPE_LINKEDLIST),
+            TYPE_PROTOMAP = new ObjectType(STR_TYPE_PROTOMAP),
+            TYPE_PROTOOBJECT = new ObjectType(STR_TYPE_PROTOOBJECT);
     
     public static final ArrayType
             TYPE_ARRAY_VALUE = new ArrayType(TYPE_VALUE, 1);
@@ -106,10 +111,13 @@ final class BytecodeGenerator
             ARGS_DOUBLE = { Type.DOUBLE },
             ARGS_STRING = { Type.STRING },
             ARGS_VARARGS_INT = { TYPE_VARARGS, Type.INT },
-            ARGS_VALUE_INT = { TYPE_VALUE, Type.INT };
+            ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
+            ARGS_JAVAMAP = { new ObjectType(Map.class.getName()) },
+            ARGS_HASHMAP = { TYPE_HASHMAP };
     
     public static final String
             STR_VAR_PREFIX = "var",
+            STR_TEMP_PREFIX = "temp",
             STR_CONSTANT_PREFIX = "cnt",
             STR_SELF = "self";
     
@@ -143,6 +151,7 @@ final class BytecodeGenerator
     private final HashSet<Integer> pointerVars = new HashSet<>();
     private final LinkedList<BranchInfo> branchInfo = new LinkedList<>();
     private final HashMap<PSValue,String> constants = new HashMap<>();
+    private final HashMap<String, TempInfo> tempVars = new HashMap<>();
     
     public BytecodeGenerator(PSClassLoader classLoader, String name, int argsLen, int defaultValues, boolean packExtraArgs)
     {
@@ -326,7 +335,7 @@ final class BytecodeGenerator
                 constantPool
         );
         mainClass.addField(field.getField());
-        InstructionList instr = new InstructionList();
+        /*InstructionList instr = new InstructionList();
         MethodGen mg = new MethodGen(
                 Constants.ACC_PUBLIC | Constants.ACC_FINAL,
                 Type.VOID,
@@ -345,7 +354,7 @@ final class BytecodeGenerator
         instr.append(InstructionConstants.RETURN);
         mg.setMaxStack();
         mainClass.addMethod(mg.getMethod());
-        instr.dispose();
+        instr.dispose();*/
     }
     
     public final void initiateUpPointersArray(int count)
@@ -354,31 +363,94 @@ final class BytecodeGenerator
         il.append(InstructionConstants.THIS);
         il.append(new INVOKESPECIAL(constantPool.addMethodref(mainClass.getSuperclassName(),"<init>","()V")));
         il.append(InstructionConstants.THIS);
-        il.append(new PUSH(constantPool,count));
-        il.append(new ANEWARRAY(constantPool.addClass(TYPE_VALUE)));
-        il.append(factory.createPutField(className,"__upptrs",TYPE_ARRAY_VALUE));
+        il.append(new ALOAD(1));
+        il.append(factory.createPutField(className, STR_UP_POINTERS, TYPE_ARRAY_VALUE));
         il.append(InstructionConstants.RETURN);
-        MethodGen mg = new MethodGen(Constants.ACC_PUBLIC, Type.VOID, Type.NO_ARGS,
+        MethodGen mg = new MethodGen(Constants.ACC_PUBLIC, Type.VOID, ARGS_A_VALUE,
                 new String[]{},"<init>",className,il,constantPool);
         mg.setMaxStack();
         mainClass.addMethod(mg.getMethod());
     }
     
-    public final InstructionHandle insertUpPointer(BytecodeGenerator closure, boolean fromUp, int fromReference, int toReference)
+    public final InstructionHandle createInheritedUpPointers(Variable[] vars)
     {
-        mainInst.append(InstructionConstants.DUP);
-        if(fromUp)
+        InstructionHandle ih = mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+        int count = 0;
+        for(Variable var : vars)
         {
-            mainInst.append(InstructionConstants.THIS);
-            mainInst.append(factory.createGetField(className, STR_UP_POINTERS, TYPE_ARRAY_VALUE));
-            mainInst.append(new PUSH(constantPool,fromReference));
-            mainInst.append(InstructionConstants.AALOAD);
+            mainInst.append(InstructionConstants.DUP);
+            Variable pref = var.getUpPointerReference();
+            if(pref == null)
+                throw new IllegalStateException();
+            if(!pref.isLocalPointer() && !pref.isUpPointer())
+            {
+                castLocaltoPointer(pref.getReference());
+                pref.switchToLocalPointer();
+            }
+            if(pref.isUpPointer())
+            {
+                mainInst.append(InstructionConstants.THIS);
+                mainInst.append(factory.createGetField(className, STR_UP_POINTERS, TYPE_ARRAY_VALUE));
+                mainInst.append(new PUSH(constantPool,pref.getReference()));
+                mainInst.append(InstructionConstants.AALOAD);
+            }
+            else loadLocal(pref.getReference());
+            mainInst.append(new PUSH(constantPool, count++));
+            ih = mainInst.append(new AASTORE());
         }
-        else
-            loadLocal(fromReference);
-        mainInst.append(new PUSH(constantPool,toReference));
-        return mainInst.append(factory.createInvoke(closure.className,"insertUpPointer",
-                Type.VOID,new Type[] { TYPE_VALUE, Type.INT },Constants.INVOKEVIRTUAL));
+        return ih;
+    }
+    
+    private InstructionHandle castLocaltoPointer(int reference)
+    {
+        //Integer idx = localVars.get(slot);
+        if(pointerVars.contains(reference)/* || idx == null*/)
+            throw new IllegalStateException();
+        mainInst.append(factory.createNew(TYPE_POINTER));
+        mainInst.append(InstructionConstants.DUP);
+        loadLocal(reference);
+        mainInst.append(factory.createInvoke(
+                STR_TYPE_POINTER,
+                "<init>",
+                Type.VOID,
+                new Type[] { TYPE_VALUE },
+                Constants.INVOKESPECIAL));
+        InstructionHandle ih = storeLocal(reference);
+        pointerVars.add(reference);
+        return ih;
+    }
+    
+    private InstructionHandle insertClosureDefaults(BytecodeGenerator closure, InstructionHandle last)
+    {
+        if(closure.defaultValues <= 0 || closure.argsLen <= 0)
+            return last;
+        ObjectType supert = new ObjectType(closure.mainClass.getSuperclassName());
+        if(closure.argsLen < 5)
+        {
+            Type[] args;
+            switch(closure.defaultValues)
+            {
+                case 1: args = new Type[] { TYPE_VALUE, supert }; break;
+                case 2: args = new Type[] { TYPE_VALUE, TYPE_VALUE, supert }; break;
+                case 3: args = new Type[] { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, supert }; break;
+                case 4: args = new Type[] { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, supert }; break;
+                default: throw new IllegalStateException();
+            }
+            return mainInst.append(factory.createInvoke(closure.mainClass.getSuperclassName(),"insertDefaults",
+                    supert,args,Constants.INVOKESTATIC));
+        }
+        //createTemp("defs_temp");
+        //storeTemp("defs_temp");
+        //LocalVariableGen temp = mainMethod.addLocalVariable("defs_temp",TYPE_VALUE,last,null);
+        //mainInst.append(new ASTORE(temp.getIndex()));
+        wrapArgsToArray(closure.defaultValues);
+        mainInst.append(new PUSH(constantPool,closure.argsLen));
+        mainInst.append(InstructionConstants.SWAP);
+        //append(new ALOAD(temp.getIndex()));
+        InstructionHandle ih = mainInst.append(factory.createInvoke(closure.mainClass.getSuperclassName(),"insertDefaults",
+                    new ObjectType(closure.mainClass.getSuperclassName()),new Type[]{TYPE_VARARGS,Type.INT,supert},Constants.INVOKESTATIC));
+        //temp.setEnd(ih);
+        return ih;
     }
     
     
@@ -556,6 +628,56 @@ final class BytecodeGenerator
         loadConstant(PSValue.valueOf(literal));
         return store(var);
     }
+    
+    
+    
+    
+    
+    /* TEMP VARS */
+    public final InstructionHandle loadTemp(String name)
+    {
+        TempInfo temp = tempVars.get(name);
+        if(temp == null || !temp.enabled)
+            throw new IllegalStateException("Temporal Variable " + name + " does not exists");
+        return mainInst.append(new ALOAD(temp.id));
+    }
+    
+    public final InstructionHandle storeTemp(String name)
+    {
+        TempInfo temp = tempVars.get(name);
+        if(temp == null || !temp.enabled)
+            throw new IllegalStateException("Temporal Variable " + name + " does not exists");
+        return mainInst.append(new ASTORE(temp.id));
+    }
+    
+    public final void createTemp(String name)
+    {
+        TempInfo temp = tempVars.get(name);
+        if(temp != null)
+        {
+            if(temp.enabled)
+                throw new IllegalStateException("Temporal Variable " + name + " already exists");
+            temp.enabled = true;
+        }
+        else
+        {
+            String varName = STR_TEMP_PREFIX + name;
+            LocalVariableGen local = mainMethod.addLocalVariable(varName, TYPE_VALUE, null, null);
+            tempVars.put(name, new TempInfo(local.getIndex()));
+        }
+    }
+    
+    public final boolean existsTemp(String name) { return tempVars.containsKey(name); }
+    
+    public final void removeTemp(String name)
+    {
+        TempInfo temp = tempVars.get(name);
+        if(temp == null || !temp.enabled)
+            throw new IllegalStateException("Temporal Variable " + name + " does not exists");
+        temp.enabled = false;
+    }
+    
+    
     
     
     
@@ -745,15 +867,18 @@ final class BytecodeGenerator
         compiler.getStack().push();
         mainInst.append(factory.createNew(TYPE_ARRAY));
         mainInst.append(InstructionConstants.DUP);
-        return mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+        mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+        return mainInst.append(InstructionConstants.DUP);
     }
     
-    public final InstructionHandle insertArrayLiteralItem(int index) throws CompilerError
+    public final InstructionHandle insertArrayLiteralItem(int index, boolean last) throws CompilerError
     {
         compiler.getStack().pop();
-        mainInst.append(InstructionConstants.DUP);
         mainInst.append(new PUSH(constantPool, index));
-        return mainInst.append(new AASTORE());
+        if(last)
+            return mainInst.append(new AASTORE());
+        mainInst.append(new AASTORE());
+        return mainInst.append(InstructionConstants.DUP);
     }
     
     public final InstructionHandle endArrayLiteral()
@@ -772,15 +897,18 @@ final class BytecodeGenerator
         compiler.getStack().push();
         mainInst.append(factory.createNew(TYPE_TUPLE));
         mainInst.append(InstructionConstants.DUP);
-        return mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+        mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+        return mainInst.append(InstructionConstants.DUP);
     }
     
-    public final InstructionHandle insertTupleLiteralItem(int index) throws CompilerError
+    public final InstructionHandle insertTupleLiteralItem(int index, boolean last) throws CompilerError
     {
         compiler.getStack().pop();
-        mainInst.append(InstructionConstants.DUP);
         mainInst.append(new PUSH(constantPool, index));
-        return mainInst.append(new AASTORE());
+        if(last)
+            return mainInst.append(new AASTORE());
+        mainInst.append(new AASTORE());
+        return mainInst.append(InstructionConstants.DUP);
     }
     
     public final InstructionHandle endTupleLiteral()
@@ -790,6 +918,84 @@ final class BytecodeGenerator
                 "<init>",
                 Type.VOID,
                 ARGS_A_VALUE,
+                Constants.INVOKESPECIAL));
+    }
+    
+    /* MAP LITERAL */
+    public final InstructionHandle initMapLiteral(MutableLiteral literal) throws CompilerError
+    {
+        compiler.getStack().push();
+        mainInst.append(factory.createNew(TYPE_MAP));
+        mainInst.append(InstructionConstants.DUP);
+        mainInst.append(factory.createNew(TYPE_PROTOMAP));
+        mainInst.append(InstructionConstants.DUP);
+        mainInst.append(new PUSH(constantPool, literal.getItemCount()));
+        mainInst.append(factory.createInvoke(
+                STR_TYPE_PROTOMAP,
+                "<init>",
+                Type.VOID,
+                ARGS_INT,
+                Constants.INVOKESPECIAL));
+        return mainInst.append(InstructionConstants.DUP);
+    }
+    
+    public final InstructionHandle insertMapLiteralItem(int index, boolean last) throws CompilerError
+    {
+        compiler.getStack().pop();
+        mainInst.append(factory.createInvoke(STR_TYPE_HASHMAP, "put",
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+        if(last)
+            mainInst.append(InstructionConstants.POP);
+        mainInst.append(InstructionConstants.POP);
+        return mainInst.append(InstructionConstants.DUP);
+    }
+    
+    public final InstructionHandle endMapLiteral()
+    {
+        return mainInst.append(factory.createInvoke(
+                STR_TYPE_MAP,
+                "<init>",
+                Type.VOID,
+                ARGS_JAVAMAP,
+                Constants.INVOKESPECIAL));
+    }
+    
+    /* OBJECT LITERAL */
+    public final InstructionHandle initObjectLiteral(MutableLiteral literal) throws CompilerError
+    {
+        compiler.getStack().push();
+        mainInst.append(factory.createNew(TYPE_OBJECT));
+        mainInst.append(InstructionConstants.DUP);
+        mainInst.append(factory.createNew(TYPE_PROTOOBJECT));
+        mainInst.append(InstructionConstants.DUP);
+        mainInst.append(new PUSH(constantPool, literal.getItemCount()));
+        mainInst.append(factory.createInvoke(
+                STR_TYPE_PROTOOBJECT,
+                "<init>",
+                Type.VOID,
+                ARGS_INT,
+                Constants.INVOKESPECIAL));
+        return mainInst.append(InstructionConstants.DUP);
+    }
+    
+    public final InstructionHandle insertObjectLiteralItem(int index, boolean last) throws CompilerError
+    {
+        compiler.getStack().pop();
+        mainInst.append(factory.createInvoke(STR_TYPE_HASHMAP, "put",
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+        if(last)
+            mainInst.append(InstructionConstants.POP);
+        mainInst.append(InstructionConstants.POP);
+        return mainInst.append(InstructionConstants.DUP);
+    }
+    
+    public final InstructionHandle endObjectLiteral()
+    {
+        return mainInst.append(factory.createInvoke(
+                STR_TYPE_OBJECT,
+                "<init>",
+                Type.VOID,
+                ARGS_HASHMAP,
                 Constants.INVOKESPECIAL));
     }
     
@@ -851,6 +1057,85 @@ final class BytecodeGenerator
         byte[] bytecode = completeClass(type);
         return classLoader.createPSClass(className, bytecode);
     }
+    
+    
+    
+    
+    
+    
+    
+    public final InstructionHandle getValueFromVarargs(int index)
+    {
+        if(index == 0)
+            return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_SELF,
+                    TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.append(new PUSH(constantPool, index));
+        return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_ARG,
+                    TYPE_VALUE, ARGS_INT, Constants.INVOKEVIRTUAL));
+    }
+    
+    public final InstructionHandle createTailVarargs()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, "varargsOf",
+                TYPE_VARARGS, new Type[]{ TYPE_VARARGS, TYPE_VARARGS }, Constants.INVOKESTATIC));
+    }
+    
+    public final InstructionHandle wrapArgsToArray(int argsLen)
+    {
+        switch(argsLen)
+        {
+            case 0:
+                return mainInst.append(factory.createGetStatic(STR_TYPE_VARARGS,"EMPTY",TYPE_VARARGS));
+            case 1:
+                return getLastHandle();
+            case 2:
+                return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS,"varargsOf",
+                        TYPE_VARARGS,
+                        new Type[] { TYPE_VALUE, TYPE_VARARGS },
+                        Constants.INVOKESTATIC));
+            case 3:
+                return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS,"varargsOf",
+                        TYPE_VARARGS,
+                        new Type[] { TYPE_VALUE, TYPE_VALUE, TYPE_VARARGS },
+                        Constants.INVOKESTATIC));
+            case 4:
+                return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS,"varargsOf",
+                        TYPE_VARARGS,
+                        new Type[] { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VARARGS },
+                        Constants.INVOKESTATIC));
+            case 5:
+                return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS,"varargsOf",
+                        TYPE_VARARGS,
+                        new Type[] { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VARARGS },
+                        Constants.INVOKESTATIC));
+            default: {
+                createTemp("wrap_varargs");
+                mainInst.append(new PUSH(constantPool,argsLen));
+                mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+                storeTemp("wrap_varargs");
+                for(int i=0;i<argsLen;i++)
+                {
+                    loadTemp("wrap_varargs");
+                    mainInst.append(InstructionConstants.SWAP);
+                    mainInst.append(new PUSH(constantPool, i));
+                    mainInst.append(InstructionConstants.SWAP);
+                    mainInst.append(InstructionConstants.AASTORE);
+                }
+                removeTemp("wrap_varargs");
+                loadEmpty();
+                return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS,"varargsOf",
+                        TYPE_VARARGS,new Type[]{ TYPE_ARRAY_VALUE, TYPE_VARARGS },Constants.INVOKESTATIC));
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    
+    public final InstructionHandle getLastHandle() { return mainInst.getEnd(); }
+    public final InstructionHandle getFirstHandle() { return mainInst.getStart(); }
     
     
     
@@ -930,6 +1215,18 @@ final class BytecodeGenerator
             instr = i;
             target = t;
             this.line = line;
+        }
+    }
+    
+    private static final class TempInfo
+    {
+        private final int id;
+        private boolean enabled;
+        
+        private TempInfo(int id)
+        {
+            this.id = id;
+            this.enabled = true;
         }
     }
 }
