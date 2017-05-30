@@ -19,6 +19,9 @@ import nt.ps.compiler.VariablePool.Variable;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
+import nt.ps.compiler.parser.Operator;
+import nt.ps.compiler.parser.OperatorSymbol;
+import nt.ps.compiler.parser.ParsedCode;
 import nt.ps.lang.*;
 import org.apache.bcel.Constants;
 import org.apache.bcel.classfile.JavaClass;
@@ -372,7 +375,7 @@ final class BytecodeGenerator
         mainClass.addMethod(mg.getMethod());
     }
     
-    public final InstructionHandle createInheritedUpPointers(Variable[] vars)
+    private InstructionHandle createInheritedUpPointers(Variable[] vars)
     {
         InstructionHandle ih = mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
         int count = 0;
@@ -452,6 +455,68 @@ final class BytecodeGenerator
         //temp.setEnd(ih);
         return ih;
     }
+    
+    
+    
+    
+    /* FUNCTIONS */
+    public final InstructionHandle createFunction(Class<? extends PSFunction> functionClass,
+            BytecodeGenerator functionBytecodeGenerator, Variable[] upPointers) throws CompilerError
+    {
+        mainInst.append(factory.createNew(new ObjectType(functionClass.getName())));
+        mainInst.append(InstructionConstants.DUP);
+        createInheritedUpPointers(upPointers);
+        mainInst.append(factory.createInvoke(
+                functionClass.getName(),
+                "<init>",
+                Type.VOID,
+                ARGS_A_VALUE,
+                Constants.INVOKESPECIAL));
+        mainInst.append(InstructionConstants.DUP);
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className,STR_GLOBALS_ATTRIBUTE,TYPE_GLOBALS));
+        InstructionHandle ih = mainInst.append(factory.createInvoke(functionClass.getName(),STR_FUNC_SET_GLOBALS,
+                Type.VOID,new Type[]{TYPE_GLOBALS},Constants.INVOKEVIRTUAL));
+        ih = insertClosureDefaults(functionBytecodeGenerator, ih);
+        if(functionBytecodeGenerator.defaultValues > 0)
+            compiler.getStack().pop(functionBytecodeGenerator.defaultValues);
+        compiler.getStack().push();
+        return ih;
+    }
+    
+    
+    
+    
+    /* ASSIGNATIONS */
+    public final InstructionHandle assign(ParsedCode to)
+    {
+        switch(to.getCodeType())
+        {
+            default: throw new IllegalArgumentException();
+            case IDENTIFIER: {
+                
+            } break;
+            case OPERATOR: {
+                Operator operator = (Operator) to;
+                OperatorSymbol symbol = operator.getSymbol();
+                if(symbol == OperatorSymbol.ACCESS)
+                {
+                    
+                }
+                else if(symbol == OperatorSymbol.PROPERTY_ACCESS)
+                {
+                    
+                }
+                else throw new IllegalArgumentException();
+            } break;
+        }
+    }
+    
+    public final InstructionHandle assignFromAccess()
+    {
+        compiler.getStack().pop(2);
+    }
+    
     
     
     

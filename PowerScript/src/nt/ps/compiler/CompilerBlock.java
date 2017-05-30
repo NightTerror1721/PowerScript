@@ -14,10 +14,13 @@ import nt.ps.compiler.exception.CompilerErrors;
 import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Command;
 import nt.ps.compiler.parser.FunctionLiteral;
+import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
+import nt.ps.compiler.parser.Operator;
 import nt.ps.compiler.parser.ParsedCode;
 import nt.ps.lang.PSFunction;
+import org.apache.bcel.generic.InstructionHandle;
 
 /**
  *
@@ -189,6 +192,23 @@ final class CompilerBlock
     
     
     
+    private InstructionHandle assignFromIdentifier(Identifier identifier) throws CompilerError
+    {
+        String name = identifier.toString();
+        if(!vars.exists(name))
+            throw new CompilerError("Variable \"" + name + "\" does not exists");
+        Variable var = vars.get(name, false);
+        return bytecode.store(var);
+    }
+    
+    private InstructionHandle assignFromAccess(Operator operator) throws CompilerError
+    {
+        compileOperation(operator.getOperand(0));
+        compileOperation(operator.getOperand(1));
+        
+    }
+    
+    
     private Variable checkAndGetVar(String nameVar, boolean globalModifier) throws CompilerError
     {
         if(!vars.exists(nameVar))
@@ -220,6 +240,7 @@ final class CompilerBlock
     }
     
     public final Stack getStack() { return stack; }
+    public final VariablePool getVariables() { return vars; }
     
     public static enum CompilerBlockType { SCRIPT, FUNCTION }
     private static final Class<?>[] SET_GLOBALS_SIGNATURE = { PSGlobals.class };
