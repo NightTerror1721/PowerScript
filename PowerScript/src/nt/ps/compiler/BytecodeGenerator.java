@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import nt.ps.PSClassLoader;
 import nt.ps.PSGlobals;
@@ -21,7 +22,6 @@ import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.compiler.parser.Operator;
 import nt.ps.compiler.parser.OperatorSymbol;
-import nt.ps.compiler.parser.ParsedCode;
 import nt.ps.lang.*;
 import org.apache.bcel.Constants;
 import org.apache.bcel.classfile.JavaClass;
@@ -56,6 +56,7 @@ final class BytecodeGenerator
             STR_TYPE_VARARGS = PSVarargs.class.getName(),
             STR_TYPE_HASHMAP = HashMap.class.getName(),
             STR_TYPE_LINKEDLIST = LinkedList.class.getName(),
+            STR_TYPE_UTILS = LangUtils.class.getName(),
             STR_TYPE_PROTOMAP = LangUtils.ProtoMap.class.getName(),
             STR_TYPE_PROTOOBJECT = LangUtils.ProtoObject.class.getName();
     
@@ -82,6 +83,7 @@ final class BytecodeGenerator
             TYPE_VARARGS = new ObjectType(STR_TYPE_VARARGS),
             TYPE_HASHMAP = new ObjectType(STR_TYPE_HASHMAP),
             TYPE_LINKEDLIST = new ObjectType(STR_TYPE_LINKEDLIST),
+            TYPE_UTILS = new ObjectType(STR_TYPE_UTILS),
             TYPE_PROTOMAP = new ObjectType(STR_TYPE_PROTOMAP),
             TYPE_PROTOOBJECT = new ObjectType(STR_TYPE_PROTOOBJECT);
     
@@ -113,6 +115,7 @@ final class BytecodeGenerator
             ARGS_FLOAT = { Type.FLOAT },
             ARGS_DOUBLE = { Type.DOUBLE },
             ARGS_STRING = { Type.STRING },
+            ARGS_STRING_VALUE = { Type.STRING, TYPE_VALUE },
             ARGS_VARARGS_INT = { TYPE_VARARGS, Type.INT },
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
             ARGS_JAVAMAP = { new ObjectType(Map.class.getName()) },
@@ -155,6 +158,8 @@ final class BytecodeGenerator
     private final LinkedList<BranchInfo> branchInfo = new LinkedList<>();
     private final HashMap<PSValue,String> constants = new HashMap<>();
     private final HashMap<String, TempInfo> tempVars = new HashMap<>();
+    
+    private long inheritedFunctionsId = 0;
     
     public BytecodeGenerator(PSClassLoader classLoader, String name, int argsLen, int defaultValues, boolean packExtraArgs)
     {
@@ -375,7 +380,7 @@ final class BytecodeGenerator
         mainClass.addMethod(mg.getMethod());
     }
     
-    private InstructionHandle createInheritedUpPointers(Variable[] vars)
+    private InstructionHandle createInheritedUpPointers(List<Variable> vars)
     {
         InstructionHandle ih = mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
         int count = 0;
@@ -461,7 +466,7 @@ final class BytecodeGenerator
     
     /* FUNCTIONS */
     public final InstructionHandle createFunction(Class<? extends PSFunction> functionClass,
-            BytecodeGenerator functionBytecodeGenerator, Variable[] upPointers) throws CompilerError
+            BytecodeGenerator functionBytecodeGenerator, List<Variable> upPointers) throws CompilerError
     {
         mainInst.append(factory.createNew(new ObjectType(functionClass.getName())));
         mainInst.append(InstructionConstants.DUP);
@@ -488,33 +493,20 @@ final class BytecodeGenerator
     
     
     /* ASSIGNATIONS */
-    public final InstructionHandle assign(ParsedCode to)
+    public final InstructionHandle callStoreAccess() throws CompilerError
     {
-        switch(to.getCodeType())
-        {
-            default: throw new IllegalArgumentException();
-            case IDENTIFIER: {
-                
-            } break;
-            case OPERATOR: {
-                Operator operator = (Operator) to;
-                OperatorSymbol symbol = operator.getSymbol();
-                if(symbol == OperatorSymbol.ACCESS)
-                {
-                    
-                }
-                else if(symbol == OperatorSymbol.PROPERTY_ACCESS)
-                {
-                    
-                }
-                else throw new IllegalArgumentException();
-            } break;
-        }
+        compiler.getStack().pop(3);
+        compiler.getStack().push();
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "set",
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
     }
     
-    public final InstructionHandle assignFromAccess()
+    public final InstructionHandle callStorePropertyAccess() throws CompilerError
     {
-        compiler.getStack().pop(2);
+        compiler.getStack().pop(3);
+        compiler.getStack().push();
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "setProperty",
+                TYPE_VALUE, ARGS_STRING_VALUE, Constants.INVOKEVIRTUAL));
     }
     
     
@@ -528,6 +520,11 @@ final class BytecodeGenerator
         if(id == null)
             throw new IllegalStateException("Variable with reference " + reference + " does not exists");
         return mainInst.append(new ALOAD(id));
+    }
+    
+    public final InstructionHandle loadSelf()
+    {
+        return mainInst.append(new ALOAD(SELF_ID));
     }
     
     private InstructionHandle storeLocal(int reference)
@@ -1069,9 +1066,221 @@ final class BytecodeGenerator
     
     
     
+    /* OPERATORS */
+    public final InstructionHandle callOperator(OperatorSymbol symbol) throws CompilerError
+    {
+        if(symbol.isUnary())
+        {
+            compiler.getStack().pop();
+            compiler.getStack().push();
+            if(!symbol.hasAssociatedFunction())
+            {
+                if(symbol == OperatorSymbol.TYPEOF)
+                    return callTypeofOperator();
+                throw new IllegalStateException();
+            }
+            return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, symbol.getAssociatedFunction(),
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+        }
+        else if(symbol.isBinary())
+        {
+            compiler.getStack().pop(2);
+            compiler.getStack().push();
+            if(!symbol.hasAssociatedFunction())
+            {
+                if(symbol == OperatorSymbol.INSTANCEOF)
+                    return callInstanceofOperator();
+                if(symbol == OperatorSymbol.EQUALS_REFERENCE)
+                    return callEqualsReferenceOperator();
+                if(symbol == OperatorSymbol.NOT_EQUALS_REFERENCE)
+                    return callNotEqualsReferenceOperator();
+                throw new IllegalStateException();
+            }
+            return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, symbol.getAssociatedFunction(),
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+        }
+        else throw new IllegalStateException();
+    }
+    
+    private InstructionHandle callTypeofOperator()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorTypeof",
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle callInstanceofOperator()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorInstanceof",
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle callEqualsReferenceOperator()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorEqualsReference",
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+    }
+    
+    private InstructionHandle callNotEqualsReferenceOperator()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorNotEqualsReference",
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+    }
+    
+    
+    public final InstructionHandle doCall(Operator operator, boolean isInvoke, boolean multiresult) throws CompilerError
+    {
+        int args = operator.getOperandCount() - 1;
+        if(args > 0)
+            compiler.getStack().pop(args);
+        compiler.getStack().pop(isInvoke ? 2 : 1);
+        compiler.getStack().push();
+        return doCall(args, isInvoke, multiresult);
+    }
+    public final InstructionHandle doTailedCall(boolean isInvoke, boolean multiresult) throws CompilerError
+    {
+        compiler.getStack().pop(isInvoke ? 3 : 2);
+        compiler.getStack().push();
+        return doCall(-1, isInvoke, multiresult);
+    }
+    
+    private InstructionHandle doCall(int args, boolean isInvoke, boolean multiresult)
+    {
+        if(args < -1)
+            throw new IllegalStateException();
+        String method = isInvoke ? "invoke" : "call";
+        InstructionHandle ih;
+        
+        switch(args)
+        {
+            default:
+                wrapArgsToArray(args);
+            case -1:
+                ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
+                        TYPE_VARARGS, ARGS_VARARGS, Constants.INVOKEVIRTUAL));
+                break;
+            case 0:
+                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
+                        TYPE_VARARGS, NO_ARGS, Constants.INVOKEVIRTUAL));
+                break;
+            case 1:
+                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
+                        TYPE_VARARGS, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+                break;
+            case 2:
+                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
+                        TYPE_VARARGS, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+                break;
+            case 3:
+                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
+                        TYPE_VARARGS, ARGS_VALUE_3, Constants.INVOKEVIRTUAL));
+                break;
+            case 4:
+                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
+                        TYPE_VARARGS, ARGS_VALUE_4, Constants.INVOKEVIRTUAL));
+                break;
+        }
+        
+        if(multiresult)
+            ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, STR_FUNC_SELF,
+                    TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
+        return ih;
+    }
+    
+    
+    public final InstructionHandle callNewOperator(Operator operator) throws CompilerError
+    {
+        int args = operator.getOperandCount() - 1;
+        if(args > 0)
+            compiler.getStack().pop(args);
+        compiler.getStack().pop();
+        compiler.getStack().push();
+        
+        switch(args)
+        {
+            default:
+                wrapArgsToArray(args);
+            case -1:
+                return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
+                        TYPE_VARARGS, ARGS_VARARGS, Constants.INVOKEVIRTUAL));
+            case 0:
+                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
+                        TYPE_VARARGS, NO_ARGS, Constants.INVOKEVIRTUAL));
+            case 1:
+                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
+                        TYPE_VARARGS, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+            case 2:
+                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
+                        TYPE_VARARGS, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+            case 3:
+                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
+                        TYPE_VARARGS, ARGS_VALUE_3, Constants.INVOKEVIRTUAL));
+            case 4:
+                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
+                        TYPE_VARARGS, ARGS_VALUE_4, Constants.INVOKEVIRTUAL));
+        }
+    }
+    
+    
+    
+    
+    
+    
     
     
     /* BRANCHES */
+    public final InstructionHandle computeIf() throws CompilerError
+    {
+        if(compiler.getStack().getTempUsed() <= 0)
+            throw new IllegalStateException();
+        compiler.getStack().pop();
+        asJavaBoolean();
+        return doIf(false);
+    }
+    
+    public final InstructionHandle computeInverseIf() throws CompilerError
+    {
+        if(compiler.getStack().getTempUsed() <= 0)
+            throw new IllegalStateException();
+        compiler.getStack().pop();
+        asJavaBoolean();
+        return doIf(true);
+    }
+    
+    private InstructionHandle doIf(boolean inverse)
+    {
+        if(!inverse)
+        {
+            IFEQ ifeq = new IFEQ(null);
+            return mainInst.append(ifeq);
+        }
+        IFNE ifne = new IFNE(null);
+        return mainInst.append(ifne);
+    }
+    
+    private InstructionHandle doIfLsThan()
+    {
+        return mainInst.append(new IF_ICMPLE(null));
+    }
+    
+    final InstructionHandle emptyJump()
+    {
+        return builder.createEmptyGoto();
+    }
+    final void modifyJump(InstructionHandle instrId, int line)
+    {
+        builder.markBranch(instrId,line);
+        /*int code = instr.get(instrId);
+        if(code != Instr.JUMP)
+            throw new IllegalStateException();
+        code = Instr.JUMP + (instrTo << 8);
+        instr.set(instrId,code);*/
+    }
+    
+    final InstructionHandle jump(InstructionHandle instrTo)
+    {
+        return builder.createGoto(instrTo);
+    }
+    
     private void markBranch(InstructionHandle igoto, int line)
     {
         Instruction i = igoto.getInstruction();
@@ -1089,6 +1298,12 @@ final class BytecodeGenerator
                 throw new IllegalStateException("In line: " + b.line);
             b.instr.setTarget(ih);
         }
+    }
+    
+    private InstructionHandle asJavaBoolean()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "toJavaBoolean",
+                Type.BOOLEAN, NO_ARGS, Constants.INVOKEVIRTUAL));
     }
     
     
@@ -1111,8 +1326,9 @@ final class BytecodeGenerator
     
 
     
-    BytecodeGenerator createInstance(String name, int argsLen, int defaultValues, boolean packExtraArgs)
+    BytecodeGenerator createInstance(int argsLen, int defaultValues, boolean packExtraArgs)
     {
+        String name = className + '$' + (inheritedFunctionsId++);
         return new BytecodeGenerator(classLoader, name, argsLen, defaultValues, packExtraArgs);
     }
 

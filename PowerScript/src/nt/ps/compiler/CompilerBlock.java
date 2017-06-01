@@ -8,16 +8,19 @@ package nt.ps.compiler;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import nt.ps.PSGlobals;
+import nt.ps.compiler.ScopeInfo.ScopeType;
 import nt.ps.compiler.VariablePool.Variable;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.CompilerErrors;
 import nt.ps.compiler.parser.Block;
+import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Command;
 import nt.ps.compiler.parser.FunctionLiteral;
 import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.compiler.parser.Operator;
+import nt.ps.compiler.parser.OperatorSymbol;
 import nt.ps.compiler.parser.ParsedCode;
 import nt.ps.lang.PSFunction;
 import org.apache.bcel.generic.InstructionHandle;
@@ -87,7 +90,7 @@ final class CompilerBlock
     {
         if(command.isOperationsCommand())
         {
-            compileOperation(command.getCode(0));
+            compileOperation(command.getCode(0), false);
             return;
         }
         
@@ -102,33 +105,43 @@ final class CompilerBlock
         
     }
     
-    private void compileOperation(ParsedCode code) throws CompilerError
+    private void compileOperation(ParsedCode code, boolean isGlobal) throws CompilerError
     {
         switch(code.getCodeType())
         {
             case IDENTIFIER: {
-                Variable var = checkAndGetVar(code.toString(), false);
+                Variable var = checkAndGetVar(code.toString(), isGlobal);
                 bytecode.load(var);
             } break;
             case LITERAL: {
                 bytecode.loadLiteral((Literal) code);
             } break;
             case MUTABLE_LITERAL: {
-                compileMutableLiteral((MutableLiteral) code);
+                compileMutableLiteral((MutableLiteral) code, isGlobal);
             } break;
             case BLOCK: {
                 Block b = (Block) code;
                 if(!b.isParenthesis())
                     throw CompilerError.unexpectedCode(code);
-                compileOperation(b.getFirstCode());
+                compileOperation(b.getFirstCode(), isGlobal);
             } break;
             case FUNCTION: {
-                compileFunction((FunctionLiteral) code);
+                compileFunction((FunctionLiteral) code, isGlobal);
             } break;
+            case SELF: {
+                bytecode.loadSelf();
+            } break;
+            case OPERATOR: {
+                
+            } break;
+            case ASSIGNATION: {
+                
+            } break;
+            default: throw CompilerError.unexpectedCode(code);
         }
     }
     
-    private void compileMutableLiteral(MutableLiteral literal) throws CompilerError
+    private void compileMutableLiteral(MutableLiteral literal, boolean isGlobal) throws CompilerError
     {
         if(literal.isLiteralArray())
         {
@@ -136,7 +149,7 @@ final class CompilerBlock
             int count = 0, max = literal.getItemCount();
             for(MutableLiteral.Item item : literal)
             {
-                compileOperation(item.getValue());
+                compileOperation(item.getValue(), isGlobal);
                 bytecode.insertArrayLiteralItem(count++, count >= max);
             }
             bytecode.endArrayLiteral();
@@ -147,7 +160,7 @@ final class CompilerBlock
             int count = 0, max = literal.getItemCount();
             for(MutableLiteral.Item item : literal)
             {
-                compileOperation(item.getValue());
+                compileOperation(item.getValue(), isGlobal);
                 bytecode.insertTupleLiteralItem(count++, count >= max);
             }
             bytecode.endTupleLiteral();
@@ -158,8 +171,8 @@ final class CompilerBlock
             int count = 0, max = literal.getItemCount();
             for(MutableLiteral.Item item : literal)
             {
-                compileOperation(item.getKey());
-                compileOperation(item.getValue());
+                compileOperation(item.getKey(), isGlobal);
+                compileOperation(item.getValue(), isGlobal);
                 bytecode.insertMapLiteralItem(count++, count >= max);
             }
             bytecode.endMapLiteral();
@@ -170,8 +183,8 @@ final class CompilerBlock
             int count = 0, max = literal.getItemCount();
             for(MutableLiteral.Item item : literal)
             {
-                compileOperation(item.getKey());
-                compileOperation(item.getValue());
+                compileOperation(item.getKey(), isGlobal);
+                compileOperation(item.getValue(), isGlobal);
                 bytecode.insertObjectLiteralItem(count++, count >= max);
             }
             bytecode.endObjectLiteral();
@@ -179,9 +192,50 @@ final class CompilerBlock
         else throw new IllegalStateException();
     }
     
-    private void compileFunction(FunctionLiteral function)
+    private void compileFunction(FunctionLiteral function, boolean isGlobal) throws CompilerError
     {
-        function.
+        String varargs = function.isVarargs() ? function.getVarargsParameterName() : null;
+        int defualts = function.getDefaultCount();
+        int parameters = function.getParameterCount();
+        ParsedCode assignation = function.hasAssignation() ? function.getAssignation() : null;
+        ScopeInfo info = new ScopeInfo(function.getScope(), ScopeType.BASE);
+        
+        CompilerErrors childErrors = new CompilerErrors();
+        BytecodeGenerator childGenerator = bytecode.createInstance(varargs != null ? parameters + 1 : parameters,
+                defualts, varargs != null);
+        CompilerBlock childCompiler = new CompilerBlock(info, globals, CompilerBlockType.FUNCTION,
+                childGenerator, childErrors, vars);
+        
+        for(int i=0;i<parameters;i++)
+        {
+            String par = function.getParameterName(i);
+            childCompiler.vars.createParameter(par);
+        }
+        if(varargs != null)
+            childCompiler.vars.createParameter(varargs);
+        
+        childCompiler.compile();
+        
+        if(childErrors.hasErrors())
+        {
+            errors.addErrors(childErrors);
+            return;
+        }
+        
+        Class<? extends PSFunction> functionClass = childCompiler.getCompiledClass();
+        bytecode.createFunction(functionClass, childGenerator, childCompiler.vars.getUpPointers());
+        
+        if(assignation != null)
+        {
+            bytecode.createTemp("functionTemp");
+            bytecode.storeTemp("functionTemp");
+            assign(assignation, isGlobal, () -> {
+                bytecode.loadTemp("functionTemp");
+                return 1;
+            });
+            bytecode.loadTemp("functionTemp");
+            bytecode.removeTemp("functionTemp");
+        }
     }
     
     
@@ -192,20 +246,60 @@ final class CompilerBlock
     
     
     
-    private InstructionHandle assignFromIdentifier(Identifier identifier) throws CompilerError
+    private InstructionHandle assign(ParsedCode to, boolean isGlobal, AssignationParametersLoader parametersLoader) throws CompilerError
+    {
+        switch(to.getCodeType())
+        {
+            default: throw new IllegalArgumentException();
+            case IDENTIFIER: return assignFromIdentifier((Identifier) to, parametersLoader);
+            case OPERATOR: {
+                Operator operator = (Operator) to;
+                OperatorSymbol symbol = operator.getSymbol();
+                if(symbol == OperatorSymbol.ACCESS)
+                    return assignFromAccess(operator, parametersLoader, isGlobal);
+                else if(symbol == OperatorSymbol.PROPERTY_ACCESS)
+                    return assignFromPropertyAccess(operator, parametersLoader, isGlobal);
+                else throw new IllegalArgumentException();
+            }
+        }
+    }
+    
+    private InstructionHandle assignFromIdentifier(Identifier identifier, AssignationParametersLoader loader) throws CompilerError
     {
         String name = identifier.toString();
         if(!vars.exists(name))
             throw new CompilerError("Variable \"" + name + "\" does not exists");
         Variable var = vars.get(name, false);
+        int amount = loader.load();
+        if(amount < 1)
+            throw new IllegalStateException();
+        bytecode.wrapArgsToArray(amount);
         return bytecode.store(var);
     }
     
-    private InstructionHandle assignFromAccess(Operator operator) throws CompilerError
+    private InstructionHandle assignFromAccess(Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
     {
-        compileOperation(operator.getOperand(0));
-        compileOperation(operator.getOperand(1));
-        
+        compileOperation(operator.getOperand(0), isGlobal);
+        compileOperation(operator.getOperand(1), isGlobal);
+        int amount = loader.load();
+        if(amount < 1)
+            throw new IllegalStateException();
+        bytecode.wrapArgsToArray(amount);
+        return bytecode.callStoreAccess();
+    }
+    
+    private InstructionHandle assignFromPropertyAccess(Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
+    {
+        compileOperation(operator.getOperand(0), isGlobal);
+        ParsedCode code2 = operator.getOperand(1);
+        if(!code2.is(Code.CodeType.IDENTIFIER))
+            throw new CompilerError("Expected valid identifier in property assignation: " + operator);
+        bytecode.loadLiteral(Literal.valueOf(code2.toString()));
+        int amount = loader.load();
+        if(amount < 1)
+            throw new IllegalStateException();
+        bytecode.wrapArgsToArray(amount);
+        return bytecode.callStorePropertyAccess();
     }
     
     
@@ -244,4 +338,7 @@ final class CompilerBlock
     
     public static enum CompilerBlockType { SCRIPT, FUNCTION }
     private static final Class<?>[] SET_GLOBALS_SIGNATURE = { PSGlobals.class };
+    
+    @FunctionalInterface
+    private static interface AssignationParametersLoader { int load(); }
 }

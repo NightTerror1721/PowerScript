@@ -21,6 +21,13 @@ public final class CompilerErrors
         errors.add(new Error(command,error.getMessage(),error.getCause()));
     }
     
+    public final void addErrors(CompilerErrors errors)
+    {
+        errors.errors.forEach((error) -> {
+            this.errors.add(error);
+        });
+    }
+    
     public final boolean hasErrors() { return !errors.isEmpty(); }
     
     public static final class Error

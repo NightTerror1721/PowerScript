@@ -319,7 +319,7 @@ public final class Tuple
             if(!pars.isArgumentsList())
                 throw new CompilerError("Expected a valid list of arguments in call operator");
             it.increase();
-            operation = Operator.invokeOperator((Identifier) identifier, operand1, pars);
+            operation = Operator.invokeOperator(operand1, (Identifier) identifier, pars);
         }
         else if(operator.isCall())
         {

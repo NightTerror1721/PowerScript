@@ -6,8 +6,9 @@
 package nt.ps.compiler;
 
 import java.util.HashMap;
+import nt.ps.lang.PSObject;
+import nt.ps.lang.PSString;
 import nt.ps.lang.PSValue;
-import nt.ps.lang.PSVarargs;
 
 /**
  *
@@ -31,8 +32,28 @@ public final class LangUtils
         public ProtoObject(int initialCapacity, float loadFactor) { super(initialCapacity, loadFactor); }
     }
     
-    public static final PSVarargs wrap2Args(PSValue arg0, PSValue arg1)
+    public static final PSValue operatorTypeof(PSValue value)
     {
-        return PSVarargs.varargsOf(arg0, arg1);
+        return new PSString(value.getPSType().getTypeName());
+    }
+    
+    public static final PSValue operatorInstanceof(PSValue object, PSValue prototype)
+    {
+        PSObject obj = object.toPSObject();
+        return obj.getPrototype() == prototype ? PSValue.TRUE : PSValue.FALSE;
+    }
+    
+    public static final PSValue operatorEqualsReference(PSValue value0, PSValue value1)
+    {
+        return value0.getPSType() == value1.getPSType()
+                ? value0.equals(value1)
+                : PSValue.FALSE;
+    }
+    
+    public static final PSValue operatorNotEqualsReference(PSValue value0, PSValue value1)
+    {
+        return value0.getPSType() == value1.getPSType()
+                ? value0.notEquals(value1)
+                : PSValue.TRUE;
     }
 }

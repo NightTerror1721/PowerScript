@@ -5,7 +5,6 @@
  */
 package nt.ps.compiler.parser;
 
-import java.util.Objects;
 import nt.ps.compiler.exception.CompilerError;
 
 /**
@@ -79,7 +78,7 @@ public final class Operator extends CodeObject
         return new Operator(OperatorSymbol.CALL, ops);
     }
     
-    public static final Operator invokeOperator(Identifier identifier, ParsedCode preOperand, Block parameters)
+    public static final Operator invokeOperator(ParsedCode preOperand, Identifier identifier, Block parameters)
     {
         if(preOperand == null)
             throw new NullPointerException();
