@@ -238,6 +238,37 @@ final class CompilerBlock
         }
     }
     
+    private void compileTernaryOperator(Operator operator, boolean isGlobal) throws CompilerError
+    {
+        compileOperation(operator.getOperand(0), isGlobal);
+        InstructionHandle cmpIh = bytecode.computeIf();
+        compileOperation(operator.getOperand(1), isGlobal);
+        InstructionHandle ifIh = bytecode.emptyJump();
+        bytecode.modifyJump(cmpIh);
+        compileOperation(operator.getOperand(2), isGlobal);
+        bytecode.modifyJump(ifIh);
+    }
+    
+    private void compileAndOperator(Operator operator, boolean isGlobal) throws CompilerError
+    {
+        compileOperation(operator.getOperand(0), isGlobal);
+        bytecode.dup();
+        InstructionHandle ih = bytecode.computeIf();
+        bytecode.pop();
+        compileOperation(operator.getOperand(1), isGlobal);
+        bytecode.modifyJump(ih);
+    }
+    
+    private void compileOrOperator(Operator operator, boolean isGlobal) throws CompilerError
+    {
+        compileOperation(operator.getOperand(0), isGlobal);
+        bytecode.dup();
+        InstructionHandle ih = bytecode.computeInverseIf();
+        bytecode.pop();
+        compileOperation(operator.getOperand(1), isGlobal);
+        bytecode.modifyJump(ih);
+    }
+    
     
     
     

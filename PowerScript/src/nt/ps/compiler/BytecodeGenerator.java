@@ -1156,27 +1156,27 @@ final class BytecodeGenerator
                 wrapArgsToArray(args);
             case -1:
                 ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VARARGS, Constants.INVOKEVIRTUAL));
+                        TYPE_VARARGS, ARGS_VALUE_VARARGS, Constants.INVOKEVIRTUAL));
                 break;
             case 0:
                 ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, NO_ARGS, Constants.INVOKEVIRTUAL));
+                        TYPE_VARARGS, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
                 break;
             case 1:
                 ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+                        TYPE_VARARGS, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
                 break;
             case 2:
                 ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+                        TYPE_VARARGS, ARGS_VALUE_3, Constants.INVOKEVIRTUAL));
                 break;
             case 3:
                 ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_3, Constants.INVOKEVIRTUAL));
+                        TYPE_VARARGS, ARGS_VALUE_4, Constants.INVOKEVIRTUAL));
                 break;
             case 4:
                 ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_4, Constants.INVOKEVIRTUAL));
+                        TYPE_VARARGS, ARGS_VALUE_5, Constants.INVOKEVIRTUAL));
                 break;
         }
         
@@ -1262,31 +1262,37 @@ final class BytecodeGenerator
         return mainInst.append(new IF_ICMPLE(null));
     }
     
-    final InstructionHandle emptyJump()
+    public final InstructionHandle emptyJump()
     {
-        return builder.createEmptyGoto();
+        return createEmptyGoto();
     }
-    final void modifyJump(InstructionHandle instrId, int line)
+    public final void modifyJump(InstructionHandle instrId)
     {
-        builder.markBranch(instrId,line);
-        /*int code = instr.get(instrId);
-        if(code != Instr.JUMP)
-            throw new IllegalStateException();
-        code = Instr.JUMP + (instrTo << 8);
-        instr.set(instrId,code);*/
+        markBranch(instrId);
     }
     
     final InstructionHandle jump(InstructionHandle instrTo)
     {
-        return builder.createGoto(instrTo);
+        return createGoto(instrTo);
     }
     
-    private void markBranch(InstructionHandle igoto, int line)
+    private InstructionHandle createEmptyGoto()
+    {
+        GOTO g = new GOTO(null);
+        return mainInst.append(g);
+    }
+    
+    private InstructionHandle createGoto(InstructionHandle ih)
+    {
+        return mainInst.append(new GOTO(ih));
+    }
+    
+    private void markBranch(InstructionHandle igoto)
     {
         Instruction i = igoto.getInstruction();
         if(!(i instanceof BranchInstruction))
             throw new IllegalStateException();
-        branchInfo.add(new BranchInfo((BranchInstruction)i,mainInst.getEnd(),line));
+        branchInfo.add(new BranchInfo((BranchInstruction)i,mainInst.getEnd()));
     }
     
     private void resolveAllBranches()
@@ -1295,12 +1301,12 @@ final class BytecodeGenerator
         {
             InstructionHandle ih = b.target.getNext();
             if(ih == null)
-                throw new IllegalStateException("In line: " + b.line);
+                throw new IllegalStateException();
             b.instr.setTarget(ih);
         }
     }
     
-    private InstructionHandle asJavaBoolean()
+    public final InstructionHandle asJavaBoolean()
     {
         return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "toJavaBoolean",
                 Type.BOOLEAN, NO_ARGS, Constants.INVOKEVIRTUAL));
@@ -1489,13 +1495,11 @@ final class BytecodeGenerator
     {
         private final BranchInstruction instr;
         private final InstructionHandle target;
-        private final int line;
         
-        private BranchInfo(BranchInstruction i, InstructionHandle t, int line)
+        private BranchInfo(BranchInstruction i, InstructionHandle t)
         {
             instr = i;
             target = t;
-            this.line = line;
         }
     }
     
