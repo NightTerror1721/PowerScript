@@ -96,6 +96,7 @@ final class BytecodeGenerator
             STR_FUNC_NAME = "innerCall",
             STR_FUNC_SET_GLOBALS = "setGlobals",
             STR_FUNC_ARG = "arg",
+            STR_EXPAND_TEMP = "__exp",
             STR_GLOBALS_ATTRIBUTE = "__G",
             STR_UP_POINTERS = "__upptrs";
     
@@ -107,6 +108,12 @@ final class BytecodeGenerator
             ARGS_VALUE_4 = { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
             ARGS_VALUE_5 = { TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
             ARGS_VARARGS = { TYPE_VARARGS },
+            ARGS_STRING = { Type.STRING },
+            ARGS_STRING_VALUE_1 = { Type.STRING, TYPE_VALUE },
+            ARGS_STRING_VALUE_2 = { Type.STRING, TYPE_VALUE, TYPE_VALUE },
+            ARGS_STRING_VALUE_3 = { Type.STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
+            ARGS_STRING_VALUE_4 = { Type.STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
+            ARGS_STRING_VARARGS = { Type.STRING, TYPE_VARARGS },
             ARGS_VALUE_VARARGS = { TYPE_VALUE, TYPE_VARARGS },
             ARGS_A_VALUE = { new ArrayType(TYPE_VALUE, 1) },
             ARGS_GLOBALS = { TYPE_GLOBALS },
@@ -114,12 +121,16 @@ final class BytecodeGenerator
             ARGS_LONG = { Type.LONG },
             ARGS_FLOAT = { Type.FLOAT },
             ARGS_DOUBLE = { Type.DOUBLE },
-            ARGS_STRING = { Type.STRING },
-            ARGS_STRING_VALUE = { Type.STRING, TYPE_VALUE },
             ARGS_VARARGS_INT = { TYPE_VARARGS, Type.INT },
+            ARGS_STRING_VALUE = ARGS_STRING_VALUE_1,
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
             ARGS_JAVAMAP = { new ObjectType(Map.class.getName()) },
             ARGS_HASHMAP = { TYPE_HASHMAP };
+    
+    private static final Type[][][] FUNC_ARGS = {
+        { NO_ARGS, ARGS_VALUE_1, ARGS_VALUE_2, ARGS_VALUE_3, ARGS_VALUE_4, ARGS_VARARGS },
+        { ARGS_STRING, ARGS_STRING_VALUE_1, ARGS_STRING_VALUE_2, ARGS_STRING_VALUE_3, ARGS_STRING_VALUE_4, ARGS_STRING_VARARGS }
+    };
     
     public static final String
             STR_VAR_PREFIX = "var",
@@ -158,6 +169,7 @@ final class BytecodeGenerator
     private final LinkedList<BranchInfo> branchInfo = new LinkedList<>();
     private final HashMap<PSValue,String> constants = new HashMap<>();
     private final HashMap<String, TempInfo> tempVars = new HashMap<>();
+    private int expandId = -1;
     
     private long inheritedFunctionsId = 0;
     
@@ -739,6 +751,29 @@ final class BytecodeGenerator
         temp.enabled = false;
     }
     
+    private int createExpand()
+    {
+        if(expandId >= 0)
+            return expandId;
+        
+        LocalVariableGen local = mainMethod.addLocalVariable(STR_EXPAND_TEMP, TYPE_VARARGS, null, null);
+        return expandId = local.getIndex();
+    }
+    
+    public final InstructionHandle storeExpand()
+    {
+        return mainInst.append(new ASTORE(createExpand()));
+    }
+    
+    public final InstructionHandle loadExpand(int index)
+    {
+        mainInst.append(new ALOAD(createExpand()));
+        String func = index == 0 ? STR_FUNC_SELF : STR_FUNC_ARG;
+        Type[] args = index == 0 ? NO_ARGS : ARGS_INT;
+        return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, func,
+                TYPE_VALUE, args, Constants.INVOKEVIRTUAL));
+    }
+    
     
     
     
@@ -1148,37 +1183,12 @@ final class BytecodeGenerator
         if(args < -1)
             throw new IllegalStateException();
         String method = isInvoke ? "invoke" : "call";
-        InstructionHandle ih;
+        Type[] targs = FUNC_ARGS[isInvoke ? 1 : 0][args < 0 || args > 5 ? 5 : args];
         
-        switch(args)
-        {
-            default:
-                wrapArgsToArray(args);
-            case -1:
-                ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_VARARGS, Constants.INVOKEVIRTUAL));
-                break;
-            case 0:
-                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
-                break;
-            case 1:
-                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
-                break;
-            case 2:
-                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_3, Constants.INVOKEVIRTUAL));
-                break;
-            case 3:
-                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_4, Constants.INVOKEVIRTUAL));
-                break;
-            case 4:
-                ih =  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
-                        TYPE_VARARGS, ARGS_VALUE_5, Constants.INVOKEVIRTUAL));
-                break;
-        }
+        if(args < 0)
+            wrapArgsToArray(args);
+        InstructionHandle ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
+                TYPE_VARARGS, targs, Constants.INVOKEVIRTUAL));
         
         if(multiresult)
             ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, STR_FUNC_SELF,
@@ -1187,37 +1197,30 @@ final class BytecodeGenerator
     }
     
     
-    public final InstructionHandle callNewOperator(Operator operator) throws CompilerError
+    public final InstructionHandle callNewOperator(Operator operator, boolean isTailed) throws CompilerError
     {
-        int args = operator.getOperandCount() - 1;
-        if(args > 0)
-            compiler.getStack().pop(args);
-        compiler.getStack().pop();
+        int args;
+        Type[] targs;
+        if(isTailed)
+        {
+            args = -1;
+            targs = FUNC_ARGS[0][5];
+            compiler.getStack().pop(2);
+        }
+        else
+        {
+            args = operator.getOperandCount() - 1;
+            targs = FUNC_ARGS[0][args > 5 ? 5 : args];
+            if(args > 0)
+                compiler.getStack().pop(args);
+            compiler.getStack().pop();
+        }
         compiler.getStack().push();
         
-        switch(args)
-        {
-            default:
-                wrapArgsToArray(args);
-            case -1:
-                return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
-                        TYPE_VARARGS, ARGS_VARARGS, Constants.INVOKEVIRTUAL));
-            case 0:
-                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
-                        TYPE_VARARGS, NO_ARGS, Constants.INVOKEVIRTUAL));
-            case 1:
-                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
-                        TYPE_VARARGS, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
-            case 2:
-                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
-                        TYPE_VARARGS, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
-            case 3:
-                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
-                        TYPE_VARARGS, ARGS_VALUE_3, Constants.INVOKEVIRTUAL));
-            case 4:
-                return  mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
-                        TYPE_VARARGS, ARGS_VALUE_4, Constants.INVOKEVIRTUAL));
-        }
+        if(isTailed)
+            wrapArgsToArray(args);
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
+                TYPE_VARARGS, targs, Constants.INVOKEVIRTUAL));
     }
     
     

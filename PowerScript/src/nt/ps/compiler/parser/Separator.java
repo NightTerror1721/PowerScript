@@ -23,12 +23,12 @@ public class Separator extends ParsedCode
     @Override
     public final CodeType getCodeType() { return CodeType.SEPARATOR; }
     
-    private static final HashMap<String, Separator> HASH = collect(Separator.class,s -> s.symbol);
-    
     public static final Separator
             COMMA = new Separator(","),
             COLON = new Separator(";"),
             TWO_POINTS = new Separator(":");
+    
+    private static final HashMap<String, Separator> HASH = collect(Separator.class,s -> s.symbol);
     
     public static final boolean isSeparator(String str) { return HASH.containsKey(str); }
     

@@ -33,7 +33,7 @@ public final class Assignation extends ParsedCode
     public final boolean hasIdentifiersOnly()
     {
         for(int i=0;i<parts.length;i++)
-            if(!parts[i].isIdentifier())
+            if(!parts[i].isIdentifiersOnly())
                 return false;
         return true;
     }
@@ -46,7 +46,7 @@ public final class Assignation extends ParsedCode
     public static final Assignation parse(Tuple tuple) throws CompilerError
     {
         int count = tuple.count(CodeType.ASSIGNATION_SYMBOL);
-        if(count >= 0)
+        if(count <= 0)
             return null;
         if(count > 1)
             throw new CompilerError("Cannot have more than one assignation operator in same statement");
@@ -66,32 +66,42 @@ public final class Assignation extends ParsedCode
         
         for(int i=0;i<len;i++)
         {
-            AssignationPart ap;
-            if(i >= assignations.length)
-                ap = new AssignationPart(locations[i].pack());
-            else if(i < len - 1)
-                ap = new AssignationPart(locations[i].pack(), assignations[i].pack());
+            if(i < len - 1)
+                aparts[i] = new AssignationPart(locations[i].pack(), assignations[i].pack());
             else
             {
-                ParsedCode[] passignations = Tuple.mapArray(i, assignations, t -> t.pack(), new ParsedCode[assignations.length]);
-                ap = new AssignationPart(locations[i].pack(), passignations);
+                if(assignations.length == locations.length)
+                    aparts[i] = new AssignationPart(locations[i].pack(), assignations[i].pack());
+                else if(assignations.length < locations.length)
+                {
+                    ParsedCode assignation = assignations[i].pack();
+                    if(assignation.is(CodeType.OPERATOR) && ((Operator) assignation).getSymbol().isCallable())
+                    {
+                        ParsedCode[] plocs = Tuple.mapArray(i, locations, t -> t.pack(), new ParsedCode[locations.length - i]);
+                        aparts[i] = new AssignationPart(plocs, assignation);
+                    }
+                    else
+                    {
+                        aparts[i] = new AssignationPart(locations[i].pack(), assignation);
+                        for(i++;i<locations.length;i++)
+                            aparts[i] = new AssignationPart(locations[i].pack());
+                    }
+                }
+                else throw new CompilerError("Cannot assign more operations than assignators");
             }
-            aparts[i] = ap;
         }
         
         return new Assignation(symbol, aparts);
     }
     
-    public static final class AssignationPart
+    public static final class Location
     {
         private final ParsedCode location;
-        private final ParsedCode[] assignations;
         private final int special;
         
-        private AssignationPart(ParsedCode location, ParsedCode... assignations) throws CompilerError
+        private Location(ParsedCode location) throws CompilerError
         {
             this.location = location;
-            this.assignations = assignations;
             
             if(location.is(CodeType.OPERATOR))
             {
@@ -106,13 +116,41 @@ public final class Assignation extends ParsedCode
                 special = 0;
             else throw new CompilerError("Invalid code in left assignation part: " + location);
         }
-        private AssignationPart(ParsedCode location) throws CompilerError { this(location, Literal.UNDEFINED); }
         
-        public final ParsedCode getLocation() { return location; }
-        public final int getAssignationCount() { return assignations.length; }
-        public final ParsedCode getAssignation(int index) { return assignations[index]; }
+        public final ParsedCode getCode() { return location; }
         public final boolean isIdentifier() { return special == 0; }
         public final boolean isAccess() { return special == 1; }
         public final boolean isPropertyAccess() { return special == 2; }
+    }
+    
+    public static final class AssignationPart
+    {
+        private final Location[] locations;
+        private final ParsedCode assignation;
+        
+        private AssignationPart(ParsedCode[] locations, ParsedCode assignation) throws CompilerError
+        {
+            if(locations.length <= 0)
+                throw new IllegalStateException();
+            this.locations = new Location[locations.length];
+            for(int i=0;i<locations.length;i++)
+                this.locations[i] = new Location(locations[i]);
+            
+            this.assignation = assignation;
+        }
+        private AssignationPart(ParsedCode location) throws CompilerError { this(location, Literal.UNDEFINED); }
+        private AssignationPart(ParsedCode location, ParsedCode assignation) throws CompilerError { this(new ParsedCode[]{ location }, assignation); }
+        
+        public final Location getLocation(int index) { return locations[index]; }
+        public final int getLocationCount() { return locations.length; }
+        public final ParsedCode getAssignation() { return assignation; }
+        public final boolean isIdentifiersOnly()
+        {
+            for(Location loc : locations)
+                if(!loc.isIdentifier())
+                    return false;
+            return true;
+        }
+        
     }
 }

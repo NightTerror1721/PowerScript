@@ -99,12 +99,12 @@ public class FunctionLiteral extends ParsedCode
                     if(a.getPartCount() != 1)
                         throw new CompilerError("Only is valid a single literal in right part of default identifier in function definition. <identifier = literal>");
                     AssignationPart ap = a.getPart(0);
-                    if(ap.getAssignationCount() != 1)
+                    if(ap.getLocationCount() != 1)
                         throw new CompilerError("Only is valid a single literal in right part of default identifier in function definition. <identifier = literal>");
-                    ParsedCode plit = ap.getAssignation(0);
+                    ParsedCode plit = ap.getAssignation();
                     if(!plit.is(CodeType.LITERAL))
                         throw new CompilerError("Only is valid a single literal in right part of default identifier in function definition. <identifier = literal>");
-                    spars[count] = ap.getLocation().toString();
+                    spars[count] = ap.getLocation(0).toString();
                     ldefs[count - (spars.length - ldefs.length)] = (Literal) plit;
                 } break;
                 default: throw new CompilerError("Unexpected code. Expected only a valid identifier or varargs identifier");

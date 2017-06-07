@@ -5,7 +5,12 @@
  */
 package nt.ps;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.exception.PSCompilerException;
 import nt.ps.compiler.parser.Literal;
 
 /**
@@ -14,8 +19,17 @@ import nt.ps.compiler.parser.Literal;
  */
 public final class Main
 {
-    public static void main(String[] args) throws CompilerError
+    public static void main(String[] args) throws CompilerError, FileNotFoundException, PSCompilerException
     {
         System.out.println(Literal.decode("Infinity"));
+        
+        
+        File file = new File("test.pws");
+        FileInputStream fis = new FileInputStream(file);
+        PSClassLoader cl = new PSClassLoader(Main.class.getClassLoader());
+        PSState state = new PSState();
+        
+        PSScript script = CompilerUnit.compile(fis, state, cl, "test");
+        script.execute();
     }
 }

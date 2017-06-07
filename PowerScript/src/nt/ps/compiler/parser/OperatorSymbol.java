@@ -49,6 +49,8 @@ public abstract class OperatorSymbol extends Code
     public boolean isNew() { return false; }
     public boolean isFunction() { return false; }
     
+    public final boolean isCallable() { return isCall() || isInvoke(); }
+    
     public boolean canBeBothUnaryOrder() { return false; }
     
     public final int comparePriority(OperatorSymbol os)

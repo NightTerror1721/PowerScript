@@ -20,8 +20,8 @@ public final class Command extends ParsedCode
     
     private Command(int line, CommandWord command, ParsedCode... code)
     {
-        if(line < 1)
-            throw new IllegalStateException();
+        if(line < 0)
+            throw new IllegalStateException("line == " + line);
         this.line = line;
         this.command = command;
         this.code = code;

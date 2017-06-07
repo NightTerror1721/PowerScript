@@ -156,7 +156,7 @@ public final class Tuple
             }
             tokens.add(cp);
         }
-        if(!part.isEmpty())
+        if(!tokens.isEmpty())
             part.add(new Tuple(tokens));
         tokens.clear();
         return part.toArray(new Tuple[part.size()]);
@@ -350,7 +350,7 @@ public final class Tuple
             }
             if(it.end())
                 throw new CompilerError("Expected a : in ternary operator");
-            ParsedCode response1 = subTuple(start,it.value - 1).pack();
+            ParsedCode response1 = subTuple(start, it.value  - start).pack();
             it.increase();
             ParsedCode response2 = subTuple(it.value).pack();
             it.value = it.limit;
@@ -408,7 +408,7 @@ public final class Tuple
         public final int decrease(int times) { return value -= times; }
         public final int decrease() { return decrease(1); }
         public final int value() { return value; }
-        public final boolean end() { return value < limit; }
+        public final boolean end() { return value >= limit; }
     }
     
     @FunctionalInterface

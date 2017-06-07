@@ -11,6 +11,7 @@ import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Identifier;
+import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.OperatorSymbol;
 import nt.ps.compiler.parser.Tuple;
 
@@ -63,11 +64,15 @@ final class InstructionBuilder
         if(!isEmpty())
         {
             boolean unary = !codes.isEmpty() && !codes.getLast().isValidCodeObject();
-            Code code = Identifier.create(sb.toString(), unary);
+            Code code = Literal.decode(sb.toString());
             if(code == null)
-                throw new CompilerError("Invalid command: " + sb.toString());
-            if(code.is(CodeType.COMMAND_WORD) && !codes.isEmpty())
-                throw new CompilerError("Invalid command after first possition in instruction: " + code);
+            {
+                code = Identifier.create(sb.toString(), unary);
+                if(code == null)
+                    throw new CompilerError("Invalid command: " + sb.toString());
+                if(code.is(CodeType.COMMAND_WORD) && !codes.isEmpty())
+                    throw new CompilerError("Invalid command after first possition in instruction: " + code);
+            }
             codes.add(code);
             clear();
         }

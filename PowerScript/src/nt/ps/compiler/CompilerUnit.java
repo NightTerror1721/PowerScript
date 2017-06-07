@@ -89,7 +89,8 @@ public final class CompilerUnit
             {
                 Tuple tuple = parseInstruction(errors, source, false, ColonMode.ENDS);
                 Command command = Command.decode(currentLine, tuple);
-                commands.add(command);
+                if(command != null)
+                    commands.add(command);
             }
             catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(currentLine)); }
         }
@@ -119,6 +120,7 @@ public final class CompilerUnit
                     } break;
                     
                     case ';': {
+                        sb.decode();
                         switch(colonMode)
                         {
                             case ENDS: break base_loop;
@@ -526,14 +528,14 @@ public final class CompilerUnit
                         c = source.next();
                         if(c == '=')
                         {
-                            sb.addOperator(OperatorSymbol.MULTIPLY);
-                            source.move(-1);
-                        }
-                        else
-                        {
                             if(!source.canPeek(1))
                                 throw CompilerError.invalidEndChar('=');
                             sb.addAssignation(AssignationSymbol.ASSIGNATION_MULTIPLY);
+                        }
+                        else
+                        {
+                            sb.addOperator(OperatorSymbol.MULTIPLY);
+                            source.move(-1);
                         }
                     } break;
                     

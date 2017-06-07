@@ -1,0 +1,2 @@
+var local = 650;
+local = local == 650 ? local * 2 : local - 50;

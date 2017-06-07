@@ -87,8 +87,8 @@ public final class Operator extends CodeObject
         if(!parameters.isArgumentsList())
             throw new IllegalStateException();
         ParsedCode[] ops = new ParsedCode[parameters.getCodeCount() + 2];
+        ops[0] = preOperand;
         ops[1] = identifier;
-        ops[1] = preOperand;
         parameters.putInArray(ops,2);
         return new Operator(OperatorSymbol.INVOKE, ops);
     }
