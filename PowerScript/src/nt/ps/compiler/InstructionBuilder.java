@@ -46,6 +46,8 @@ final class InstructionBuilder
         return text;
     }
     
+    public final char getLastChar() { return sb.charAt(sb.length() - 1); }
+    
     public final String get() { return sb.toString(); }
     @Override public final String toString() { return sb.toString(); }
     public final boolean equals(String str) { return sb.toString().equals(str); }

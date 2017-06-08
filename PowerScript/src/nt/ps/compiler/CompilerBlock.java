@@ -41,9 +41,11 @@ final class CompilerBlock
     private final PSGlobals globals;
     private final CompilerBlockType type;
     private final CompilerErrors errors;
+    private final ClassRepository repository;
     private Class<? extends PSFunction> compiledClass;
     
-    public CompilerBlock(ScopeInfo source, PSGlobals globals, CompilerBlockType type, BytecodeGenerator bytecode, CompilerErrors errors, VariablePool parentVars)
+    public CompilerBlock(ScopeInfo source, PSGlobals globals, CompilerBlockType type, BytecodeGenerator bytecode,
+            CompilerErrors errors, VariablePool parentVars, ClassRepository repository)
     {
         scopes = new ScopeStack();
         stack = new Stack();
@@ -52,6 +54,7 @@ final class CompilerBlock
         this.globals = globals;
         this.type = type;
         this.errors = errors;
+        this.repository = repository;
         
         this.bytecode.setCompiler(this);
         scopes.push(source);
@@ -81,7 +84,7 @@ final class CompilerBlock
         if(type != CompilerBlockType.SCRIPT)
             bytecode.initiateUpPointersArray(vars.getUpPointers().size());
         
-        compiledClass = bytecode.build(type);
+        compiledClass = bytecode.build(type, repository);
     }
     
     private void completeScope(ScopeInfo scopeInfo)
@@ -151,49 +154,65 @@ final class CompilerBlock
     {
         if(literal.isLiteralArray())
         {
-            bytecode.initArrayLiteral(literal);
-            int count = 0, max = literal.getItemCount();
-            for(MutableLiteral.Item item : literal)
+            if(literal.getItemCount() <= 0)
+                bytecode.emptyArrayLiteral();
+            else
             {
-                compileOperation(item.getValue(), isGlobal, false);
-                bytecode.insertArrayLiteralItem(count++, count >= max);
+                bytecode.initArrayLiteral(literal);
+                int count = 0;
+                for(MutableLiteral.Item item : literal)
+                    bytecode.insertArrayLiteralItem(count++, () -> compileOperation(item.getValue(), isGlobal, false));
+                bytecode.endArrayLiteral();
             }
-            bytecode.endArrayLiteral();
         }
         else if(literal.isLiteralTuple())
         {
-            bytecode.initTupleLiteral(literal);
-            int count = 0, max = literal.getItemCount();
-            for(MutableLiteral.Item item : literal)
+            if(literal.getItemCount() <= 0)
+                bytecode.emptyTupleLiteral();
+            else
             {
-                compileOperation(item.getValue(), isGlobal, false);
-                bytecode.insertTupleLiteralItem(count++, count >= max);
+                bytecode.initTupleLiteral(literal);
+                int count = 0;
+                for(MutableLiteral.Item item : literal)
+                    bytecode.insertTupleLiteralItem(count++, () -> compileOperation(item.getValue(), isGlobal, false));
+                bytecode.endTupleLiteral();
             }
-            bytecode.endTupleLiteral();
         }
         else if(literal.isLiteralMap())
         {
-            bytecode.initMapLiteral(literal);
-            int count = 0, max = literal.getItemCount();
-            for(MutableLiteral.Item item : literal)
+            if(literal.getItemCount() <= 0)
+                bytecode.emptyMapLiteral();
+            else
             {
-                compileOperation(item.getKey(), isGlobal, false);
-                compileOperation(item.getValue(), isGlobal, false);
-                bytecode.insertMapLiteralItem(count++, count >= max);
+                bytecode.initMapLiteral(literal);
+                int count = 0;
+                for(MutableLiteral.Item item : literal)
+                {
+                    bytecode.insertMapLiteralItem(count++, () -> {
+                        compileOperation(item.getKey(), isGlobal, false);
+                        compileOperation(item.getValue(), isGlobal, false);
+                    });
+                }
+                bytecode.endMapLiteral();
             }
-            bytecode.endMapLiteral();
         }
         else if(literal.isLiteralObject())
         {
-            bytecode.initObjectLiteral(literal);
-            int count = 0, max = literal.getItemCount();
-            for(MutableLiteral.Item item : literal)
+            if(literal.getItemCount() <= 0)
+                bytecode.emptyObjectLiteral();
+            else
             {
-                compileOperation(item.getKey(), isGlobal, false);
-                compileOperation(item.getValue(), isGlobal, false);
-                bytecode.insertObjectLiteralItem(count++, count >= max);
+                bytecode.initObjectLiteral(literal);
+                int count = 0;
+                for(MutableLiteral.Item item : literal)
+                {
+                    bytecode.insertObjectLiteralItem(count++, () -> {
+                        compileOperation(item.getKey(), isGlobal, false);
+                        compileOperation(item.getValue(), isGlobal, false);
+                    });
+                }
+                bytecode.endObjectLiteral();
             }
-            bytecode.endObjectLiteral();
         }
         else throw new IllegalStateException();
     }
@@ -210,7 +229,7 @@ final class CompilerBlock
         BytecodeGenerator childGenerator = bytecode.createInstance(varargs != null ? parameters + 1 : parameters,
                 defualts, varargs != null);
         CompilerBlock childCompiler = new CompilerBlock(info, globals, CompilerBlockType.FUNCTION,
-                childGenerator, childErrors, vars);
+                childGenerator, childErrors, vars, repository);
         
         for(int i=0;i<parameters;i++)
         {
@@ -278,6 +297,7 @@ final class CompilerBlock
         compileOperation(operator.getOperand(1), isGlobal, false);
         InstructionHandle ifIh = bytecode.emptyJump();
         bytecode.modifyJump(cmpIh);
+        stack.pop();
         compileOperation(operator.getOperand(2), isGlobal, false);
         bytecode.modifyJump(ifIh);
     }

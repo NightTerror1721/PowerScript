@@ -6,6 +6,8 @@
 package nt.ps.compiler;
 
 import java.io.EOFException;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Objects;
@@ -38,22 +40,33 @@ public final class CompilerUnit
     private final PSClassLoader classLoader;
     private final String name;
     private final PSGlobals globals;
+    private final ClassRepository repository;
     
-    private CompilerUnit(CodeReader source, PSClassLoader classLoader, String name, PSGlobals globals)
+    private CompilerUnit(CodeReader source, PSClassLoader classLoader, String name, PSGlobals globals, ClassRepository repository)
     {
         this.source = Objects.requireNonNull(source);
         this.classLoader = Objects.requireNonNull(classLoader);
         this.name = Objects.requireNonNull(name);
         this.globals = Objects.requireNonNull(globals);
+        this.repository = repository;
     }
     
-    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name) throws PSCompilerException
+    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name, ClassRepository repository) throws PSCompilerException
     {
         CodeReader sourceBase = new CodeReader(input);
-        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals);
+        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals, repository);
         
         PSScript script = compiler.compile();
         return script;
+    }
+    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name) throws PSCompilerException
+    {
+        return compile(input, globals, classLoader, name, null);
+    }
+    
+    public static final void compileAsJar(File jarFile, File sourceRoot, File... sources) throws IOException, PSCompilerException
+    {
+        JarBuilder.createJar(jarFile, sourceRoot, sources);
     }
     
     private PSScript compile() throws PSCompilerException
@@ -66,7 +79,7 @@ public final class CompilerUnit
         
         ScopeInfo baseInfo = new ScopeInfo(base, ScopeInfo.ScopeType.BASE);
         BytecodeGenerator bytecode = new BytecodeGenerator(classLoader, name);
-        CompilerBlock compilerBlock = new CompilerBlock(baseInfo, globals, CompilerBlockType.SCRIPT, bytecode, errors, null);
+        CompilerBlock compilerBlock = new CompilerBlock(baseInfo, globals, CompilerBlockType.SCRIPT, bytecode, errors, null, repository);
         
         compilerBlock.compile();
         if(errors.hasErrors())
@@ -322,7 +335,9 @@ public final class CompilerUnit
                         }
                         else
                         {
-                            sb.addOperator(OperatorSymbol.PROPERTY_ACCESS);
+                            if(!sb.isEmpty() && Character.isDigit(sb.getLastChar()))
+                                sb.append('.');
+                            else sb.addOperator(OperatorSymbol.PROPERTY_ACCESS);
                             source.move(-1);
                         }
                     } break;
@@ -597,7 +612,7 @@ public final class CompilerUnit
                 else if(c == cend)
                 {
                     if(scope == 0)
-                        return source.subpart(startIndex, source.getCurrentIndex());
+                        return source.subpart(startIndex, source.getCurrentIndex() - 1);
                     scope--;
                 }
             }

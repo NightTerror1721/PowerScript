@@ -1,2 +1,4 @@
 var local = 650;
-local = local == 650 ? local * 2 : local - 50;
+local = local === 650 ? local * 2 : local - 50;
+
+var arr = [45, null, "this is sparta", [], 5.65];

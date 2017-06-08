@@ -7,6 +7,7 @@ package nt.ps.compiler;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -154,6 +155,7 @@ final class BytecodeGenerator
     private final InstructionList constInst;
     private final InstructionFactory factory;
     private final MethodGen mainMethod;
+    private byte[] bytecode;
     
     private final String className;
     private final String fileName;
@@ -261,7 +263,7 @@ final class BytecodeGenerator
     
     private void initLocalVariables()
     {
-        localVars.put(SELF_REFERENCE, SELF_ID);
+        //localVars.put(SELF_REFERENCE, SELF_ID);
         
         if(!functionId.isVarargs())
         {
@@ -644,7 +646,10 @@ final class BytecodeGenerator
         compiler.getStack().pop();
         switch(var.getVariableType())
         {
-            case LOCAL: return storeLocal(var.getReference());
+            case LOCAL:
+                if(!localVars.containsKey(var.getReference()))
+                    createLocal(var.getReference());
+                return storeLocal(var.getReference());
             case LOCAL_POINTER: return storeLocalPointer(var.getReference());
             case UP_POINTER: return storeUpPointer(var.getReference());
             case GLOBAL: return storeGlobal(var.getName());
@@ -959,23 +964,35 @@ final class BytecodeGenerator
     
     
     /* ARRAY LITERAL */
+    public final InstructionHandle emptyArrayLiteral() throws CompilerError
+    {
+        compiler.getStack().push();
+        mainInst.append(factory.createNew(TYPE_ARRAY));
+        mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(factory.createInvoke(
+                STR_TYPE_ARRAY,
+                "<init>",
+                Type.VOID,
+                NO_ARGS,
+                Constants.INVOKESPECIAL));
+    }
+    
     public final InstructionHandle initArrayLiteral(MutableLiteral literal) throws CompilerError
     {
         compiler.getStack().push();
         mainInst.append(factory.createNew(TYPE_ARRAY));
         mainInst.append(InstructionConstants.DUP);
-        mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
-        return mainInst.append(InstructionConstants.DUP);
+        mainInst.append(new PUSH(constantPool, literal.getItemCount()));
+        return mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
     }
     
-    public final InstructionHandle insertArrayLiteralItem(int index, boolean last) throws CompilerError
+    public final InstructionHandle insertArrayLiteralItem(int index, VoidOperation element) throws CompilerError
     {
         compiler.getStack().pop();
+        mainInst.append(InstructionConstants.DUP);
         mainInst.append(new PUSH(constantPool, index));
-        if(last)
-            return mainInst.append(new AASTORE());
-        mainInst.append(new AASTORE());
-        return mainInst.append(InstructionConstants.DUP);
+        element.doOperation();
+        return mainInst.append(new AASTORE());
     }
     
     public final InstructionHandle endArrayLiteral()
@@ -989,23 +1006,29 @@ final class BytecodeGenerator
     }
     
     /* TUPLE LITERAL */
+    public final InstructionHandle emptyTupleLiteral() throws CompilerError
+    {
+        compiler.getStack().push();
+        return mainInst.append(factory.createFieldAccess(STR_TYPE_VALUE, "EMPTY_TUPLE", TYPE_VALUE, Constants.GETSTATIC));
+    }
+    
     public final InstructionHandle initTupleLiteral(MutableLiteral literal) throws CompilerError
     {
         compiler.getStack().push();
         mainInst.append(factory.createNew(TYPE_TUPLE));
         mainInst.append(InstructionConstants.DUP);
+        mainInst.append(new PUSH(constantPool, literal.getItemCount()));
         mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
         return mainInst.append(InstructionConstants.DUP);
     }
     
-    public final InstructionHandle insertTupleLiteralItem(int index, boolean last) throws CompilerError
+    public final InstructionHandle insertTupleLiteralItem(int index, VoidOperation element) throws CompilerError
     {
         compiler.getStack().pop();
+        mainInst.append(InstructionConstants.DUP);
         mainInst.append(new PUSH(constantPool, index));
-        if(last)
-            return mainInst.append(new AASTORE());
-        mainInst.append(new AASTORE());
-        return mainInst.append(InstructionConstants.DUP);
+        element.doOperation();
+        return mainInst.append(new AASTORE());
     }
     
     public final InstructionHandle endTupleLiteral()
@@ -1019,6 +1042,19 @@ final class BytecodeGenerator
     }
     
     /* MAP LITERAL */
+    public final InstructionHandle emptyMapLiteral() throws CompilerError
+    {
+        compiler.getStack().push();
+        mainInst.append(factory.createNew(TYPE_MAP));
+        mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(factory.createInvoke(
+                STR_TYPE_MAP,
+                "<init>",
+                Type.VOID,
+                NO_ARGS,
+                Constants.INVOKESPECIAL));
+    }
+    
     public final InstructionHandle initMapLiteral(MutableLiteral literal) throws CompilerError
     {
         compiler.getStack().push();
@@ -1036,15 +1072,13 @@ final class BytecodeGenerator
         return mainInst.append(InstructionConstants.DUP);
     }
     
-    public final InstructionHandle insertMapLiteralItem(int index, boolean last) throws CompilerError
+    public final InstructionHandle insertMapLiteralItem(int index, VoidOperation element) throws CompilerError
     {
         compiler.getStack().pop();
+        element.doOperation();
         mainInst.append(factory.createInvoke(STR_TYPE_HASHMAP, "put",
                 TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
-        if(last)
-            mainInst.append(InstructionConstants.POP);
-        mainInst.append(InstructionConstants.POP);
-        return mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(InstructionConstants.POP);
     }
     
     public final InstructionHandle endMapLiteral()
@@ -1058,6 +1092,19 @@ final class BytecodeGenerator
     }
     
     /* OBJECT LITERAL */
+    public final InstructionHandle emptyObjectLiteral() throws CompilerError
+    {
+        compiler.getStack().push();
+        mainInst.append(factory.createNew(TYPE_OBJECT));
+        mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(factory.createInvoke(
+                STR_TYPE_OBJECT,
+                "<init>",
+                Type.VOID,
+                NO_ARGS,
+                Constants.INVOKESPECIAL));
+    }
+    
     public final InstructionHandle initObjectLiteral(MutableLiteral literal) throws CompilerError
     {
         compiler.getStack().push();
@@ -1075,15 +1122,13 @@ final class BytecodeGenerator
         return mainInst.append(InstructionConstants.DUP);
     }
     
-    public final InstructionHandle insertObjectLiteralItem(int index, boolean last) throws CompilerError
+    public final InstructionHandle insertObjectLiteralItem(int index, VoidOperation element) throws CompilerError
     {
         compiler.getStack().pop();
+        element.doOperation();
         mainInst.append(factory.createInvoke(STR_TYPE_HASHMAP, "put",
                 TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
-        if(last)
-            mainInst.append(InstructionConstants.POP);
-        mainInst.append(InstructionConstants.POP);
-        return mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(InstructionConstants.POP);
     }
     
     public final InstructionHandle endObjectLiteral()
@@ -1114,8 +1159,8 @@ final class BytecodeGenerator
                     return callTypeofOperator();
                 throw new IllegalStateException();
             }
-            return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, symbol.getAssociatedFunction(),
-                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+            return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, symbol.getAssociatedFunction(),
+                TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
         }
         else if(symbol.isBinary())
         {
@@ -1131,8 +1176,8 @@ final class BytecodeGenerator
                     return callNotEqualsReferenceOperator();
                 throw new IllegalStateException();
             }
-            return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, symbol.getAssociatedFunction(),
-                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+            return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, symbol.getAssociatedFunction(),
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
         }
         else throw new IllegalStateException();
     }
@@ -1140,25 +1185,25 @@ final class BytecodeGenerator
     private InstructionHandle callTypeofOperator()
     {
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorTypeof",
-                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKESTATIC));
     }
     
     private InstructionHandle callInstanceofOperator()
     {
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorInstanceof",
-                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKESTATIC));
     }
     
     private InstructionHandle callEqualsReferenceOperator()
     {
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorEqualsReference",
-                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKESTATIC));
     }
     
     private InstructionHandle callNotEqualsReferenceOperator()
     {
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorNotEqualsReference",
-                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKESTATIC));
     }
     
     
@@ -1342,10 +1387,18 @@ final class BytecodeGenerator
     }
 
     
-    public final Class<? extends PSFunction> build(CompilerBlockType type)
+    public final Class<? extends PSFunction> build(CompilerBlockType type, ClassRepository repository)
     {
-        byte[] bytecode = completeClass(type);
+        if(bytecode == null)
+            bytecode = completeClass(type);
+        if(repository != null)
+            repository.registerClass(className, bytecode);
         return classLoader.createPSClass(className, bytecode);
+    }
+    
+    public final void storeBytecode(OutputStream output) throws IOException
+    {
+        output.write(bytecode);
     }
     
     
@@ -1517,4 +1570,7 @@ final class BytecodeGenerator
             this.enabled = true;
         }
     }
+    
+    @FunctionalInterface
+    public static interface VoidOperation { void doOperation() throws CompilerError; }
 }

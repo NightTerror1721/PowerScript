@@ -95,7 +95,7 @@ public final class CodeReader
     public final CodeReader subpart(int from, int to)
     {
         CodeReader cr = new CodeReader(this);
-        cr.start = from;
+        cr.index = cr.start = from;
         cr.size = to;
         return cr;
     }

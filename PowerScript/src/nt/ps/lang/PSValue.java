@@ -186,6 +186,7 @@ public abstract class PSValue extends PSVarargs
     public static final PSValue MINUSONE = new PSNumber.PSInteger(-1);
     public static final PSValue ZERO = new PSNumber.PSInteger(0);
     public static final PSValue ONE = new PSNumber.PSInteger(1);
+    public static final PSValue EMPTY_TUPLE = new PSTuple(new PSValue[0]);
     
     
     

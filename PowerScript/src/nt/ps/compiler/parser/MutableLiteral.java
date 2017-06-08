@@ -89,7 +89,7 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
         {
             if(value == null)
                 throw new NullPointerException();
-            this.key = key.pack();
+            this.key = key == null ? null : key.pack();
             this.value = value.pack();
         }
         
