@@ -62,4 +62,7 @@ public class CompilerError extends PSException
             default:  return new CompilerError("Invalid character '" + c + "'");
         }
     }
+    
+    static boolean DEBUG = false;
+    public static final void setDebugMode(boolean flag) { DEBUG = flag; }
 }

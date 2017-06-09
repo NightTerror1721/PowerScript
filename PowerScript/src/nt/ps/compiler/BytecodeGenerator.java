@@ -515,10 +515,12 @@ final class BytecodeGenerator
                 TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
     }
     
-    public final InstructionHandle callStorePropertyAccess() throws CompilerError
+    public final InstructionHandle callStorePropertyAccess(String property) throws CompilerError
     {
         compiler.getStack().pop(3);
         compiler.getStack().push();
+        mainInst.append(new PUSH(constantPool, property));
+        mainInst.append(InstructionConstants.SWAP);
         return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "setProperty",
                 TYPE_VALUE, ARGS_STRING_VALUE, Constants.INVOKEVIRTUAL));
     }
@@ -797,6 +799,11 @@ final class BytecodeGenerator
     public final InstructionHandle swap()
     {
         return mainInst.append(InstructionConstants.SWAP);
+    }
+    
+    public final InstructionHandle loadNativeString(String string)
+    {
+        return mainInst.append(new PUSH(constantPool, string));
     }
     
     public final InstructionHandle loadUndefined()
@@ -1206,19 +1213,36 @@ final class BytecodeGenerator
                 TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKESTATIC));
     }
     
+    public final InstructionHandle callAccessOperator() throws CompilerError
+    {
+        compiler.getStack().pop(2);
+        compiler.getStack().push();
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "get",
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+    }
+    
+    public final InstructionHandle callPropertyAccessOperator(String property) throws CompilerError
+    {
+        compiler.getStack().pop();
+        compiler.getStack().push();
+        mainInst.append(new PUSH(constantPool, property));
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "getProperty",
+                TYPE_VALUE, ARGS_STRING, Constants.INVOKEVIRTUAL));
+    }
+    
     
     public final InstructionHandle doCall(Operator operator, boolean isInvoke, boolean multiresult) throws CompilerError
     {
-        int args = operator.getOperandCount() - 1;
+        int args = operator.getOperandCount() - (isInvoke ? 2 : 1);
         if(args > 0)
             compiler.getStack().pop(args);
-        compiler.getStack().pop(isInvoke ? 2 : 1);
+        compiler.getStack().pop();
         compiler.getStack().push();
         return doCall(args, isInvoke, multiresult);
     }
     public final InstructionHandle doTailedCall(boolean isInvoke, boolean multiresult) throws CompilerError
     {
-        compiler.getStack().pop(isInvoke ? 3 : 2);
+        compiler.getStack().pop(2);
         compiler.getStack().push();
         return doCall(-1, isInvoke, multiresult);
     }

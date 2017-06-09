@@ -18,6 +18,8 @@ public final class CompilerErrors
     
     public final void addError(CompilerError error, Command command)
     {
+        if(CompilerError.DEBUG)
+            throw new IllegalStateException(error);
         errors.add(new Error(command,error.getMessage(),error.getCause()));
     }
     

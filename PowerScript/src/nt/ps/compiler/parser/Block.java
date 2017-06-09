@@ -86,7 +86,7 @@ public abstract class Block<C extends ParsedCode>
         @Override
         public final ParsedCode[] putInArray(ParsedCode[] array, int offset)
         {
-            System.arraycopy(array,offset,codes,0,codes.length);
+            System.arraycopy(codes,0,array,offset,codes.length);
             return array;
         }
         

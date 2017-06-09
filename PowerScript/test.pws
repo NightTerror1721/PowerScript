@@ -2,3 +2,6 @@ var local = 650;
 local = local === 650 ? local * 2 : local - 50;
 
 var arr = [45, null, "this is sparta", [], 5.65];
+
+local.show("hola", arr[2](6, local));
+local("poz ezo");

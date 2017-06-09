@@ -61,6 +61,12 @@ final class InstructionBuilder
         return this;
     }
     
+    public final InstructionBuilder replaceCode(int index, Code code)
+    {
+        codes.set(index, code);
+        return this;
+    }
+    
     public final InstructionBuilder decode() throws CompilerError
     {
         if(!isEmpty())

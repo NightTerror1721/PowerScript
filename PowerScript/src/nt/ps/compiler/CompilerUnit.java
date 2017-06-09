@@ -145,7 +145,7 @@ public final class CompilerUnit
                     
                     case '(': {
                         CodeReader scopeSource = extractScope(source, '(', ')');
-                        if(!sb.isEmpty() && sb.getLastCode() == CommandWord.FOR)
+                        if(sb.getCodeCount() > 0 && sb.getLastCode() == CommandWord.FOR)
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.IGNORE);
                             sb.decode();
@@ -156,14 +156,23 @@ public final class CompilerUnit
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                             sb.decode();
 
-                            if(sb.isEmpty() || !sb.getLastCode().isValidCodeObject()) //Parenthesis or Tuple
+                            if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject()) //Parenthesis or Tuple
                             {
                                 if(tuple.has(Separator.COMMA))
                                     sb.addCode(MutableLiteral.tuple(tuple));
                                 else sb.addCode(Block.parenthesis(tuple));
                             }
                             else //Arguments list
+                            {
+                                sb.decode();
+                                int codesCount = sb.getCodeCount();
+                                if(codesCount < 1)
+                                    throw new CompilerError("Required any before call/invoke operators");
+                                if(codesCount > 2 && sb.getCode(codesCount - 2) == OperatorSymbol.PROPERTY_ACCESS)
+                                    sb.replaceCode(codesCount - 2, OperatorSymbol.INVOKE);
+                                else sb.addOperator(OperatorSymbol.CALL);
                                 sb.addCode(Block.arguments(tuple, Separator.COMMA));
+                            }
                         }
                     } break;
                     
@@ -174,7 +183,7 @@ public final class CompilerUnit
                         Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                         sb.decode();
                         
-                        if(sb.isEmpty() || !sb.getLastCode().isValidCodeObject()) //Array or Map
+                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject()) //Array or Map
                         {
                             if(tuple.has(Separator.TWO_POINTS))
                                 sb.addCode(MutableLiteral.map(tuple));
@@ -190,7 +199,7 @@ public final class CompilerUnit
                     case '{': {
                         CodeReader scopeSource = extractScope(source, '{', '}');
                         
-                        if(sb.isEmpty() || !sb.getLastCode().isValidCodeObject()) //Object
+                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject()) //Object
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                             sb.decode();

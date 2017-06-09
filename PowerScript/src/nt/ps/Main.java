@@ -11,7 +11,6 @@ import java.io.IOException;
 import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.PSCompilerException;
-import nt.ps.compiler.parser.Literal;
 
 /**
  *
@@ -21,7 +20,7 @@ public final class Main
 {
     public static void main(String[] args) throws CompilerError, FileNotFoundException, PSCompilerException, IOException
     {
-        System.out.println(Literal.decode("Infinity"));
+        CompilerError.setDebugMode(true);
         
         
         /*File file = new File("test.pws");
