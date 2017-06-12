@@ -3,5 +3,6 @@ local = local === 650 ? local * 2 : local - 50;
 
 var arr = [45, null, "this is sparta", [], 5.65];
 
-local.show("hola", arr[2](6, local));
-local("poz ezo");
+//local.show("hola", arr[2](6, local));
+/*local.show(arr, 750, arr[6], 4, 65, arr[5](65, 8, 5, 78, 15, 999, 5), "hell", 9999);
+local("poz ezo");*/

@@ -359,7 +359,7 @@ public final class Tuple
         else if(operator.isBinary())
         {
             OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
-            if(nextOperator != null && operator.comparePriority(nextOperator) > 0)
+            if(nextOperator != null && operator.comparePriority(nextOperator) >= 0)
                 nextOperator = null;
             
             ParsedCode operand2;

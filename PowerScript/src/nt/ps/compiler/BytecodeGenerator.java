@@ -1240,27 +1240,26 @@ final class BytecodeGenerator
         compiler.getStack().push();
         return doCall(args, isInvoke, multiresult);
     }
-    public final InstructionHandle doTailedCall(boolean isInvoke, boolean multiresult) throws CompilerError
+    public final InstructionHandle doTailedCall(Operator operator, boolean isInvoke, boolean multiresult) throws CompilerError
     {
+        int args = -(operator.getOperandCount() - (isInvoke ? 2 : 1));
         compiler.getStack().pop(2);
         compiler.getStack().push();
-        return doCall(-1, isInvoke, multiresult);
+        return doCall(args, isInvoke, multiresult);
     }
     
     private InstructionHandle doCall(int args, boolean isInvoke, boolean multiresult)
     {
-        if(args < -1)
-            throw new IllegalStateException();
         String method = isInvoke ? "invoke" : "call";
         Type[] targs = FUNC_ARGS[isInvoke ? 1 : 0][args < 0 || args > 5 ? 5 : args];
         
-        if(args < 0)
+        if(args > 4)
             wrapArgsToArray(args);
         InstructionHandle ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, method,
                 TYPE_VARARGS, targs, Constants.INVOKEVIRTUAL));
         
-        if(multiresult)
-            ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, STR_FUNC_SELF,
+        if(!multiresult)
+            ih = mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_SELF,
                     TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
         return ih;
     }
@@ -1441,10 +1440,20 @@ final class BytecodeGenerator
                     TYPE_VALUE, ARGS_INT, Constants.INVOKEVIRTUAL));
     }
     
-    public final InstructionHandle createTailVarargs()
+    private InstructionHandle createTailVarargs()
     {
         return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, "varargsOf",
                 TYPE_VARARGS, new Type[]{ TYPE_VARARGS, TYPE_VARARGS }, Constants.INVOKESTATIC));
+    }
+    
+    public final InstructionHandle wrapVarargsTail(int argsLen) throws CompilerError
+    {
+        InstructionHandle ih = getLastHandle();
+        compiler.getStack().pop(argsLen);
+        compiler.getStack().push();
+        for(;argsLen>1;argsLen--)
+            ih = createTailVarargs();
+        return ih;
     }
     
     public final InstructionHandle wrapArgsToArray(int argsLen)
@@ -1480,7 +1489,7 @@ final class BytecodeGenerator
                 mainInst.append(new PUSH(constantPool,argsLen));
                 mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
                 storeTemp("wrap_varargs");
-                for(int i=0;i<argsLen;i++)
+                for(int i=0;i<argsLen-1;i++)
                 {
                     loadTemp("wrap_varargs");
                     mainInst.append(InstructionConstants.SWAP);
@@ -1488,8 +1497,9 @@ final class BytecodeGenerator
                     mainInst.append(InstructionConstants.SWAP);
                     mainInst.append(InstructionConstants.AASTORE);
                 }
+                loadTemp("wrap_varargs");
+                mainInst.append(InstructionConstants.SWAP);
                 removeTemp("wrap_varargs");
-                loadEmpty();
                 return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS,"varargsOf",
                         TYPE_VARARGS,new Type[]{ TYPE_ARRAY_VALUE, TYPE_VARARGS },Constants.INVOKESTATIC));
             }

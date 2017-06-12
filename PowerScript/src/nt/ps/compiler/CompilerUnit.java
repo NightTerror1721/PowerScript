@@ -519,21 +519,17 @@ public final class CompilerUnit
                         switch(c)
                         {
                             case '/': {
-                                canend = true;
+                                sb.decode();
                                 skipUntil(source, '\n', true);
-                                canend = false;
                             } break;
                             case '*': {
-                                canend = true;
                                 for(;;)
                                 {
+                                    sb.decode();
                                     skipUntil(source, '*', true);
                                     c = source.next();
                                     if(c == '/')
-                                    {
-                                        canend = false;
                                         continue base_loop;
-                                    }
                                 }
                             }
                             case '=': {

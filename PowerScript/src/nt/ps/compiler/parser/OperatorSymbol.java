@@ -55,7 +55,7 @@ public abstract class OperatorSymbol extends Code
     
     public final int comparePriority(OperatorSymbol os)
     {
-        int cmp = Integer.compare(type.ordinal(), os.type.ordinal());
+        int cmp = type.comparePriority(os.type);
         if(cmp != 0)
             return cmp;
         return Integer.compare(priority,os.priority);
@@ -154,7 +154,24 @@ public abstract class OperatorSymbol extends Code
     
     
     private enum Order { LEFT, RIGHT, BOTH }
-    private enum Type { TERNARY, BINARY, UNARY, CALL, INVOKE, NEW, FUNCTION; }
+    private enum Type
+    {
+        TERNARY(0),
+        BINARY(1),
+        UNARY(2),
+        CALL(1),
+        INVOKE(1),
+        NEW(1),
+        FUNCTION(3);
+        
+        private int priority;
+        private Type(int priority) { this.priority = priority; }
+        
+        private int comparePriority(Type other)
+        {
+            return Integer.compare(priority, other.priority);
+        }
+    }
     
     private static final class UnaryOperatorSymbol extends OperatorSymbol
     {

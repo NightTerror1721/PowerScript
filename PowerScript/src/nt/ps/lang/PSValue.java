@@ -119,12 +119,12 @@ public abstract class PSValue extends PSVarargs
     public final PSVarargs call(PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3) { return innerCall(NULL,arg0,arg1,arg2,arg3); }
     public final PSVarargs call(PSVarargs args) { return innerCall(NULL,args); }
     
-    public final PSVarargs invoke(String attribute) { return getProperty(attribute).innerCall(this); }
-    public final PSVarargs invoke(String attribute, PSValue arg0) { return getProperty(attribute).innerCall(this,arg0); }
-    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1) { return getProperty(attribute).innerCall(this,arg0,arg1); }
-    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1, PSValue arg2) { return getProperty(attribute).innerCall(this,arg0,arg1,arg2); }
-    public final PSVarargs invoke(String attribute, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3) { return getProperty(attribute).innerCall(this,arg0,arg1,arg2,arg3); }
-    public final PSVarargs invoke(String attribute, PSVarargs args) { return getProperty(attribute).innerCall(this,args); }
+    public final PSVarargs invoke(String property) { return getProperty(property).innerCall(this); }
+    public final PSVarargs invoke(String property, PSValue arg0) { return getProperty(property).innerCall(this,arg0); }
+    public final PSVarargs invoke(String property, PSValue arg0, PSValue arg1) { return getProperty(property).innerCall(this,arg0,arg1); }
+    public final PSVarargs invoke(String property, PSValue arg0, PSValue arg1, PSValue arg2) { return getProperty(property).innerCall(this,arg0,arg1,arg2); }
+    public final PSVarargs invoke(String property, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3) { return getProperty(property).innerCall(this,arg0,arg1,arg2,arg3); }
+    public final PSVarargs invoke(String property, PSVarargs args) { return getProperty(property).innerCall(this,args); }
     
     
     /* Iterator Operations */

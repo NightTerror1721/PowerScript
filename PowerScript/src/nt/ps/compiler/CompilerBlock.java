@@ -376,10 +376,14 @@ final class CompilerBlock
             return 0;
         boolean multiresponse = false;
         for(int i=0;i<len;i++)
-            if(compileOperation(operator.getOperand(i + offset), isGlobal, true, false) && !multiresponse)
+        {
+            ParsedCode code = operator.getOperand(i + offset);
+            if(!multiresponse && code.is(Code.CodeType.OPERATOR) && ((Operator)code).getSymbol().isCallable())
                 multiresponse = true;
+            compileOperation(operator.getOperand(i + offset), isGlobal, true, false);
+        }
         if(multiresponse)
-            bytecode.wrapArgsToArray(len);
+            bytecode.wrapVarargsTail(len);
         return multiresponse ? -1 : len;
     }
     
@@ -391,14 +395,14 @@ final class CompilerBlock
             bytecode.loadNativeString(operator.getOperand(1).toString());
             int parsCount = compileParameters(operator, 2, isGlobal);
             if(parsCount < 0)
-                bytecode.doTailedCall(true, multiresult);
+                bytecode.doTailedCall(operator, true, multiresult);
             else bytecode.doCall(operator, true, multiresult);
         }
         else
         {
             int parsCount = compileParameters(operator, 1, isGlobal);
             if(parsCount < 0)
-                bytecode.doTailedCall(false, multiresult);
+                bytecode.doTailedCall(operator, false, multiresult);
             else bytecode.doCall(operator, false, multiresult);
         }
     }
