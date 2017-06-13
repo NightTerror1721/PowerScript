@@ -131,7 +131,7 @@ public abstract class OperatorSymbol extends Code
                     array = new OperatorSymbol[2];
                     HASH.put(cp.symbol,array);
                 }
-                array[cp.isUnary()? 1 : 0] = cp;
+                array[cp.isUnary() || cp.isNew() ? 1 : 0] = cp;
             }
             catch(IllegalAccessException | IllegalArgumentException ex)
             {

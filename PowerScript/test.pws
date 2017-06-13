@@ -1,7 +1,43 @@
+global IO, Object;
+
 var local = 650;
 local = local === 650 ? local * 2 : local - 50;
 
-var arr = [45, null, "this is sparta", [], 5.65];
+var arr = [45, null, "this is sparta", [], 5.65f];
+
+IO.print(arr.expand());
+
+var tuple = (5, 8);
+IO.print((5, "nada más", 650));
+
+var obj = {
+	done: true,
+	law: ["dash", false]
+};
+
+IO.print(obj, new Object(obj));
+IO.print(new obj());
+
+IO.print(
+{
+	done: true,
+	law: ["dash", false],
+	nested: {
+		folk: ("none", 65)
+	}
+});
+
+var map = [:];
+map.put("dash", false);
+
+IO.print([
+	"hello": true,
+	"inf": Infinity,
+	5: local,
+	"obj": { dash: true, power: 50 }
+]);
+
+local, arr[0], obj.law[1] = local + 50, "none", true;
 
 //local.show("hola", arr[2](6, local));
 /*local.show(arr, 750, arr[6], 4, 65, arr[5](65, 8, 5, 78, 15, 999, 5), "hell", 9999);

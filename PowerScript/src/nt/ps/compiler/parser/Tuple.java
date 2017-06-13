@@ -174,13 +174,17 @@ public final class Tuple
             throw new CompilerError("Expected a valid identifier in new operator");
         it.increase();
         Code cpars = code[it.value];
+        if(cpars != OperatorSymbol.CALL)
+            throw new CompilerError("Expected a valid list of arguments in new operator");
+        it.increase();
+        cpars = code[it.value];
         if(!cpars.is(CodeType.BLOCK))
             throw new CompilerError("Expected a valid list of arguments in new operator");
         Block pars = (Block) cpars;
         if(!pars.isArgumentsList())
             throw new CompilerError("Expected a valid list of arguments in new operator");
         it.increase();
-        return Operator.newOperator(pars, pars);
+        return Operator.newOperator((ParsedCode) ident, pars);
     }
     
     private ParsedCode packFunctionOperator(Counter it) throws CompilerError
@@ -379,8 +383,15 @@ public final class Tuple
         return packOperation(it, operation);
     }
     
-    public final ParsedCode pack() throws CompilerError
+    public final ParsedCode pack() throws CompilerError { return pack(false); }
+    public final ParsedCode pack(boolean allowDeclaration) throws CompilerError
     {
+        if(allowDeclaration)
+        {
+            Declaration d = Declaration.decode(this);
+            if(d != null)
+                return d;
+        }
         Assignation a = Assignation.parse(this);
         if(a != null)
             return a;

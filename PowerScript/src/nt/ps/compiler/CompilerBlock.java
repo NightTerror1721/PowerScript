@@ -15,9 +15,12 @@ import nt.ps.compiler.exception.CompilerErrors;
 import nt.ps.compiler.parser.Assignation;
 import nt.ps.compiler.parser.Assignation.AssignationPart;
 import nt.ps.compiler.parser.Assignation.Location;
+import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Code;
+import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Command;
+import nt.ps.compiler.parser.Declaration;
 import nt.ps.compiler.parser.FunctionLiteral;
 import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
@@ -103,10 +106,16 @@ final class CompilerBlock
         switch(command.getName())
         {
             case VAR: {
-                compileAssignation((Assignation) command.getCode(0), false, true);
+                ParsedCode pc = command.getCode(0);
+                if(pc.is(CodeType.ASSIGNATION))
+                    compileAssignation((Assignation) pc, false, true);
+                else compileDeclaration((Declaration) pc, false);
             } break;
             case GLOBAL: {
-                compileAssignation((Assignation) command.getCode(0), true, true);
+                ParsedCode pc = command.getCode(0);
+                if(pc.is(CodeType.ASSIGNATION))
+                    compileAssignation((Assignation) pc, true, true);
+                else compileDeclaration((Declaration) pc, true);
             } break;
         }
     }
@@ -234,7 +243,8 @@ final class CompilerBlock
                 for(MutableLiteral.Item item : literal)
                 {
                     bytecode.insertObjectLiteralItem(count++, () -> {
-                        compileOperation(item.getKey(), isGlobal, false, false);
+                        bytecode.loadNativeString(item.getKey().toString());
+                        //compileOperation(item.getKey(), isGlobal, false, false);
                         compileOperation(item.getValue(), isGlobal, false, false);
                     });
                 }
@@ -281,7 +291,7 @@ final class CompilerBlock
         {
             bytecode.createTemp("functionTemp");
             bytecode.storeTemp("functionTemp");
-            assign(assignation, isGlobal, false, () -> bytecode.loadTemp("functionTemp"));
+            assign(null, assignation, isGlobal, false, () -> bytecode.loadTemp("functionTemp"));
             bytecode.loadTemp("functionTemp");
             bytecode.removeTemp("functionTemp");
         }
@@ -409,7 +419,7 @@ final class CompilerBlock
     
     private void compileNewOperator(Operator operator, boolean isGlobal) throws CompilerError
     {
-        bytecode.loadLiteral(Literal.valueOf(operator.getOperand(0).toString()));
+        compileOperation(operator.getOperand(0), isGlobal, false, false);
         int parsCount = compileParameters(operator, 1, isGlobal);
         bytecode.callNewOperator(operator, parsCount < 0);
     }
@@ -418,11 +428,12 @@ final class CompilerBlock
     private void compileAssignation(Assignation assignation, boolean isGlobal, boolean createVars) throws CompilerError
     {
         int len = assignation.getPartCount();
+        AssignationSymbol symbol = assignation.getSymbol();
         for(int i=0;i<len;i++)
         {
             AssignationPart part = assignation.getPart(i);
             if(part.getLocationCount() == 1)
-                assign(part.getLocation(0).getCode(), isGlobal, createVars, () -> compileOperation(part.getAssignation(), isGlobal, false, false));
+                assign(symbol, part.getLocation(0).getCode(), isGlobal, createVars, () -> compileOperation(part.getAssignation(), isGlobal, false, false));
             else
             {
                 compileOperation(part.getAssignation(), isGlobal, true, false);
@@ -432,12 +443,31 @@ final class CompilerBlock
                 {
                     Location loc = part.getLocation(j);
                     final int index = j;
-                    assign(loc.getCode(), isGlobal, createVars, () -> bytecode.loadExpand(index));
+                    assign(symbol, loc.getCode(), isGlobal, createVars, () -> bytecode.loadExpand(index));
                 }
             }
         }
     }
     
+    private void compileDeclaration(Declaration declaration, boolean isGlobal) throws CompilerError
+    {
+        int len = declaration.getIdentifierCount();
+        for(int i=0;i<len;i++)
+        {
+            String name = declaration.getIdentifier(i).toString();
+            if(vars.exists(name))
+                throw new CompilerError("Variable \"" + name + "\" already exists");
+            if(isGlobal)
+            {
+                vars.createGlobal(name);
+            }
+            else
+            {
+                Variable var = vars.createLocal(name);
+                bytecode.storeUndefined(var);
+            }
+        }
+    }
     
     
     
@@ -446,25 +476,28 @@ final class CompilerBlock
     
     
     
-    private InstructionHandle assign(ParsedCode to, boolean isGlobal, boolean createVars, AssignationParametersLoader parametersLoader) throws CompilerError
+    
+    private InstructionHandle assign(AssignationSymbol asymbol, ParsedCode to,
+            boolean isGlobal, boolean createVars, AssignationParametersLoader parametersLoader) throws CompilerError
     {
         switch(to.getCodeType())
         {
             default: throw new IllegalArgumentException();
-            case IDENTIFIER: return assignFromIdentifier((Identifier) to, isGlobal, createVars, parametersLoader);
+            case IDENTIFIER: return assignFromIdentifier(asymbol, (Identifier) to, isGlobal, createVars, parametersLoader);
             case OPERATOR: {
                 Operator operator = (Operator) to;
-                OperatorSymbol symbol = operator.getSymbol();
-                if(symbol == OperatorSymbol.ACCESS)
-                    return assignFromAccess(operator, parametersLoader, isGlobal);
-                else if(symbol == OperatorSymbol.PROPERTY_ACCESS)
-                    return assignFromPropertyAccess(operator, parametersLoader, isGlobal);
+                OperatorSymbol osymbol = operator.getSymbol();
+                if(osymbol == OperatorSymbol.ACCESS)
+                    return assignFromAccess(asymbol, operator, parametersLoader, isGlobal);
+                else if(osymbol == OperatorSymbol.PROPERTY_ACCESS)
+                    return assignFromPropertyAccess(asymbol, operator, parametersLoader, isGlobal);
                 else throw new IllegalArgumentException();
             }
         }
     }
     
-    private InstructionHandle assignFromIdentifier(Identifier identifier, boolean isGlobal, boolean createVars, AssignationParametersLoader loader) throws CompilerError
+    private InstructionHandle assignFromIdentifier(AssignationSymbol asymbol, Identifier identifier,
+            boolean isGlobal, boolean createVars, AssignationParametersLoader loader) throws CompilerError
     {
         String name = identifier.toString();
         Variable var;
@@ -482,25 +515,46 @@ final class CompilerBlock
                 throw new CompilerError("Variable \"" + name + "\" does not exists");
             var = vars.get(name, false);
         }
-        loader.load();
+        if(asymbol.containsOperator())
+        {
+            bytecode.load(var);
+            loader.load();
+            bytecode.callOperator(asymbol.getAssociatedOperatorSymbol());
+        }
+        else loader.load();
         return bytecode.store(var);
     }
     
-    private InstructionHandle assignFromAccess(Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
+    private InstructionHandle assignFromAccess(AssignationSymbol asymbol, Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
     {
         compileOperation(operator.getOperand(0), isGlobal, false, false);
         compileOperation(operator.getOperand(1), isGlobal, false, false);
-        loader.load();
+        if(asymbol.containsOperator())
+        {
+            compileOperation(operator.getOperand(0), isGlobal, false, false);
+            compileOperation(operator.getOperand(1), isGlobal, false, false);
+            bytecode.callAccessOperator();
+            loader.load();
+            bytecode.callOperator(asymbol.getAssociatedOperatorSymbol());
+        }
+        else loader.load();
         return bytecode.callStoreAccess();
     }
     
-    private InstructionHandle assignFromPropertyAccess(Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
+    private InstructionHandle assignFromPropertyAccess(AssignationSymbol asymbol, Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
     {
         compileOperation(operator.getOperand(0), isGlobal, false, false);
         ParsedCode code2 = operator.getOperand(1);
         if(!code2.is(Code.CodeType.IDENTIFIER))
             throw new CompilerError("Expected valid identifier in property assignation: " + operator);
-        loader.load();
+        if(asymbol.containsOperator())
+        {
+            bytecode.dup();
+            bytecode.callPropertyAccessOperator(code2.toString());
+            loader.load();
+            bytecode.callOperator(asymbol.getAssociatedOperatorSymbol());
+        }
+        else loader.load();
         return bytecode.callStorePropertyAccess(code2.toString());
     }
     

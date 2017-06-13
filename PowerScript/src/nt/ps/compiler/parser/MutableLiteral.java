@@ -28,11 +28,16 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
                 items = Tuple.mapArray(tuples,t -> new Item(null,t), new Item[tuples.length]);
                 break;
             case TYPE_MAP:
+                if(tuple.length() == 1 && tuple.get(0) == Separator.TWO_POINTS)
+                {
+                    items = new Item[0];
+                    break;
+                }
             case TYPE_OBJECT:
                 items = Tuple.mapArray(tuples, t -> {
                     Tuple[] parts = t.splitByToken(Separator.TWO_POINTS);
                     if(parts.length != 2)
-                        throw new IllegalArgumentException();
+                        throw new CompilerError("Malformed " + (type == TYPE_MAP ? "map" : "object") + " literal.");
                     return new Item(parts[0], parts[1]);
                 }, new Item[tuples.length]);
                 break;

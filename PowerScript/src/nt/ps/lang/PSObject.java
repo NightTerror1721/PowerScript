@@ -29,6 +29,11 @@ public final class PSObject extends PSValue
     public PSObject(HashMap<String, PSValue> properties) { this(properties,null); }
     public PSObject() { this(new HashMap<>(),null); }
     
+    public final PSObject copy()
+    {
+        return new PSObject((HashMap<String, PSValue>) properties.clone(), prototype);
+    }
+    
     public final PSValue getPrototype() { return prototype; }
     public final boolean hasPrototype() { return prototype != null; }
     

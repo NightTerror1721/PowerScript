@@ -126,7 +126,8 @@ final class BytecodeGenerator
             ARGS_STRING_VALUE = ARGS_STRING_VALUE_1,
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
             ARGS_JAVAMAP = { new ObjectType(Map.class.getName()) },
-            ARGS_HASHMAP = { TYPE_HASHMAP };
+            ARGS_HASHMAP = { TYPE_HASHMAP },
+            ARGS_JAVA_OBJECT_2 = { Type.OBJECT, Type.OBJECT };
     
     private static final Type[][][] FUNC_ARGS = {
         { NO_ARGS, ARGS_VALUE_1, ARGS_VALUE_2, ARGS_VALUE_3, ARGS_VALUE_4, ARGS_VARARGS },
@@ -510,9 +511,9 @@ final class BytecodeGenerator
     public final InstructionHandle callStoreAccess() throws CompilerError
     {
         compiler.getStack().pop(3);
-        compiler.getStack().push();
-        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "set",
+        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "set",
                 TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
+        return mainInst.append(InstructionConstants.POP);
     }
     
     public final InstructionHandle callStorePropertyAccess(String property) throws CompilerError
@@ -521,8 +522,9 @@ final class BytecodeGenerator
         compiler.getStack().push();
         mainInst.append(new PUSH(constantPool, property));
         mainInst.append(InstructionConstants.SWAP);
-        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "setProperty",
+        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "setProperty",
                 TYPE_VALUE, ARGS_STRING_VALUE, Constants.INVOKEVIRTUAL));
+        return mainInst.append(InstructionConstants.POP);
     }
     
     
@@ -1025,8 +1027,7 @@ final class BytecodeGenerator
         mainInst.append(factory.createNew(TYPE_TUPLE));
         mainInst.append(InstructionConstants.DUP);
         mainInst.append(new PUSH(constantPool, literal.getItemCount()));
-        mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
-        return mainInst.append(InstructionConstants.DUP);
+        return mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
     }
     
     public final InstructionHandle insertTupleLiteralItem(int index, VoidOperation element) throws CompilerError
@@ -1070,21 +1071,21 @@ final class BytecodeGenerator
         mainInst.append(factory.createNew(TYPE_PROTOMAP));
         mainInst.append(InstructionConstants.DUP);
         mainInst.append(new PUSH(constantPool, literal.getItemCount()));
-        mainInst.append(factory.createInvoke(
+        return mainInst.append(factory.createInvoke(
                 STR_TYPE_PROTOMAP,
                 "<init>",
                 Type.VOID,
                 ARGS_INT,
                 Constants.INVOKESPECIAL));
-        return mainInst.append(InstructionConstants.DUP);
     }
     
     public final InstructionHandle insertMapLiteralItem(int index, VoidOperation element) throws CompilerError
     {
-        compiler.getStack().pop();
+        mainInst.append(InstructionConstants.DUP);
         element.doOperation();
+        compiler.getStack().pop(2);
         mainInst.append(factory.createInvoke(STR_TYPE_HASHMAP, "put",
-                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+                Type.OBJECT, ARGS_JAVA_OBJECT_2, Constants.INVOKEVIRTUAL));
         return mainInst.append(InstructionConstants.POP);
     }
     
@@ -1120,21 +1121,21 @@ final class BytecodeGenerator
         mainInst.append(factory.createNew(TYPE_PROTOOBJECT));
         mainInst.append(InstructionConstants.DUP);
         mainInst.append(new PUSH(constantPool, literal.getItemCount()));
-        mainInst.append(factory.createInvoke(
+        return mainInst.append(factory.createInvoke(
                 STR_TYPE_PROTOOBJECT,
                 "<init>",
                 Type.VOID,
                 ARGS_INT,
                 Constants.INVOKESPECIAL));
-        return mainInst.append(InstructionConstants.DUP);
     }
     
     public final InstructionHandle insertObjectLiteralItem(int index, VoidOperation element) throws CompilerError
     {
-        compiler.getStack().pop();
+        mainInst.append(InstructionConstants.DUP);
         element.doOperation();
+        compiler.getStack().pop();
         mainInst.append(factory.createInvoke(STR_TYPE_HASHMAP, "put",
-                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
+                Type.OBJECT, ARGS_JAVA_OBJECT_2, Constants.INVOKEVIRTUAL));
         return mainInst.append(InstructionConstants.POP);
     }
     
@@ -1288,7 +1289,7 @@ final class BytecodeGenerator
         if(isTailed)
             wrapArgsToArray(args);
         return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
-                TYPE_VARARGS, targs, Constants.INVOKEVIRTUAL));
+                TYPE_VALUE, targs, Constants.INVOKEVIRTUAL));
     }
     
     

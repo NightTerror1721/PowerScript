@@ -198,7 +198,8 @@ public final class PSMap extends PSValue implements Iterable<Map.Entry<PSValue, 
     private static final PSValue PUT = PSFunction.<PSMap>method((self, arg0, arg1) -> {
         if(arg0 == UNDEFINED)
             throw new PSRuntimeException("Key value cannot be a undefined value");
-        return self.map.put(arg0,arg1);
+        PSValue value = self.map.put(arg0,arg1);
+        return value == null ? UNDEFINED : value;
     });
     
     private static final PSValue PUT_ALL = PSFunction.<PSMap>voidMethod((self, arg0) -> {

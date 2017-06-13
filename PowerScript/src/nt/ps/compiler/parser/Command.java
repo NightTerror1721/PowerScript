@@ -58,6 +58,7 @@ public final class Command extends ParsedCode
         {
             default: throw new IllegalStateException();
             case VAR: return VAR(line, tuple);
+            case GLOBAL: return GLOBAL(line, tuple);
             case IF: return IF(line, tuple);
         }
     }
@@ -66,14 +67,36 @@ public final class Command extends ParsedCode
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.VAR);
-        ParsedCode code = tuple.pack();
-        if(!code.is(CodeType.ASSIGNATION))
-            throw new CompilerError("Expected a valid assignation in \"var\" command");
-        Assignation a = (Assignation) code;
-        if(!a.hasIdentifiersOnly())
-            throw new CompilerError("In \"var\" can put only identifier in left part");
+        ParsedCode code = tuple.pack(true);
+        switch(code.getCodeType())
+        {
+            case ASSIGNATION:
+                if(!((Assignation) code).hasIdentifiersOnly())
+                    throw new CompilerError("In \"var\" can put only identifier in left part");
+            case DECLARATION:
+                break;
+            default: throw new CompilerError("Expected a valid assignation or declaration in \"var\" command");
+        }
         
-        return new Command(line, CommandWord.VAR, a);
+        return new Command(line, CommandWord.VAR, code);
+    }
+    
+    private static Command GLOBAL(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.GLOBAL);
+        ParsedCode code = tuple.pack(true);
+        switch(code.getCodeType())
+        {
+            case ASSIGNATION:
+                if(!((Assignation) code).hasIdentifiersOnly())
+                    throw new CompilerError("In \"global\" can put only identifier in left part");
+            case DECLARATION:
+                break;
+            default: throw new CompilerError("Expected a valid assignation or declaration in \"global\" command");
+        }
+        
+        return new Command(line, CommandWord.GLOBAL, code);
     }
     
     private static Command IF(int line, Tuple tuple) throws CompilerError

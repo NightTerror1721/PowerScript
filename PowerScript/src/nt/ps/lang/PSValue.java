@@ -167,6 +167,7 @@ public abstract class PSValue extends PSVarargs
         @Override public final boolean equals(Object o) { return this == o; }
         @Override public final int hashCode() { return 0; }
         @Override public final boolean toJavaBoolean() { return false; }
+        @Override public final String toJavaString() { return "undefined"; }
     }
     private static final class PSNull extends PSValue
     {
@@ -176,6 +177,7 @@ public abstract class PSValue extends PSVarargs
         @Override public final boolean equals(Object o) { return this == o; }
         @Override public final int hashCode() { return 0; }
         @Override public final boolean toJavaBoolean() { return false; }
+        @Override public final String toJavaString() { return "null"; }
     }
     
     

@@ -95,6 +95,7 @@ public final class CodeReader
     public final CodeReader subpart(int from, int to)
     {
         CodeReader cr = new CodeReader(this);
+        cr.setIndex(from);
         cr.index = cr.start = from;
         cr.size = to;
         return cr;
@@ -148,7 +149,8 @@ public final class CodeReader
     
     private char move(int to, boolean fix) throws IllegalArgumentException
     {
-        if(to < start || to >= size) throw new IllegalArgumentException("Out of range 'to' offset");
+        if(to < start || to >= size)
+            throw new IllegalArgumentException("Out of range 'to' offset");
         int line = lcur == null ? 0 : lcur.num-1;
         if(to == index)
         {
