@@ -15,32 +15,34 @@ import java.util.Map;
  */
 public final class PSObject extends PSValue
 {
-    private final PSValue prototype;
-    private final HashMap<String, PSValue> properties;
+    private final PSObject parent;
+    private final Map<String, PSValue> properties;
     
-    PSObject(HashMap<String, PSValue> properties, PSValue prototype)
+    PSObject(Map<String, PSValue> properties, PSObject parent)
     {
         if(properties == null)
             throw new NullPointerException();
         this.properties = properties;
-        this.prototype = prototype;
+        this.parent = parent;
     }
-    PSObject(PSValue prototype) { this(new HashMap<>(),prototype); }
-    public PSObject(HashMap<String, PSValue> properties) { this(properties,null); }
+    PSObject(PSObject parent) { this(new HashMap<>(),parent); }
+    public PSObject(Map<String, PSValue> properties) { this(properties,null); }
     public PSObject() { this(new HashMap<>(),null); }
     
     public final PSObject copy()
     {
-        return new PSObject((HashMap<String, PSValue>) properties.clone(), prototype);
+        return new PSObject(new HashMap<>(properties), parent);
     }
     
-    public final PSValue getPrototype() { return prototype; }
-    public final boolean hasPrototype() { return prototype != null; }
+    public final PSValue getParent() { return parent; }
+    public final boolean hasParent() { return parent != null; }
     
     private PSValue property(String name)
     {
         PSValue prop = properties.get(name);
-        return prop == null || prop == UNDEFINED ? null : prop;
+        return prop == null || prop == UNDEFINED
+                ? parent != null ? parent.property(name) : null
+                : prop;
     }
     
     @Override
@@ -341,7 +343,7 @@ public final class PSObject extends PSValue
     public final PSValue getProperty(String name)
     {
         PSValue value;
-        return (value = properties.get(name)) == null ? UNDEFINED : value;
+        return (value = property(name)) == null ? UNDEFINED : value;
     }
     
     @Override
@@ -406,7 +408,7 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue createNewInstance()
     {
-        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSObject instance = new PSObject(new HashMap<>(), this);
         PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
             init.innerCall(instance);
@@ -415,7 +417,7 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue createNewInstance(PSValue arg0)
     {
-        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSObject instance = new PSObject(new HashMap<>(), this);
         PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
             init.innerCall(instance,arg0);
@@ -424,7 +426,7 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue createNewInstance(PSValue arg0, PSValue arg1)
     {
-        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSObject instance = new PSObject(new HashMap<>(), this);
         PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
             init.innerCall(instance,arg0,arg1);
@@ -433,7 +435,7 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2)
     {
-        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSObject instance = new PSObject(new HashMap<>(), this);
         PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
             init.innerCall(instance,arg0,arg1,arg2);
@@ -442,7 +444,7 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
     {
-        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSObject instance = new PSObject(new HashMap<>(), this);
         PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
             init.innerCall(instance,arg0,arg1,arg2,arg3);
@@ -451,7 +453,7 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue createNewInstance(PSVarargs args)
     {
-        PSObject instance = new PSObject((HashMap<String, PSValue>) properties.clone(), this);
+        PSObject instance = new PSObject(new HashMap<>(), this);
         PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
             init.innerCall(instance,args);
