@@ -21,6 +21,7 @@ import nt.ps.compiler.exception.PSCompilerException;
 import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Block.Scope;
+import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Command;
 import nt.ps.compiler.parser.CommandWord;
 import nt.ps.compiler.parser.Literal;
@@ -145,16 +146,15 @@ public final class CompilerUnit
                     
                     case '(': {
                         CodeReader scopeSource = extractScope(source, '(', ')');
-                        if(sb.getCodeCount() > 0 && sb.getLastCode() == CommandWord.FOR)
+                        sb.decode();
+                        if(sb.getCodeCount() > 0 && sb.getLastCode().is(Code.CodeType.COMMAND_WORD))
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.IGNORE);
-                            sb.decode();
                             sb.addCode(Block.arguments(tuple, Separator.COLON));
                         }
                         else
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
-                            sb.decode();
 
                             if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject()) //Parenthesis or Tuple
                             {
@@ -164,7 +164,6 @@ public final class CompilerUnit
                             }
                             else //Arguments list
                             {
-                                sb.decode();
                                 int codesCount = sb.getCodeCount();
                                 if(codesCount < 1)
                                     throw new CompilerError("Required any before call/invoke operators");
@@ -210,6 +209,13 @@ public final class CompilerUnit
                             Scope scope = parseScope(errors, scopeSource);
                             sb.decode();
                             sb.addCode(scope);
+                            switch(colonMode)
+                            {
+                                case ENDS: break base_loop;
+                                case IGNORE: break;
+                                case ERROR: throw new CompilerError("Unexpected End of Instruction ';'");
+                                default: throw new IllegalStateException();
+                            }
                         }
                     } break;
                     

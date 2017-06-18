@@ -12,6 +12,7 @@ import java.io.IOException;
 import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.PSCompilerException;
+import nt.ps.lang.PSValue;
 import nt.ps.lang.core.PSIO;
 import nt.ps.lang.core.PSObjectReference;
 
@@ -40,10 +41,10 @@ public final class Main
         File file = new File("test.pws");
         FileInputStream fis = new FileInputStream(file);
         PSClassLoader cl = new PSClassLoader(Main.class.getClassLoader());
-        PSState state = new PSState();
         
+        PSState state = PSState.createDefaultInstance();
         state.setGlobalValue("IO", new PSIO());
-        state.setGlobalValue("Object", new PSObjectReference());
+        //state.setGlobalValue("Object", new PSObjectReference());
         
         PSScript script = CompilerUnit.compile(fis, state, cl, "test");
         script.execute();

@@ -39,7 +39,7 @@ public final class JarBuilder
         LinkedList<ClassData> list = new LinkedList<>();
         //ClassData cmain = "";
         ClassAccumulator acc = new ClassAccumulator();
-        PSState env = new PSState();
+        PSState env = PSState.createDefaultInstance();
         PSClassLoader classLoader = new PSClassLoader(JarBuilder.class.getClassLoader());
         for(SourceFile input : inputs)
         {

@@ -103,9 +103,20 @@ public final class Command extends ParsedCode
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.IF);
-        ParsedCode code = tuple.pack();
-        if(!code.isValidCodeObject())
-            throw new CompilerError("Expected a valid code object in \"if\" command");
-        return new Command(line, CommandWord.IF, code);
+        if(tuple.length() != 2)
+            throw new CompilerError("Malformed \"if\" command");
+        ParsedCode cond = tuple.get(0);
+        ParsedCode scope = tuple.get(1);
+        if(!cond.is(CodeType.BLOCK) || !((Block)cond).isArgumentsList())
+            throw new CompilerError("Malformed \"if\" command");
+        if(scope.is(CodeType.BLOCK))
+        {
+            if(!((Block)scope).isScope())
+                throw new CompilerError("Expected a valid code object or scope in \"if\" command");
+            return new Command(line, CommandWord.IF, scope);
+        }
+        if(!scope.isValidCodeObject())
+            throw new CompilerError("Expected a valid code object or scope in \"if\" command");
+        return new Command(line, CommandWord.IF, scope);
     }
 }

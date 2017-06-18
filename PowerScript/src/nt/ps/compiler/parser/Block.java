@@ -36,7 +36,7 @@ public abstract class Block<C extends ParsedCode>
     public final CodeType getCodeType() { return CodeType.BLOCK; }
     
     @Override
-    public final boolean isValidCodeObject() { return isParenthesis(); }
+    public final boolean isValidCodeObject() { return isParenthesis() || isArgumentsList(); }
     
     
     public static final Block<ParsedCode> parenthesis(Tuple tuple) throws CompilerError { return parenthesis(tuple.pack()); }

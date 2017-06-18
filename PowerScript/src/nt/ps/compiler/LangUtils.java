@@ -37,10 +37,10 @@ public final class LangUtils
         return new PSString(value.getPSType().getTypeName());
     }
     
-    public static final PSValue operatorInstanceof(PSValue object, PSValue prototype)
+    public static final PSValue operatorInstanceof(PSValue object, PSValue parent)
     {
         PSObject obj = object.toPSObject();
-        return obj.getPrototype() == prototype ? PSValue.TRUE : PSValue.FALSE;
+        return obj.getParent()== parent ? PSValue.TRUE : PSValue.FALSE;
     }
     
     public static final PSValue operatorEqualsReference(PSValue value0, PSValue value1)

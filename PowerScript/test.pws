@@ -1,4 +1,8 @@
-global IO, Object;
+global IO;
+
+if(IO !== null) {
+	IO.print(true);
+}
 
 var local = 650;
 local = local === 650 ? local * 2 : local - 50;
@@ -38,6 +42,11 @@ IO.print([
 ]);
 
 local, arr[0], obj.law[1] = local + 50, "none", true;
+
+IO.print(typeof (IO.print));
+IO.print(new obj() instanceof obj);
+
+IO.print((65,)..["hola", "k", "ase"]);
 
 //local.show("hola", arr[2](6, local));
 /*local.show(arr, 750, arr[6], 4, 65, arr[5](65, 8, 5, 78, 15, 999, 5), "hell", 9999);

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import nt.ps.PSGlobals;
 import nt.ps.compiler.exception.CompilerError;
 
 /**
@@ -20,23 +21,27 @@ public final class VariablePool
 {
     private final VariablePool parent;
     private final Stack stack;
+    private final PSGlobals globals;
     private final LinkedList<VariableScope> vars;
     private final LinkedList<Variable> upPointers;
+    private final HashMap<String, Variable> natives;
     private int upLocalRefs;
     
-    private VariablePool(VariablePool parent, Stack stack)
+    private VariablePool(VariablePool parent, Stack stack, PSGlobals globals)
     {
         this.parent = parent;
         if(stack == null)
             throw new NullPointerException();
         this.stack = stack;
+        this.globals = globals;
         vars = new LinkedList<>();
         upPointers = new LinkedList<>();
+        natives = new HashMap<>();
         upLocalRefs = 0;
     }
-    public VariablePool(Stack stack) { this(null, stack); }
+    public VariablePool(Stack stack, PSGlobals globals) { this(null, stack, globals); }
     
-    public final VariablePool createChild(Stack stack) { return new VariablePool(this, stack); }
+    public final VariablePool createChild(Stack stack) { return new VariablePool(this, stack, globals); }
     
     public final Stack getStack() { return stack; }
     
@@ -64,6 +69,17 @@ public final class VariablePool
     
     private Variable get0(String name, boolean globalModifier) throws CompilerError
     {
+        if(globals.hasNativeValue(name))
+        {
+            Variable var = natives.get(name);
+            if(var == null)
+            {
+                var = new Variable(VariableType.NATIVE, name, -1);
+                natives.put(name, var);
+            }
+            return var;
+        }
+        
         ListIterator<VariableScope> it = vars.listIterator(vars.size());
         while(it.hasPrevious())
         {
@@ -85,6 +101,9 @@ public final class VariablePool
     
     public final boolean exists(String name)
     {
+        if(globals.hasNativeValue(name))
+            return true;
+        
         ListIterator<VariableScope> it = vars.listIterator(vars.size());
         while(it.hasPrevious())
         {
@@ -209,6 +228,7 @@ public final class VariablePool
         public final boolean isGlobal() { return type == VariableType.GLOBAL; }
         public final boolean isLocalPointer() { return type == VariableType.LOCAL_POINTER; }
         public final boolean isUpPointer() { return type == VariableType.UP_POINTER; }
+        public final boolean isNative() { return type == VariableType.NATIVE; }
         
         public final Variable switchToLocalPointer()
         {
@@ -220,5 +240,5 @@ public final class VariablePool
         
     }
     
-    public static enum VariableType { LOCAL, GLOBAL, LOCAL_POINTER, UP_POINTER };
+    public static enum VariableType { LOCAL, GLOBAL, LOCAL_POINTER, UP_POINTER, NATIVE };
 }

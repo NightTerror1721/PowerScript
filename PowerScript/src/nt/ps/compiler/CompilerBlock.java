@@ -52,7 +52,7 @@ final class CompilerBlock
     {
         scopes = new ScopeStack();
         stack = new Stack();
-        vars = parentVars != null ? parentVars.createChild(stack) : new VariablePool(stack);
+        vars = parentVars != null ? parentVars.createChild(stack) : new VariablePool(stack, globals);
         this.bytecode = bytecode;
         this.globals = globals;
         this.type = type;

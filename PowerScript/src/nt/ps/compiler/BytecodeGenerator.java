@@ -127,6 +127,7 @@ final class BytecodeGenerator
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
             ARGS_JAVAMAP = { new ObjectType(Map.class.getName()) },
             ARGS_HASHMAP = { TYPE_HASHMAP },
+            ARGS_JAVA_MAP = { new ObjectType(Map.class.getName()) },
             ARGS_JAVA_OBJECT_2 = { Type.OBJECT, Type.OBJECT };
     
     private static final Type[][][] FUNC_ARGS = {
@@ -632,6 +633,15 @@ final class BytecodeGenerator
                 Constants.INVOKEVIRTUAL));
     }
     
+    private InstructionHandle loadNative(String namevar)
+    {
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className,STR_GLOBALS_ATTRIBUTE,TYPE_GLOBALS));
+        mainInst.append(new PUSH(constantPool,namevar));
+        return mainInst.append(factory.createInvoke(STR_TYPE_GLOBALS, "getNativeValue",
+                TYPE_VALUE, ARGS_STRING, Constants.INVOKEVIRTUAL));
+    }
+    
     public final InstructionHandle load(Variable var) throws CompilerError
     {
         compiler.getStack().push();
@@ -641,6 +651,7 @@ final class BytecodeGenerator
             case LOCAL_POINTER: return loadLocalPointer(var.getReference());
             case UP_POINTER: return loadUpPointer(var.getReference());
             case GLOBAL: return loadGlobal(var.getName());
+            case NATIVE: return loadNative(var.getName());
             default: throw new IllegalStateException();
         }
     }
@@ -657,6 +668,7 @@ final class BytecodeGenerator
             case LOCAL_POINTER: return storeLocalPointer(var.getReference());
             case UP_POINTER: return storeUpPointer(var.getReference());
             case GLOBAL: return storeGlobal(var.getName());
+            case NATIVE: throw new CompilerError("Native variables cannot be store");
             default: throw new IllegalStateException();
         }
     }
@@ -1145,7 +1157,7 @@ final class BytecodeGenerator
                 STR_TYPE_OBJECT,
                 "<init>",
                 Type.VOID,
-                ARGS_HASHMAP,
+                ARGS_JAVA_MAP,
                 Constants.INVOKESPECIAL));
     }
     
