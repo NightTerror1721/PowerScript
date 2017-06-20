@@ -265,7 +265,7 @@ public final class Tuple
                 throw new CompilerError("Operator " + sufix + " cannot be an unary sufix operator");
             if(!pre.isValidCodeObject())
                 throw CompilerError.unexpectedCode(pre);
-            return packPostUnary(it, new Operator(sufix, pre));
+            return packPostUnary(it, new Operator(sufix, pre, true));
         }
         return pre;
     }

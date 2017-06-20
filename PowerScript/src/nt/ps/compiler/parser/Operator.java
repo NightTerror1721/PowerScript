@@ -15,6 +15,7 @@ public final class Operator extends CodeObject
 {
     private final OperatorSymbol symbol;
     private final ParsedCode[] operands;
+    private final boolean rightOrder;
     
     public Operator(OperatorSymbol symbol, ParsedCode op0, ParsedCode op1, ParsedCode op2) throws CompilerError
     {
@@ -22,6 +23,7 @@ public final class Operator extends CodeObject
             throw new NullPointerException();
         this.symbol = symbol;
         operands = new ParsedCode[]{ check(op0), check(op1), check(op2) };
+        rightOrder = false;
     }
     
     public Operator(OperatorSymbol symbol, ParsedCode op0, ParsedCode op1) throws CompilerError
@@ -30,6 +32,7 @@ public final class Operator extends CodeObject
             throw new NullPointerException();
         this.symbol = symbol;
         operands = new ParsedCode[]{ check(op0), check(op1) };
+        rightOrder = false;
     }
     
     public Operator(OperatorSymbol symbol, ParsedCode op0) throws CompilerError
@@ -38,6 +41,16 @@ public final class Operator extends CodeObject
             throw new NullPointerException();
         this.symbol = symbol;
         operands = new ParsedCode[]{ check(op0) };
+        rightOrder = false;
+    }
+    
+    public Operator(OperatorSymbol symbol, ParsedCode op0, boolean rightOrder) throws CompilerError
+    {
+        if(symbol == null)
+            throw new NullPointerException();
+        this.symbol = symbol;
+        operands = new ParsedCode[]{ check(op0) };
+        this.rightOrder = rightOrder;
     }
     
     private Operator(OperatorSymbol symbol, ParsedCode[] ops)
@@ -48,6 +61,7 @@ public final class Operator extends CodeObject
         if(ops == null)
             throw new NullPointerException();
         operands = ops;
+        rightOrder = false;
     }
     
     public static final Operator newOperator(ParsedCode identifier, Block parameters)
@@ -104,6 +118,8 @@ public final class Operator extends CodeObject
             throw new NullPointerException();
         operands[index] = operand;
     }
+    
+    public final boolean isRightOrder() { return rightOrder; }
     
     @Override
     public final CodeType getCodeType() { return CodeType.OPERATOR; }

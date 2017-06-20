@@ -56,6 +56,24 @@ public abstract class Block<C extends ParsedCode>
     }
     public final static Block<ParsedCode> arguments(ParsedCode... codes) { return new MultipleBlock(codes); }
     
+    public static final Block<ParsedCode> argumentsToFor(Tuple tuple) throws CompilerError
+    {
+        int colons = tuple.count(Separator.COLON);
+        switch(colons)
+        {
+            case 2:
+                return arguments(tuple, Separator.COLON);
+            case 0: {
+                Tuple[] parts = tuple.splitByToken(Separator.TWO_POINTS);
+                if(parts.length != 2)
+                    throw new CompilerError("Malformed \"for\" structure: for(code;code;code) or for(code : code)");
+                return arguments(parts[0].pack(), parts[1].pack());
+            }
+            default:
+                throw new CompilerError("Malformed \"for\" structure: for(code;code;code) or for(code : code)");
+        }
+    }
+    
     public static final Scope scope(List<Command> cmds) { return new Scope(cmds.toArray(new Command[cmds.size()])); }
     public static final Scope scope(Command... cmds) { return new Scope(cmds); }
     

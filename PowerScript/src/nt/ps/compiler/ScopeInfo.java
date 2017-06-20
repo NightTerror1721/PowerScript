@@ -91,6 +91,6 @@ public final class ScopeInfo
     
     public static enum ScopeType
     {
-        BASE, IF, ELSEIF, ELSE, WHILE, FOR, TRY, CATCH
+        BASE, IF, ELSEIF, ELSE, WHILE, FOR, SWITCH, TRY, CATCH
     }
 }

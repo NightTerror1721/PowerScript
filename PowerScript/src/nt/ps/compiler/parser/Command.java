@@ -63,6 +63,8 @@ public final class Command extends ParsedCode
             case GLOBAL: return GLOBAL(line, tuple);
             case IF: return IF(line, tuple);
             case ELSE: return ELSE(line, tuple);
+            case WHILE: return WHILE(line, tuple);
+            case FOR: return FOR(line, tuple);
         }
     }
     
@@ -143,5 +145,46 @@ public final class Command extends ParsedCode
         if(cmd.getName() == CommandName.IF)
             return new Command(line, CommandWord.ELSE, cmd);
         else return new Command(line, CommandWord.ELSE, Block.scope(cmd));
+    }
+    
+    private static Command WHILE(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.WHILE);
+        ParsedCode cond = tuple.get(0);
+        Code scope = tuple.get(1);
+        if(!cond.is(CodeType.BLOCK) || !((Block)cond).isArgumentsList())
+            throw new CompilerError("Malformed \"while\" command");
+        if(scope.is(CodeType.BLOCK))
+        {
+            if(((Block)scope).isScope())
+            {
+                if(tuple.length() != 2)
+                    throw new CompilerError("Malformed \"while\" command");
+                return new Command(line, CommandWord.WHILE, cond, (Scope) scope);
+            }
+        }
+        tuple = tuple.subTuple(1);
+        Command cmd = decode(line, tuple);
+        return new Command(line, CommandWord.WHILE, cond, Block.scope(cmd));
+    }
+    
+    private static Command FOR(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.FOR);
+        ParsedCode cpars = tuple.get(0);
+        if(!cpars.is(CodeType.BLOCK) || !((Block)cpars).isArgumentsList())
+            throw new CompilerError("Malformed \"for\" command");
+        Block pars = (Block) cpars;
+        switch(pars.getCodeCount())
+        {
+            case 2:
+                return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1));
+            case 3:
+                return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1), pars.getCode(2));
+            default:
+                throw new CompilerError("Malformed \"for\" command: Expected for(code;code;code) or for(code : code)");
+        }
     }
 }

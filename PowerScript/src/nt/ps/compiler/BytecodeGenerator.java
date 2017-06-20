@@ -509,7 +509,7 @@ final class BytecodeGenerator
     
     
     /* ASSIGNATIONS */
-    public final InstructionHandle callStoreAccess() throws CompilerError
+    public final InstructionHandle callStoreAccess(boolean pop) throws CompilerError
     {
         compiler.getStack().pop(3);
         mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "set",
@@ -517,7 +517,7 @@ final class BytecodeGenerator
         return mainInst.append(InstructionConstants.POP);
     }
     
-    public final InstructionHandle callStorePropertyAccess(String property) throws CompilerError
+    public final InstructionHandle callStorePropertyAccess(String property, boolean pop) throws CompilerError
     {
         compiler.getStack().pop(3);
         compiler.getStack().push();
@@ -1531,6 +1531,7 @@ final class BytecodeGenerator
     
     public final InstructionHandle getLastHandle() { return mainInst.getEnd(); }
     public final InstructionHandle getFirstHandle() { return mainInst.getStart(); }
+    public final boolean hasAnyInstruction() { return !mainInst.isEmpty(); }
     
     
     

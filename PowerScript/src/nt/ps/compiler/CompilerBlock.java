@@ -81,12 +81,18 @@ final class CompilerBlock
         compiledClass = bytecode.build(type, repository);
     }
     
-    private void compileScope(ScopeInfo scopeInfo)
+    private void compileScope(ScopeInfo scopeInfo) { compileScope(scopeInfo, null, null); }
+    private void compileScope(ScopeInfo scopeInfo, AssignationParametersLoader preCompile, AssignationParametersLoader postCompile)
     {
         if(!scopes.isEmpty())
             scopeInfo.setStartReference(bytecode.getLastHandle());
         scopes.push(scopeInfo);
         vars.createScope();
+        if(preCompile != null) try
+        {
+            preCompile.load();
+        }
+        catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(0)); }
         if(!scopeInfo.hasMoreCommands())
             bytecode.nop();
         else while(scopeInfo.hasMoreCommands())
@@ -95,7 +101,12 @@ final class CompilerBlock
             try { compileCommand(command); }
             catch(CompilerError error) { errors.addError(error, command); }
         }
-        try { vars.destroyScope(); }
+        try
+        {
+            if(postCompile != null)
+                postCompile.load();
+            vars.destroyScope();
+        }
         catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(0)); }
         scopes.pop();
         if(!scopes.isEmpty())
@@ -130,43 +141,43 @@ final class CompilerBlock
             case ELSE: {
                 throw new CompilerError("\"else\" command can only put after \"if\" command");
             }
+            case WHILE: {
+                compileWhile(command);
+            } break;
         }
     }
     
-    /*private InstructionHandle compileIf(Command command) throws CompilerError
+    private void compileFor(Command command) throws CompilerError
     {
-        Block cond = command.getCode(0);
-        ScopeInfo scope = new ScopeInfo(command.getCode(1), ScopeType.IF);
-        compileOperation(cond.getFirstCode(), false, false, false);
-        InstructionHandle startTag = bytecode.computeIf();
-        LinkedList<InstructionHandle> jumps = new LinkedList<>();
-        compileScope(scope);
-        
-        if(scopes.peek().hasMoreCommands() && scopes.peek().peekNextCommand().getName() == CommandName.ELSE)
+        if(command.size() == 3)
         {
-            InstructionHandle jumpTag = bytecode.emptyJump();
-            jumps.add(jumpTag);
-            bytecode.modifyJump(startTag);
-
-            ScopeInfo scope2 = new ScopeInfo(scopebase, ScopeType.ELSE);
-            if(scope2.currentCommand().getName() != CommandName.IF)
-            {
-                compileScope(scope2);
-                bytecode.modifyJump(jumpTag);
-            }
-            else
-            {
-                while(scopes.peek().hasMoreCommands() && scopes.peek().peekNextCommand().getName() == CommandName.ELSE)
-                {
-                    Command celse = scopes.peek().nextCommand();
-                    scopebase.
-                }
-            }
+            
         }
-        else bytecode.modifyJump(startTag);
+        else
+        {
+            if(!command.getCode(0).is(CodeType.IDENTIFIER))
+                throw new CompilerError("Expected a valid identifier in iterator for form");
+            ScopeInfo info = new ScopeInfo();
+        }
+    }
+    
+    private void compileWhile(Command command) throws CompilerError
+    {
+        if(!bytecode.hasAnyInstruction())
+            bytecode.nop();
+        InstructionHandle startTag = bytecode.getLastHandle();
         
-        return startTag;
-    }*/
+        compileOperation(command.<Block>getCode(0).getFirstCode(), false, false, false);
+        InstructionHandle condTag = bytecode.computeIf();
+        
+        ScopeInfo info = new ScopeInfo(command.getCode(1), ScopeType.WHILE);
+        compileScope(info);
+        bytecode.jump(startTag.getNext());
+        
+        for(InstructionHandle jump : info.getAllBranchs())
+            bytecode.modifyJump(jump);
+        bytecode.modifyJump(condTag);
+    }
     
     private void compileIf(Command command) throws CompilerError
     {
@@ -385,7 +396,7 @@ final class CompilerBlock
         {
             bytecode.createTemp("functionTemp");
             bytecode.storeTemp("functionTemp");
-            assign(null, assignation, isGlobal, false, () -> bytecode.loadTemp("functionTemp"));
+            assign(null, assignation, isGlobal, false, false, () -> bytecode.loadTemp("functionTemp"));
             bytecode.loadTemp("functionTemp");
             bytecode.removeTemp("functionTemp");
         }
@@ -417,8 +428,30 @@ final class CompilerBlock
         }
         else if(symbol.isUnary())
         {
-            compileOperation(operator.getOperand(0), isGlobal, false, false);
-            bytecode.callOperator(symbol);
+            if((symbol == OperatorSymbol.INCREMENT || symbol == OperatorSymbol.DECREMENT) && isAssignable(operator.getOperand(0)))
+            {
+                if(operator.isRightOrder())
+                {
+                    assign(AssignationSymbol.ASSIGNATION, operator.getOperand(0), isGlobal, false, false, () -> {
+                        compileOperation(operator.getOperand(0), isGlobal, false, false);
+                        bytecode.dup();
+                        bytecode.callOperator(symbol);
+                    });
+                    stack.push();
+                }
+                else
+                {
+                    assign(AssignationSymbol.ASSIGNATION, operator.getOperand(0), isGlobal, false, true, () -> {
+                        compileOperation(operator.getOperand(0), isGlobal, false, false);
+                        bytecode.callOperator(symbol);
+                    });
+                }
+            }
+            else
+            {
+                compileOperation(operator.getOperand(0), isGlobal, false, false);
+                bytecode.callOperator(symbol);
+            }
         }
         else if(symbol.isTernary())
             compileTernaryOperator(operator, isGlobal);
@@ -527,7 +560,7 @@ final class CompilerBlock
         {
             AssignationPart part = assignation.getPart(i);
             if(part.getLocationCount() == 1)
-                assign(symbol, part.getLocation(0).getCode(), isGlobal, createVars, () -> compileOperation(part.getAssignation(), isGlobal, false, false));
+                assign(symbol, part.getLocation(0).getCode(), isGlobal, createVars, false, () -> compileOperation(part.getAssignation(), isGlobal, false, false));
             else
             {
                 compileOperation(part.getAssignation(), isGlobal, true, false);
@@ -537,7 +570,7 @@ final class CompilerBlock
                 {
                     Location loc = part.getLocation(j);
                     final int index = j;
-                    assign(symbol, loc.getCode(), isGlobal, createVars, () -> bytecode.loadExpand(index));
+                    assign(symbol, loc.getCode(), isGlobal, createVars, false, () -> bytecode.loadExpand(index));
                 }
             }
         }
@@ -572,26 +605,42 @@ final class CompilerBlock
     
     
     private InstructionHandle assign(AssignationSymbol asymbol, ParsedCode to,
-            boolean isGlobal, boolean createVars, AssignationParametersLoader parametersLoader) throws CompilerError
+            boolean isGlobal, boolean createVars, boolean dup, AssignationParametersLoader parametersLoader) throws CompilerError
     {
+        if(dup)
+            stack.push();
         switch(to.getCodeType())
         {
             default: throw new IllegalArgumentException();
-            case IDENTIFIER: return assignFromIdentifier(asymbol, (Identifier) to, isGlobal, createVars, parametersLoader);
+            case IDENTIFIER: return assignFromIdentifier(asymbol, (Identifier) to, isGlobal, createVars, dup, parametersLoader);
             case OPERATOR: {
                 Operator operator = (Operator) to;
                 OperatorSymbol osymbol = operator.getSymbol();
                 if(osymbol == OperatorSymbol.ACCESS)
-                    return assignFromAccess(asymbol, operator, parametersLoader, isGlobal);
+                    return assignFromAccess(asymbol, operator, parametersLoader, isGlobal, dup);
                 else if(osymbol == OperatorSymbol.PROPERTY_ACCESS)
-                    return assignFromPropertyAccess(asymbol, operator, parametersLoader, isGlobal);
+                    return assignFromPropertyAccess(asymbol, operator, parametersLoader, isGlobal, dup);
                 else throw new IllegalArgumentException();
             }
         }
     }
     
+    private boolean isAssignable(ParsedCode code)
+    {
+        switch(code.getCodeType())
+        {
+            default: return false;
+            case IDENTIFIER: return true;
+            case OPERATOR: {
+                Operator operator = (Operator) code;
+                OperatorSymbol osymbol = operator.getSymbol();
+                return osymbol == OperatorSymbol.ACCESS || osymbol == OperatorSymbol.PROPERTY_ACCESS;
+            }
+        }
+    }
+    
     private InstructionHandle assignFromIdentifier(AssignationSymbol asymbol, Identifier identifier,
-            boolean isGlobal, boolean createVars, AssignationParametersLoader loader) throws CompilerError
+            boolean isGlobal, boolean createVars, boolean dup, AssignationParametersLoader loader) throws CompilerError
     {
         String name = identifier.toString();
         Variable var;
@@ -616,10 +665,13 @@ final class CompilerBlock
             bytecode.callOperator(asymbol.getAssociatedOperatorSymbol());
         }
         else loader.load();
+        if(dup)
+            bytecode.dup();
         return bytecode.store(var);
     }
     
-    private InstructionHandle assignFromAccess(AssignationSymbol asymbol, Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
+    private InstructionHandle assignFromAccess(AssignationSymbol asymbol, Operator operator,
+            AssignationParametersLoader loader, boolean isGlobal, boolean dup) throws CompilerError
     {
         compileOperation(operator.getOperand(0), isGlobal, false, false);
         compileOperation(operator.getOperand(1), isGlobal, false, false);
@@ -632,10 +684,11 @@ final class CompilerBlock
             bytecode.callOperator(asymbol.getAssociatedOperatorSymbol());
         }
         else loader.load();
-        return bytecode.callStoreAccess();
+        return bytecode.callStoreAccess(!dup);
     }
     
-    private InstructionHandle assignFromPropertyAccess(AssignationSymbol asymbol, Operator operator, AssignationParametersLoader loader, boolean isGlobal) throws CompilerError
+    private InstructionHandle assignFromPropertyAccess(AssignationSymbol asymbol, Operator operator,
+            AssignationParametersLoader loader, boolean isGlobal, boolean dup) throws CompilerError
     {
         compileOperation(operator.getOperand(0), isGlobal, false, false);
         ParsedCode code2 = operator.getOperand(1);
@@ -649,7 +702,7 @@ final class CompilerBlock
             bytecode.callOperator(asymbol.getAssociatedOperatorSymbol());
         }
         else loader.load();
-        return bytecode.callStorePropertyAccess(code2.toString());
+        return bytecode.callStorePropertyAccess(code2.toString(), !dup);
     }
     
     

@@ -12,6 +12,10 @@ else {
 	IO.print("lol");
 }
 
+var it = 0;
+while(it < 11)
+	IO.print("Iteration number: "..!(++it));
+
 var local = 650;
 local = local === 650 ? local * 2 : local - 50;
 

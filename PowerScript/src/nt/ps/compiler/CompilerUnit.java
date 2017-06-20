@@ -23,7 +23,7 @@ import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Block.Scope;
 import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Command;
-import nt.ps.compiler.parser.CommandWord;
+import nt.ps.compiler.parser.CommandWord.CommandName;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.compiler.parser.OperatorSymbol;
@@ -150,7 +150,9 @@ public final class CompilerUnit
                         if(sb.getCodeCount() > 0 && sb.getLastCode().is(Code.CodeType.COMMAND_WORD))
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.IGNORE);
-                            sb.addCode(Block.arguments(tuple, Separator.COLON));
+                            if(((Command)sb.getLastCode()).getName() == CommandName.FOR)
+                                sb.addCode(Block.argumentsToFor(tuple));
+                            else sb.addCode(Block.arguments(tuple, Separator.COLON));
                         }
                         else
                         {
@@ -270,13 +272,13 @@ public final class CompilerUnit
                     } break;
                     
                     case '?': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('?');
                         sb.addOperator(OperatorSymbol.TERNARY_CONDITION);
                     } break;
                     
                     case '|': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('|');
                         c = source.next();
                         switch(c)
@@ -286,12 +288,12 @@ public final class CompilerUnit
                                 source.move(-1);
                             } break;
                             case '|': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('|');
                                 sb.addOperator(OperatorSymbol.OR);
                             } break;
                             case '=': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('|');
                                 sb.addAssignation(AssignationSymbol.ASSIGNATION_LOGIC_OR);
                             } break;
@@ -299,7 +301,7 @@ public final class CompilerUnit
                     } break;
                     
                     case '&': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('&');
                         c = source.next();
                         switch(c)
@@ -309,12 +311,12 @@ public final class CompilerUnit
                                 source.move(-1);
                             } break;
                             case '&': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('&');
                                 sb.addOperator(OperatorSymbol.AND);
                             } break;
                             case '=': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('&');
                                 sb.addAssignation(AssignationSymbol.ASSIGNATION_LOGIC_AND);
                             } break;
@@ -322,12 +324,12 @@ public final class CompilerUnit
                     } break;
                     
                     case '^': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('^');
                         c = source.next();
                         if(c == '=')
                         {
-                            if(!source.canPeek(1))
+                            if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('=');
                             sb.addAssignation(AssignationSymbol.ASSIGNATION_LOGIC_XOR);
                         }
@@ -339,12 +341,12 @@ public final class CompilerUnit
                     } break;
                     
                     case '.': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('.');
                         c = source.next();
                         if(c == '.')
                         {
-                            if(!source.canPeek(1))
+                            if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('.');
                             sb.addOperator(OperatorSymbol.STRING_CONCAT);
                         }
@@ -358,17 +360,17 @@ public final class CompilerUnit
                     } break;
                     
                     case '!': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('!');
                         c = source.next();
                         if(c == '=')
                         {
-                            if(!source.canPeek(1))
+                            if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('=');
                             c = source.next();
                             if(c == '=')
                             {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('=');
                                 sb.addOperator(OperatorSymbol.NOT_EQUALS_REFERENCE);
                             }
@@ -386,17 +388,17 @@ public final class CompilerUnit
                     } break;
                     
                     case '=': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('=');
                         c = source.next();
                         if(c == '=')
                         {
-                            if(!source.canPeek(1))
+                            if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('=');
                             c = source.next();
                             if(c == '=')
                             {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('=');
                                 sb.addOperator(OperatorSymbol.EQUALS_REFERENCE);
                             }
@@ -410,7 +412,7 @@ public final class CompilerUnit
                     } break;
                     
                     case '>': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('>');
                         c = source.next();
                         switch(c)
@@ -420,12 +422,12 @@ public final class CompilerUnit
                                 source.move(-1);
                             } break;
                             case '=': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('>');
                                 sb.addOperator(OperatorSymbol.GREATER_THAN_EQUALS);
                             } break;
                             case '>': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('>');
                                 sb.addOperator(OperatorSymbol.SHIFT_RIGHT);
                             } break;
@@ -433,7 +435,7 @@ public final class CompilerUnit
                     } break;
                     
                     case '<': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('<');
                         c = source.next();
                         switch(c)
@@ -443,12 +445,12 @@ public final class CompilerUnit
                                 source.move(-1);
                             } break;
                             case '=': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('<');
                                 sb.addOperator(OperatorSymbol.LESS_THAN_EQUALS);
                             } break;
                             case '<': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('<');
                                 sb.addOperator(OperatorSymbol.SHIFT_LEFT);
                             } break;
@@ -456,7 +458,7 @@ public final class CompilerUnit
                     } break;
                     
                     case '-': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('-');
                         c = source.next();
                         switch(c)
@@ -466,12 +468,12 @@ public final class CompilerUnit
                                 source.move(-1);
                             } break;
                             case '-': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('-');
                                 sb.addOperator(OperatorSymbol.DECREMENT);
                             } break;
                             case '=': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('=');
                                 sb.addAssignation(AssignationSymbol.ASSIGNATION_MINUS);
                             } break;
@@ -479,7 +481,7 @@ public final class CompilerUnit
                     } break;
                     
                     case '+': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('+');
                         c = source.next();
                         switch(c)
@@ -488,13 +490,11 @@ public final class CompilerUnit
                                 sb.addOperator(OperatorSymbol.PLUS);
                                 source.move(-1);
                             } break;
-                            case '-': {
-                                if(!source.canPeek(1))
-                                    throw CompilerError.invalidEndChar('+');
+                            case '+': {
                                 sb.addOperator(OperatorSymbol.INCREMENT);
                             } break;
                             case '=': {
-                                if(!source.canPeek(1))
+                                if(!source.canPeek(0))
                                     throw CompilerError.invalidEndChar('=');
                                 sb.addAssignation(AssignationSymbol.ASSIGNATION_PLUS);
                             } break;
@@ -502,7 +502,7 @@ public final class CompilerUnit
                     } break;
                     
                     case '%': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('%');
                         c = source.next();
                         if(c == '=')
@@ -512,14 +512,14 @@ public final class CompilerUnit
                         }
                         else
                         {
-                            if(!source.canPeek(1))
+                            if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('=');
                             sb.addAssignation(AssignationSymbol.ASSIGNATION_MODULE);
                         }
                     } break;
                     
                     case '/': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('/');
                         c = source.next();
                         switch(c)
@@ -549,12 +549,12 @@ public final class CompilerUnit
                     } break;
                     
                     case '*': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('*');
                         c = source.next();
                         if(c == '=')
                         {
-                            if(!source.canPeek(1))
+                            if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('=');
                             sb.addAssignation(AssignationSymbol.ASSIGNATION_MULTIPLY);
                         }
@@ -566,7 +566,7 @@ public final class CompilerUnit
                     } break;
                     
                     case '~': {
-                        if(!source.canPeek(1))
+                        if(!source.canPeek(0))
                             throw CompilerError.invalidEndChar('~');
                         sb.addOperator(OperatorSymbol.LOGIC_NOT);
                     } break;
