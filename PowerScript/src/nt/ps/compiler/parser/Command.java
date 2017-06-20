@@ -5,7 +5,9 @@
  */
 package nt.ps.compiler.parser;
 
+import java.util.Arrays;
 import nt.ps.compiler.exception.CompilerError;
+import nt.ps.compiler.parser.Block.Scope;
 import nt.ps.compiler.parser.CommandWord.CommandName;
 
 /**
@@ -33,7 +35,7 @@ public final class Command extends ParsedCode
     
     public final int size() { return code.length; }
     
-    public final ParsedCode getCode(int index) { return code[index]; }
+    public final <C extends ParsedCode> C getCode(int index) { return (C) code[index]; }
     
     public final CommandName getName() { return command.getName(); }
     
@@ -41,7 +43,7 @@ public final class Command extends ParsedCode
     public final CodeType getCodeType() { return CodeType.COMMAND; }
     
     @Override
-    public String toString() { return command.getName().name().toLowerCase() + " " + code; }
+    public String toString() { return command.getName().name().toLowerCase() + " " + Arrays.toString(code); }
     
     public static final Command parseErrorCommand(int line) { return new Command(line, null); }
     
@@ -60,6 +62,7 @@ public final class Command extends ParsedCode
             case VAR: return VAR(line, tuple);
             case GLOBAL: return GLOBAL(line, tuple);
             case IF: return IF(line, tuple);
+            case ELSE: return ELSE(line, tuple);
         }
     }
     
@@ -103,20 +106,42 @@ public final class Command extends ParsedCode
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.IF);
-        if(tuple.length() != 2)
-            throw new CompilerError("Malformed \"if\" command");
         ParsedCode cond = tuple.get(0);
-        ParsedCode scope = tuple.get(1);
+        Code scope = tuple.get(1);
         if(!cond.is(CodeType.BLOCK) || !((Block)cond).isArgumentsList())
             throw new CompilerError("Malformed \"if\" command");
         if(scope.is(CodeType.BLOCK))
         {
-            if(!((Block)scope).isScope())
-                throw new CompilerError("Expected a valid code object or scope in \"if\" command");
-            return new Command(line, CommandWord.IF, scope);
+            if(((Block)scope).isScope())
+            {
+                if(tuple.length() != 2)
+                    throw new CompilerError("Malformed \"if\" command");
+                return new Command(line, CommandWord.IF, cond, (Scope) scope);
+            }
         }
-        if(!scope.isValidCodeObject())
-            throw new CompilerError("Expected a valid code object or scope in \"if\" command");
-        return new Command(line, CommandWord.IF, scope);
+        tuple = tuple.subTuple(1);
+        Command cmd = decode(line, tuple);
+        return new Command(line, CommandWord.IF, cond, Block.scope(cmd));
+    }
+    
+    private static Command ELSE(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.ELSE);
+        Code scope = tuple.get(0);
+        if(scope.is(CodeType.BLOCK))
+        {
+            if(((Block)scope).isScope())
+            {
+                if(tuple.length() != 1)
+                    throw new CompilerError("Malformed \"else\" command");
+                return new Command(line, CommandWord.ELSE, (Scope) scope);
+            }
+        }
+        
+        Command cmd = decode(line, tuple);
+        if(cmd.getName() == CommandName.IF)
+            return new Command(line, CommandWord.ELSE, cmd);
+        else return new Command(line, CommandWord.ELSE, Block.scope(cmd));
     }
 }

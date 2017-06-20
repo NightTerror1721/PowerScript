@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Code;
-import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.OperatorSymbol;
@@ -78,8 +77,8 @@ final class InstructionBuilder
                 code = Identifier.create(sb.toString(), unary);
                 if(code == null)
                     throw new CompilerError("Invalid command: " + sb.toString());
-                if(code.is(CodeType.COMMAND_WORD) && !codes.isEmpty())
-                    throw new CompilerError("Invalid command after first possition in instruction: " + code);
+                /*if(code.is(CodeType.COMMAND_WORD) && !codes.isEmpty())
+                    throw new CompilerError("Invalid command after first possition in instruction: " + code);*/
             }
             codes.add(code);
             clear();

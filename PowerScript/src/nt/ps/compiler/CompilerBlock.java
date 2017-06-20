@@ -7,6 +7,7 @@ package nt.ps.compiler;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.LinkedList;
 import nt.ps.PSGlobals;
 import nt.ps.compiler.ScopeInfo.ScopeType;
 import nt.ps.compiler.VariablePool.Variable;
@@ -17,9 +18,11 @@ import nt.ps.compiler.parser.Assignation.AssignationPart;
 import nt.ps.compiler.parser.Assignation.Location;
 import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Block;
+import nt.ps.compiler.parser.Block.Scope;
 import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Command;
+import nt.ps.compiler.parser.CommandWord.CommandName;
 import nt.ps.compiler.parser.Declaration;
 import nt.ps.compiler.parser.FunctionLiteral;
 import nt.ps.compiler.parser.Identifier;
@@ -37,6 +40,7 @@ import org.apache.bcel.generic.InstructionHandle;
  */
 final class CompilerBlock
 {
+    private final ScopeInfo scopeSource;
     private final ScopeStack scopes;
     private final Stack stack;
     private final VariablePool vars;
@@ -50,6 +54,7 @@ final class CompilerBlock
     public CompilerBlock(ScopeInfo source, PSGlobals globals, CompilerBlockType type, BytecodeGenerator bytecode,
             CompilerErrors errors, VariablePool parentVars, ClassRepository repository)
     {
+        scopeSource = source;
         scopes = new ScopeStack();
         stack = new Stack();
         vars = parentVars != null ? parentVars.createChild(stack) : new VariablePool(stack, globals);
@@ -60,28 +65,14 @@ final class CompilerBlock
         this.repository = repository;
         
         this.bytecode.setCompiler(this);
-        scopes.push(source);
     }
     
     public final void compile()
     {
-        vars.createScope();
         if(type == CompilerBlockType.FUNCTION)
             bytecode.createUpPointerSlots();
-        while(!scopes.isEmpty())
-        {
-            if(scopes.peek().hasMoreCommands())
-            {
-                Command command = scopes.peek().nextCommand();
-                try { compileCommand(command); }
-                catch(CompilerError error) { errors.addError(error, command); }
-            }
-            else
-            {
-                completeScope(scopes.peek());
-                scopes.pop();
-            }
-        }
+        
+        compileScope(scopeSource);
         
         try { bytecode.Return(); } catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(-1)); }
         if(type != CompilerBlockType.SCRIPT)
@@ -90,9 +81,25 @@ final class CompilerBlock
         compiledClass = bytecode.build(type, repository);
     }
     
-    private void completeScope(ScopeInfo scopeInfo)
+    private void compileScope(ScopeInfo scopeInfo)
     {
-        
+        if(!scopes.isEmpty())
+            scopeInfo.setStartReference(bytecode.getLastHandle());
+        scopes.push(scopeInfo);
+        vars.createScope();
+        if(!scopeInfo.hasMoreCommands())
+            bytecode.nop();
+        else while(scopeInfo.hasMoreCommands())
+        {
+            Command command = scopeInfo.nextCommand();
+            try { compileCommand(command); }
+            catch(CompilerError error) { errors.addError(error, command); }
+        }
+        try { vars.destroyScope(); }
+        catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(0)); }
+        scopes.pop();
+        if(!scopes.isEmpty())
+            scopeInfo.setEndReference(bytecode.getLastHandle());
     }
     
     private void compileCommand(Command command) throws CompilerError
@@ -117,7 +124,94 @@ final class CompilerBlock
                     compileAssignation((Assignation) pc, true, true);
                 else compileDeclaration((Declaration) pc, true);
             } break;
+            case IF: {
+                compileIf(command);
+            } break;
+            case ELSE: {
+                throw new CompilerError("\"else\" command can only put after \"if\" command");
+            }
         }
+    }
+    
+    /*private InstructionHandle compileIf(Command command) throws CompilerError
+    {
+        Block cond = command.getCode(0);
+        ScopeInfo scope = new ScopeInfo(command.getCode(1), ScopeType.IF);
+        compileOperation(cond.getFirstCode(), false, false, false);
+        InstructionHandle startTag = bytecode.computeIf();
+        LinkedList<InstructionHandle> jumps = new LinkedList<>();
+        compileScope(scope);
+        
+        if(scopes.peek().hasMoreCommands() && scopes.peek().peekNextCommand().getName() == CommandName.ELSE)
+        {
+            InstructionHandle jumpTag = bytecode.emptyJump();
+            jumps.add(jumpTag);
+            bytecode.modifyJump(startTag);
+
+            ScopeInfo scope2 = new ScopeInfo(scopebase, ScopeType.ELSE);
+            if(scope2.currentCommand().getName() != CommandName.IF)
+            {
+                compileScope(scope2);
+                bytecode.modifyJump(jumpTag);
+            }
+            else
+            {
+                while(scopes.peek().hasMoreCommands() && scopes.peek().peekNextCommand().getName() == CommandName.ELSE)
+                {
+                    Command celse = scopes.peek().nextCommand();
+                    scopebase.
+                }
+            }
+        }
+        else bytecode.modifyJump(startTag);
+        
+        return startTag;
+    }*/
+    
+    private void compileIf(Command command) throws CompilerError
+    {
+        InstructionHandle condTag = compileConditionalIf(command.getCode(0));
+        compileScope(new ScopeInfo(command.getCode(1), ScopeType.IF));
+        
+        if(!scopes.peek().hasMoreCommands() || scopes.peek().peekNextCommand().getName() != CommandName.ELSE)
+        {
+            bytecode.modifyJump(condTag);
+            return;
+        }
+        
+        LinkedList<InstructionHandle> jumps = new LinkedList<>();
+        do
+        {
+            jumps.add(bytecode.emptyJump());
+            bytecode.modifyJump(condTag);
+            
+            Command cmd = scopes.peek().nextCommand();
+            Code cscope = cmd.getCode(0);
+            if(cscope.is(CodeType.BLOCK))
+            {
+                Scope scope = (Scope) cscope;
+                compileScope(new ScopeInfo(scope, ScopeType.ELSE));
+                condTag = null;
+                break;
+            }
+            else
+            {
+                Command cmdIf = (Command) cscope;
+                condTag = compileConditionalIf(cmdIf.getCode(0));
+                compileScope(new ScopeInfo(cmdIf.getCode(1), ScopeType.ELSEIF));
+            }
+        }
+        while(scopes.peek().hasMoreCommands() && scopes.peek().peekNextCommand().getName() == CommandName.ELSE);
+        
+        if(condTag != null)
+            bytecode.modifyJump(condTag);
+        jumps.forEach(bytecode::modifyJump);
+    }
+    
+    private InstructionHandle compileConditionalIf(Block cond) throws CompilerError
+    {
+        compileOperation(cond.getFirstCode(), false, false, false);
+        return bytecode.computeIf();
     }
     
     private boolean compileOperation(ParsedCode code, boolean isGlobal, boolean multiresult, boolean pop) throws CompilerError

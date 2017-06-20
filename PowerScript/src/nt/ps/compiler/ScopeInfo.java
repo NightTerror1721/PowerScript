@@ -5,9 +5,9 @@
  */
 package nt.ps.compiler;
 
-import java.util.Iterator;
 import java.util.LinkedList;
 import nt.ps.compiler.parser.Block.Scope;
+import nt.ps.compiler.parser.Block.Scope.ScopeIterator;
 import nt.ps.compiler.parser.Command;
 import org.apache.bcel.generic.InstructionHandle;
 
@@ -19,7 +19,7 @@ public final class ScopeInfo
 {
     private final Scope scope;
     private final ScopeType type;
-    private final Iterator<Command> iterator;
+    private final ScopeIterator iterator;
     private InstructionHandle startRef;
     private InstructionHandle endRef;
     private LinkedList<InstructionHandle> branchs;
@@ -85,10 +85,12 @@ public final class ScopeInfo
     
     public final boolean hasMoreCommands() { return iterator.hasNext(); }
     public final Command nextCommand() { return iterator.next(); }
+    public final Command peekNextCommand() { return iterator.peekNext(); }
+    public final Command currentCommand() { return iterator.peek(); }
     
     
     public static enum ScopeType
     {
-        BASE, IF, ELSE, WHILE, FOR, TRY, CATCH
+        BASE, IF, ELSEIF, ELSE, WHILE, FOR, TRY, CATCH
     }
 }

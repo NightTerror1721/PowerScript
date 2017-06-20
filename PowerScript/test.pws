@@ -1,7 +1,15 @@
 global IO;
 
-if(IO !== null) {
+if(5 > 4 && (10 === 9 || 10 === 10))
 	IO.print(true);
+else if(IO === null)
+{
+	IO.print(650);
+	IO = Object;
+}
+else if(650 < 10 || IO !== null) {}
+else {
+	IO.print("lol");
 }
 
 var local = 650;

@@ -56,7 +56,8 @@ public final class VariablePool
         if(vars.isEmpty())
             throw new IllegalStateException();
         VariableScope scope = vars.removeLast();
-        stack.deallocateVariables(scope.getLocalCount());
+        if(scope.getLocalCount() > 0)
+            stack.deallocateVariables(scope.getLocalCount());
     }
     
     public final Variable get(String name, boolean globalModifier) throws CompilerError

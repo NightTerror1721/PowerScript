@@ -800,6 +800,11 @@ final class BytecodeGenerator
     
     
     /* CONSTANTS */
+    public final InstructionHandle nop()
+    {
+        return mainInst.append(InstructionConstants.NOP);
+    }
+    
     public final InstructionHandle dup()
     {
         return mainInst.append(InstructionConstants.DUP);

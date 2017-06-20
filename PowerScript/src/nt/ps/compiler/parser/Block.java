@@ -62,7 +62,7 @@ public abstract class Block<C extends ParsedCode>
     
     private static class MultipleBlock<C extends ParsedCode> extends Block<C>
     {
-        private final C[] codes;
+        final C[] codes;
         
         private MultipleBlock(C[] codes)
         {
@@ -98,7 +98,7 @@ public abstract class Block<C extends ParsedCode>
         }
         
         @Override
-        public final Iterator<C> iterator()
+        public Iterator<C> iterator()
         {
             return new Iterator<C>()
             {
@@ -134,6 +134,27 @@ public abstract class Block<C extends ParsedCode>
         
         @Override
         public final boolean isArgumentsList() { return false; }
+        
+        @Override
+        public final ScopeIterator iterator()
+        {
+            return new ScopeIterator();
+        }
+        
+        public final class ScopeIterator implements Iterator<Command>
+        {
+            private int it = 0;
+            
+            @Override
+            public final boolean hasNext() { return it < codes.length; }
+
+            @Override
+            public final Command next() { return codes[it++]; }
+            
+            public final Command peek() { return codes[it - 1]; }
+            
+            public final Command peekNext() { return codes[it]; }
+        }
     }
     
     private static final class SingleBlock extends Block<ParsedCode>
