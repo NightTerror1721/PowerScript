@@ -177,12 +177,26 @@ public final class Command extends ParsedCode
         if(!cpars.is(CodeType.BLOCK) || !((Block)cpars).isArgumentsList())
             throw new CompilerError("Malformed \"for\" command");
         Block pars = (Block) cpars;
+        Code cscope = tuple.get(1);
+        Scope scope;
+        if(cscope.is(CodeType.BLOCK) && ((Block)cscope).isScope())
+        {
+            if(tuple.length() != 2)
+                throw new CompilerError("Malformed \"while\" command");
+            scope = (Scope) cscope;
+        }
+        else
+        {
+            tuple = tuple.subTuple(1);
+            Command cmd = decode(line, tuple);
+            scope = Block.scope(cmd);
+        }
         switch(pars.getCodeCount())
         {
             case 2:
-                return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1));
+                return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1), scope);
             case 3:
-                return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1), pars.getCode(2));
+                return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1), pars.getCode(2), scope);
             default:
                 throw new CompilerError("Malformed \"for\" command: Expected for(code;code;code) or for(code : code)");
         }

@@ -157,7 +157,31 @@ final class CompilerBlock
         {
             if(!command.getCode(0).is(CodeType.IDENTIFIER))
                 throw new CompilerError("Expected a valid identifier in iterator for form");
-            ScopeInfo info = new ScopeInfo();
+            ScopeInfo info = new ScopeInfo(command.getCode(2), ScopeType.FOREACH);
+            final String tempVar = createTempForVar();
+            final String itVar = command.getCode(0).toString();
+            
+            compileScope(info, () -> {
+                Variable var = vars.createLocal(itVar);
+                compileOperation(command.getCode(1), false, true, false);
+                
+                
+            }, () -> {
+                bytecode.removeTemp(tempVar);
+            });
+        }
+    }
+    
+    private String createTempForVar()
+    {
+        for(int i=0;;i++)
+        {
+            String name = "foreach_temp" + i;
+            if(!bytecode.existsTemp(name))
+            {
+                bytecode.createTemp(name);
+                return name;
+            }
         }
     }
     
