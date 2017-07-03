@@ -56,18 +56,35 @@ public abstract class Block<C extends ParsedCode>
     }
     public final static Block<ParsedCode> arguments(ParsedCode... codes) { return new MultipleBlock(codes); }
     
-    public static final Block<ParsedCode> argumentsToFor(Tuple tuple) throws CompilerError
+    public static final Block<ParsedCode> argumentsToFor(Tuple tuple, int currentLine) throws CompilerError
     {
         int colons = tuple.count(Separator.COLON);
         switch(colons)
         {
-            case 2:
-                return arguments(tuple, Separator.COLON);
+            case 2: {
+                Tuple[] parts = tuple.splitByToken(Separator.COLON);
+                if(parts.length != 3)
+                    throw new CompilerError("Malformed \"for\" structure: for(code;code;code) or for(code : code)");
+                Command initPart;
+                if(!parts[0].isEmpty())
+                {
+                    Code base = parts[0].get(0);
+                    if(base.is(CodeType.COMMAND_WORD) && base != CommandWord.VAR)
+                        throw new CompilerError("Invalid command in \"for\" definition: " + base);
+                    initPart = Command.decode(currentLine, parts[0]);
+                }
+                else initPart = null;
+                return arguments(
+                        initPart,
+                        parts[1].isEmpty() ? null : parts[1].pack(),
+                        parts[2].isEmpty() ? null : parts[2].pack()
+                );
+            }
             case 0: {
                 Tuple[] parts = tuple.splitByToken(Separator.TWO_POINTS);
                 if(parts.length != 2)
                     throw new CompilerError("Malformed \"for\" structure: for(code;code;code) or for(code : code)");
-                return arguments(parts[0].pack(), parts[1].pack());
+                return arguments(parts[0].pack(true), parts[1].pack());
             }
             default:
                 throw new CompilerError("Malformed \"for\" structure: for(code;code;code) or for(code : code)");

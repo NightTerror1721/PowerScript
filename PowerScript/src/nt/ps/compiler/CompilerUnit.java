@@ -23,6 +23,7 @@ import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Block.Scope;
 import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Command;
+import nt.ps.compiler.parser.CommandWord;
 import nt.ps.compiler.parser.CommandWord.CommandName;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
@@ -124,6 +125,7 @@ public final class CompilerUnit
             {
                 char c = source.next();
                 
+                main_switch:
                 switch(c)
                 {
                     case '\t':
@@ -138,7 +140,9 @@ public final class CompilerUnit
                         switch(colonMode)
                         {
                             case ENDS: break base_loop;
-                            case IGNORE: break;
+                            case IGNORE:
+                                sb.addCode(Separator.COLON);
+                                break main_switch;
                             case ERROR: throw new CompilerError("Unexpected End of Instruction ';'");
                             default: throw new IllegalStateException();
                         }
@@ -149,9 +153,10 @@ public final class CompilerUnit
                         sb.decode();
                         if(sb.getCodeCount() > 0 && sb.getLastCode().is(Code.CodeType.COMMAND_WORD))
                         {
+                            int line = scopeSource.getCurrentLine();
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.IGNORE);
-                            if(((Command)sb.getLastCode()).getName() == CommandName.FOR)
-                                sb.addCode(Block.argumentsToFor(tuple));
+                            if(((CommandWord)sb.getLastCode()).getName() == CommandName.FOR)
+                                sb.addCode(Block.argumentsToFor(tuple, line));
                             else sb.addCode(Block.arguments(tuple, Separator.COLON));
                         }
                         else
@@ -408,7 +413,11 @@ public final class CompilerUnit
                                 source.move(-1);
                             }
                         }
-                        else sb.addAssignation(AssignationSymbol.ASSIGNATION);
+                        else
+                        {
+                            sb.addAssignation(AssignationSymbol.ASSIGNATION);
+                            source.move(-1);
+                        }
                     } break;
                     
                     case '>': {

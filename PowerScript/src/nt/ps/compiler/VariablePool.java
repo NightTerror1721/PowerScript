@@ -56,8 +56,11 @@ public final class VariablePool
         if(vars.isEmpty())
             throw new IllegalStateException();
         VariableScope scope = vars.removeLast();
-        if(scope.getLocalCount() > 0)
-            stack.deallocateVariables(scope.getLocalCount());
+        int count = vars.isEmpty()
+                ? scope.getLocalCount() + 1
+                : scope.getLocalCount() - vars.getLast().getLocalCount();
+        if(count > 0)
+            stack.deallocateVariables(count);
     }
     
     public final Variable get(String name, boolean globalModifier) throws CompilerError
@@ -100,10 +103,13 @@ public final class VariablePool
         return vars.getFirst().createUpPointer(var);
     }
     
-    public final boolean exists(String name)
+    public final boolean exists(String name, boolean inCurrentScope)
     {
         if(globals.hasNativeValue(name))
             return true;
+        
+        if(inCurrentScope)
+            return vars.getLast().exists(name);
         
         ListIterator<VariableScope> it = vars.listIterator(vars.size());
         while(it.hasPrevious())
@@ -112,7 +118,7 @@ public final class VariablePool
             if(scope.exists(name))
                 return true;
         }
-        return parent != null && parent.exists(name);
+        return parent != null && parent.exists(name, false);
     }
     
     public final Variable createLocal(String name) throws CompilerError
@@ -150,7 +156,7 @@ public final class VariablePool
         private VariableScope()
         {
             vars = new HashMap<>();
-            count = VariablePool.this.vars.isEmpty() ? 0 : VariablePool.this.vars.getLast().count;
+            count = VariablePool.this.vars.isEmpty() ? -1 : VariablePool.this.vars.getLast().count;
         }
         
         private Variable create(VariableType type, String name, int ref) throws CompilerError

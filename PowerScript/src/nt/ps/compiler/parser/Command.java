@@ -193,8 +193,12 @@ public final class Command extends ParsedCode
         }
         switch(pars.getCodeCount())
         {
-            case 2:
-                return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1), scope);
+            case 2: {
+                ParsedCode cvars = pars.getCode(0);
+                if(!cvars.is(CodeType.IDENTIFIER, CodeType.DECLARATION))
+                    throw new CompilerError("Invalid vars declaration in foreach. Expected a valid identifier o several identifiers: " + cvars);
+                return new Command(line, CommandWord.FOR, cvars, pars.getCode(1), scope);
+            }
             case 3:
                 return new Command(line, CommandWord.FOR, pars.getCode(0), pars.getCode(1), pars.getCode(2), scope);
             default:

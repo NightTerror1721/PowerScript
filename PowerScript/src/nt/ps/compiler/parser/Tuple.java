@@ -156,7 +156,7 @@ public final class Tuple
             }
             tokens.add(cp);
         }
-        if(!tokens.isEmpty())
+        if(!tokens.isEmpty() || sep == Separator.COLON)
             part.add(new Tuple(tokens));
         tokens.clear();
         return part.toArray(new Tuple[part.size()]);

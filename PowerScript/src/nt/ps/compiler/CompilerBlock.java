@@ -144,31 +144,87 @@ final class CompilerBlock
             case WHILE: {
                 compileWhile(command);
             } break;
+            case FOR: {
+                compileFor(command);
+            } break;
         }
     }
     
     private void compileFor(Command command) throws CompilerError
     {
-        if(command.size() == 3)
+        if(!bytecode.hasAnyInstruction())
+            bytecode.nop();
+        
+        if(command.size() == 4)
         {
+            final ScopeInfo info = new ScopeInfo(command.getCode(3), ScopeType.FOR);
+            final InstructionHandle[] ih = new InstructionHandle[] { null };
             
+            compileScope(info, () -> {
+                if(command.getCode(0) != null)
+                {
+                    if(!command.getCode(0).is(CodeType.COMMAND))
+                        throw new IllegalStateException();
+                    compileCommand((Command) command.getCode(0));
+                    info.setStartReference(bytecode.getLastHandle());
+                }
+                if(command.getCode(1) != null)
+                {
+                    compileOperation(command.getCode(1), false, false, false);
+                    ih[0] = bytecode.computeIf();
+                }
+            }, () -> {
+                if(command.getCode(2) != null)
+                    compileOperation(command.getCode(2), false, false, true);
+                bytecode.jump(info.getStartReference().getNext());
+                if(ih[0] != null)
+                    bytecode.modifyJump(ih[0]);
+                for(InstructionHandle jump : info.getAllBranchs())
+                    bytecode.modifyJump(jump);
+            });
         }
         else
         {
-            if(!command.getCode(0).is(CodeType.IDENTIFIER))
-                throw new CompilerError("Expected a valid identifier in iterator for form");
             ScopeInfo info = new ScopeInfo(command.getCode(2), ScopeType.FOREACH);
             final String tempVar = createTempForVar();
-            final String itVar = command.getCode(0).toString();
+            compileOperation(command.getCode(1), false, true, false);
+            bytecode.createIteratorInstance();
+            bytecode.storeTemp(tempVar);
+            stack.pop();
+            InstructionHandle[] ih = new InstructionHandle[1];
             
             compileScope(info, () -> {
-                Variable var = vars.createLocal(itVar);
-                compileOperation(command.getCode(1), false, true, false);
+                Variable[] foreachVars = initiateForeachVars(command.getCode(0));
                 
-                
+                bytecode.loadTemp(tempVar);
+                ih[0] = bytecode.invokeIteratorHasNext();
+                bytecode.loadTemp(tempVar);
+                bytecode.invokeIteratorNext(foreachVars);
             }, () -> {
+                bytecode.jump(info.getStartReference().getNext());
+                bytecode.modifyJump(ih[0]);
+                for(InstructionHandle jump : info.getAllBranchs())
+                    bytecode.modifyJump(jump);
                 bytecode.removeTemp(tempVar);
             });
+        }
+    }
+    
+    private Variable[] initiateForeachVars(ParsedCode vcode) throws CompilerError
+    {
+        switch(vcode.getCodeType())
+        {
+            case IDENTIFIER:
+                return new Variable[] { vars.createLocal(vcode.toString()) };
+            case DECLARATION: {
+                Declaration dec = (Declaration) vcode;
+                int len = dec.getIdentifierCount();
+                Variable[] foreachVars = new Variable[len];
+                for(int i=0;i<len;i++)
+                    foreachVars[i] = vars.createLocal(dec.getIdentifier(i).toString());
+                return foreachVars;
+            }
+            default: throw new IllegalStateException();
         }
     }
     
@@ -202,6 +258,8 @@ final class CompilerBlock
             bytecode.modifyJump(jump);
         bytecode.modifyJump(condTag);
     }
+    
+    
     
     private void compileIf(Command command) throws CompilerError
     {
@@ -606,7 +664,7 @@ final class CompilerBlock
         for(int i=0;i<len;i++)
         {
             String name = declaration.getIdentifier(i).toString();
-            if(vars.exists(name))
+            if(vars.exists(name, true))
                 throw new CompilerError("Variable \"" + name + "\" already exists");
             if(isGlobal)
             {
@@ -670,7 +728,7 @@ final class CompilerBlock
         Variable var;
         if(createVars)
         {
-            if(vars.exists(name))
+            if(vars.exists(name, true))
                 throw new CompilerError("Variable \"" + name + "\" already exists");
             var = isGlobal
                     ? vars.createGlobal(name)
@@ -678,7 +736,7 @@ final class CompilerBlock
         }
         else
         {
-            if(!vars.exists(name))
+            if(!vars.exists(name, false))
                 throw new CompilerError("Variable \"" + name + "\" does not exists");
             var = vars.get(name, false);
         }
@@ -732,7 +790,7 @@ final class CompilerBlock
     
     private Variable checkAndGetVar(String nameVar, boolean globalModifier) throws CompilerError
     {
-        if(!vars.exists(nameVar))
+        if(!vars.exists(nameVar, false))
             throw new CompilerError("Identifier \"" + nameVar + "\" not found");
         return vars.get(nameVar, globalModifier);
     }

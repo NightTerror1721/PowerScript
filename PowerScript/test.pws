@@ -1,5 +1,8 @@
 global IO;
 
+for(value, i : [5, 10, 20, 40, "end"])
+	IO.print("Value: "..value.."; iteration: "..i..";");
+
 if(5 > 4 && (10 === 9 || 10 === 10))
 	IO.print(true);
 else if(IO === null)
@@ -59,6 +62,13 @@ IO.print(typeof (IO.print));
 IO.print(new obj() instanceof obj);
 
 IO.print((65,)..["hola", "k", "ase"]);
+
+for(var it, pow = 0, 0; it < 12; it, pow = it + 1, it * it)
+{
+	IO.print("Iteration number: "..pow);
+}
+
+
 
 //local.show("hola", arr[2](6, local));
 /*local.show(arr, 750, arr[6], 4, 65, arr[5](65, 8, 5, 78, 15, 999, 5), "hell", 9999);

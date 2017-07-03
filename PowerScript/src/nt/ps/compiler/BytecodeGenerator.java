@@ -1313,6 +1313,62 @@ final class BytecodeGenerator
     
     
     
+    /* ITERATORS */
+    public final InstructionHandle createIteratorInstance()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createIterator",
+                TYPE_ITERATOR, NO_ARGS, Constants.INVOKEVIRTUAL));
+    }
+    
+    public final InstructionHandle invokeIteratorHasNext()
+    {
+        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "hasNext",
+                Type.BOOLEAN, NO_ARGS, Constants.INVOKEVIRTUAL));
+        return doIf(false);
+    }
+    
+    public final InstructionHandle invokeIteratorNext(Variable[] vars) throws CompilerError
+    {
+        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "next",
+                TYPE_VARARGS, NO_ARGS, Constants.INVOKEVIRTUAL));
+        compiler.getStack().push(vars.length);
+        if(vars.length == 1)
+        {
+            mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_SELF,
+                    TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
+            return store(vars[0]);
+        }
+        else
+        {
+            int last = vars.length - 1;
+            InstructionHandle ih = null;
+            for(int i=0;i<vars.length;i++)
+            {
+                if(i < last)
+                    mainInst.append(InstructionConstants.DUP);
+                if(i == 0)
+                {
+                    mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_SELF,
+                            TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
+                }
+                else
+                {
+                    mainInst.append(new PUSH(constantPool, i));
+                    mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_ARG,
+                            TYPE_VALUE, ARGS_INT, Constants.INVOKEVIRTUAL));
+                }
+                ih = store(vars[i]);
+            }
+            if(ih == null)
+                throw new IllegalStateException();
+            return ih;
+        }
+    }
+    
+    
+    
+    
+    
     
     
     
