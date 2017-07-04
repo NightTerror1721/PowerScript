@@ -8,7 +8,11 @@ package nt.ps.lang.core;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+import nt.ps.lang.PSDataType;
+import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSObject;
+import nt.ps.lang.PSObject.Property;
+import nt.ps.lang.PSString;
 import nt.ps.lang.PSValue;
 
 /**
@@ -45,9 +49,43 @@ public final class PSObjectReference extends ImmutableCoreLibrary
         switch(name)
         {
             default: return UNDEFINED;
+            case "toString": return TO_STRING;
+            case "deepToString": return DEEP_TO_STRING;
         }
     }
     
+    
+    private static final PSValue
+            TO_STRING = PSFunction.function((arg0) -> new PSString(toString(arg0, false))),
+            DEEP_TO_STRING = PSFunction.function((arg0) -> new PSString(toString(arg0, true)));
+    
+    private static String toString(PSValue value, boolean deep)
+    {
+        return value.getPSType() == PSDataType.OBJECT
+                ? toString((PSObject) value, deep)
+                : value.toString();
+    }
+    
+    public static final String toString(PSObject obj, boolean deep)
+    {
+        if(obj.getPropertyCount() <= 0 && (!deep || !obj.hasParent()))
+            return "{}";
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n");
+        
+        if(deep && obj.hasParent())
+            sb.append("<super>: ").append(toString(obj.getParent(), true)).append('\n');
+        
+        for(Property p : obj.properties())
+        {
+            sb.append('\t').append(p.getName()).append(": ")
+                    .append(toString(p.getValue(), deep).replace("\n", "\n\t")).append('\n');
+        }
+        sb.append('}');
+        
+        return sb.toString();
+    }
     
     
     

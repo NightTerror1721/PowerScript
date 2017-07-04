@@ -6,6 +6,9 @@
 package nt.ps.compiler;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Code;
 import nt.ps.compiler.parser.Code.CodeType;
@@ -46,9 +49,15 @@ public final class SwitchModel
         ) > 1;
     }
     
+    public final InstructionHandle getStartHandle() { return startHandle; }
+    
     public final int getIntCaseCount() { return ints.size(); }
     public final int getFloatCaseCount() { return floats.size(); }
     public final int getStringCaseCount() { return strs.size(); }
+    
+    public final Iterable<Case<Integer>> intCases() { return () -> new CaseIterator(ints); }
+    public final Iterable<Case<Float>> floatCases() { return () -> new CaseIterator(floats); }
+    public final Iterable<Case<String>> stringCases() { return () -> new CaseIterator(strs); }
     
     public final void addDefaultCase(InstructionHandle target) throws CompilerError
     {
@@ -97,5 +106,49 @@ public final class SwitchModel
             strs.put(s, target);
         }
         else throw new CompilerError("Required valid int, float or string literal in switch cases");
+    }
+    
+    private static final class CaseIterator<V> implements Iterator<Case<V>>
+    {
+        private final Iterator<Map.Entry<V, InstructionHandle>> it;
+        private final Case<V> currentCase;
+        
+        private CaseIterator(Map<V, InstructionHandle> map)
+        {
+            it = map.entrySet().iterator();
+            currentCase = new Case<>();
+        }
+
+        @Override
+        public final boolean hasNext() { return it.hasNext(); }
+
+        @Override
+        public final Case<V> next()
+        {
+            Map.Entry<V, InstructionHandle> e = it.next();
+            currentCase.set(e.getKey(), e.getValue());
+            return currentCase;
+        }
+    }
+    
+    public static final class Case<V>
+    {
+        private V value;
+        private InstructionHandle target;
+        private int hashcode;
+        
+        private void set(V value, InstructionHandle target)
+        {
+            this.value = value;
+            this.target = target;
+            this.hashcode = Objects.hashCode(value);
+        }
+        
+        public final V getValue() { return value; }
+        public final InstructionHandle getTarget() { return target; }
+        public final int getHashCode() { return hashcode; }
+        
+        @Override
+        public final int hashCode() { return getHashCode(); }
     }
 }

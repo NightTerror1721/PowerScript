@@ -65,6 +65,9 @@ public final class Command extends ParsedCode
             case ELSE: return ELSE(line, tuple);
             case WHILE: return WHILE(line, tuple);
             case FOR: return FOR(line, tuple);
+            case SWITCH: return SWITCH(line, tuple);
+            case CASE: return CASE(line, tuple);
+            case DEFAULT: return DEFAULT(line, tuple);
         }
     }
     
@@ -151,7 +154,7 @@ public final class Command extends ParsedCode
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.WHILE);
-        ParsedCode cond = tuple.get(0);
+        Code cond = tuple.get(0);
         Code scope = tuple.get(1);
         if(!cond.is(CodeType.BLOCK) || !((Block)cond).isArgumentsList())
             throw new CompilerError("Malformed \"while\" command");
@@ -161,19 +164,19 @@ public final class Command extends ParsedCode
             {
                 if(tuple.length() != 2)
                     throw new CompilerError("Malformed \"while\" command");
-                return new Command(line, CommandWord.WHILE, cond, (Scope) scope);
+                return new Command(line, CommandWord.WHILE, (ParsedCode) cond, (Scope) scope);
             }
         }
         tuple = tuple.subTuple(1);
         Command cmd = decode(line, tuple);
-        return new Command(line, CommandWord.WHILE, cond, Block.scope(cmd));
+        return new Command(line, CommandWord.WHILE, (ParsedCode) cond, Block.scope(cmd));
     }
     
     private static Command FOR(int line, Tuple tuple) throws CompilerError
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.FOR);
-        ParsedCode cpars = tuple.get(0);
+        Code cpars = tuple.get(0);
         if(!cpars.is(CodeType.BLOCK) || !((Block)cpars).isArgumentsList())
             throw new CompilerError("Malformed \"for\" command");
         Block pars = (Block) cpars;
@@ -204,5 +207,46 @@ public final class Command extends ParsedCode
             default:
                 throw new CompilerError("Malformed \"for\" command: Expected for(code;code;code) or for(code : code)");
         }
+    }
+    
+    private static Command SWITCH(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.length() != 2)
+            throw new CompilerError("Malformed \"switch\" command");
+        Code cpars = tuple.get(0);
+        if(!cpars.is(CodeType.BLOCK) || !((Block)cpars).isArgumentsList())
+            throw new CompilerError("Malformed \"switch\" command");
+        Block pars = (Block) cpars;
+        if(pars.getCodeCount() < 1)
+            throw new CompilerError("Expected a valid statement in \"switch\" command");
+        Code cscope = tuple.get(1);
+        if(!cscope.is(CodeType.BLOCK) || !((Block)cscope).isScope())
+            throw new CompilerError("Expected a valid scope in switch command");
+        
+        return new Command(line, CommandWord.SWITCH, pars, (Scope) cscope);
+    }
+    
+    private static Command CASE(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.length() != 2)
+            throw new CompilerError("Invalid case command. Correct form is: \"case <literal>:\"");
+        if(tuple.get(1) != Separator.TWO_POINTS)
+            throw new CompilerError("Invalid case command. Correct form is: \"case <literal>:\"");
+        
+        Code literal = tuple.get(0);
+        if(!literal.is(CodeType.LITERAL))
+            throw new CompilerError("Expected a valid literal in case command. Correct form is: \"case <literal>:\"");
+        
+        return new Command(line, CommandWord.CASE, (Literal) literal);
+    }
+    
+    private static Command DEFAULT(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.length() != 1)
+            throw new CompilerError("Invalid default command. Correct form is: \"default:\"");
+        if(tuple.get(0) != Separator.TWO_POINTS)
+            throw new CompilerError("Invalid default command. Correct form is: \"default:\"");
+        
+        return new Command(line, CommandWord.DEFAULT);
     }
 }

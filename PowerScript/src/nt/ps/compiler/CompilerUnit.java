@@ -274,6 +274,12 @@ public final class CompilerUnit
                     case ':': {
                         sb.decode();
                         sb.addCode(Separator.TWO_POINTS);
+                        if(sb.getCodeCount() > 1 && sb.getFirstCode().is(Code.CodeType.COMMAND_WORD))
+                        {
+                            CommandWord cw = (CommandWord) sb.getFirstCode();
+                            if(cw == CommandWord.CASE || cw == CommandWord.DEFAULT)
+                                break base_loop;
+                        }
                     } break;
                     
                     case '?': {

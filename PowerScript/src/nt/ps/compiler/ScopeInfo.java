@@ -23,6 +23,7 @@ public final class ScopeInfo
     private InstructionHandle startRef;
     private InstructionHandle endRef;
     private LinkedList<InstructionHandle> branchs;
+    private SwitchModel smodel;
     
     public ScopeInfo(Scope scope, ScopeType type)
     {
@@ -81,6 +82,23 @@ public final class ScopeInfo
     public final InstructionHandle getBranch(int index) { return branchs.get(index); }
     
     public final InstructionHandle[] getAllBranchs() { return branchs.toArray(new InstructionHandle[branchs.size()]); }
+    
+    public final void createSwitchModel(InstructionHandle start)
+    {
+        if(type != ScopeType.SWITCH)
+            throw new IllegalStateException("SwitchModel only works on switch scope");
+        if(smodel != null)
+            throw new IllegalStateException();
+        smodel = new SwitchModel(start);
+    }
+    public final SwitchModel getSwitchModel()
+    {
+        if(type != ScopeType.SWITCH)
+            throw new IllegalStateException("SwitchModel only works on switch scope");
+        if(smodel == null)
+            throw new IllegalStateException();
+        return smodel;
+    }
     
     
     public final boolean hasMoreCommands() { return iterator.hasNext(); }

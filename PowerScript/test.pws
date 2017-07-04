@@ -37,14 +37,14 @@ var obj = {
 IO.print(obj, new Object(obj));
 IO.print(new obj());
 
-IO.print(
+IO.print(Object.deepToString(
 {
 	done: true,
 	law: ["dash", false],
 	nested: {
 		folk: ("none", 65)
 	}
-});
+}));
 
 var map = [:];
 map.put("dash", false);

@@ -147,7 +147,23 @@ final class CompilerBlock
             case FOR: {
                 compileFor(command);
             } break;
+            case SWITCH: {
+                compileSwitch(command);
+            } break;
         }
+    }
+    
+    private void compileSwitch(Command command) throws CompilerError
+    {
+        compileOperation(command.<Block>getCode(0).getCode(0), false, false, false);
+        InstructionHandle ihStart = bytecode.getLastHandle();
+        
+        ScopeInfo info = new ScopeInfo(command.getCode(1), ScopeType.SWITCH);
+        info.createSwitchModel(ihStart);
+        
+        compileScope(info);
+        for(InstructionHandle jump : info.getAllBranchs())
+            bytecode.modifyJump(jump);
     }
     
     private void compileFor(Command command) throws CompilerError

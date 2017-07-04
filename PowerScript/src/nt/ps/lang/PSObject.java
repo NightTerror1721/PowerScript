@@ -6,6 +6,7 @@
 package nt.ps.lang;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,11 @@ public final class PSObject extends PSValue
     
     public final PSValue getParent() { return parent; }
     public final boolean hasParent() { return parent != null; }
+    
+    public final boolean hasProperty(String name) { return properties.containsKey(name); }
+    public final int getPropertyCount() { return properties.size(); }
+    
+    public final Iterable<Property> properties() { return PropertyIterator::new; }
     
     private PSValue property(String name)
     {
@@ -458,5 +464,29 @@ public final class PSObject extends PSValue
         if(init != null)
             init.innerCall(instance,args);
         return instance;
+    }
+    
+    public final class Property
+    {
+        private Map.Entry<String, PSValue> entry;
+        
+        public final String getName() { return entry.getKey(); }
+        public final PSValue getValue() { return entry.getValue(); }
+    }
+    
+    private final class PropertyIterator implements Iterator<Property>
+    {
+        private final Iterator<Map.Entry<String, PSValue>> it = properties.entrySet().iterator();
+        private final Property current = new Property();
+
+        @Override
+        public final boolean hasNext() { return it.hasNext(); }
+
+        @Override
+        public final Property next()
+        {
+            current.entry = it.next();
+            return current;
+        }
     }
 }
