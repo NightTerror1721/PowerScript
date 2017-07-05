@@ -17,6 +17,7 @@ import nt.ps.PSClassLoader;
 import nt.ps.PSGlobals;
 import nt.ps.PSScript;
 import nt.ps.compiler.CompilerBlock.CompilerBlockType;
+import nt.ps.compiler.SwitchModel.Case;
 import nt.ps.compiler.VariablePool.Variable;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.Literal;
@@ -118,6 +119,7 @@ final class BytecodeGenerator
             ARGS_VALUE_VARARGS = { TYPE_VALUE, TYPE_VARARGS },
             ARGS_A_VALUE = { new ArrayType(TYPE_VALUE, 1) },
             ARGS_GLOBALS = { TYPE_GLOBALS },
+            ARGS_OBJECT = { Type.OBJECT },
             ARGS_INT = { Type.INT },
             ARGS_LONG = { Type.LONG },
             ARGS_FLOAT = { Type.FLOAT },
@@ -1371,6 +1373,178 @@ final class BytecodeGenerator
     
     
     
+    /* SWITCH */
+    public final void computeSwitch(SwitchModel smodel)
+    {
+        InstructionHandle position = smodel.getStartHandle();
+        int count = smodel.getSwitchTypeCount();
+        switch(count)
+        {
+            default: throw new IllegalStateException();
+            case 0: {
+                mainInst.append(position, new SWITCH(new int[0], new InstructionHandle[0], smodel.getDefaultCase()));
+            } break;
+            case 1: {
+                if(smodel.getIntCaseCount() > 0)
+                    integersSwitch(position, smodel);
+                else if(smodel.getFloatCaseCount() > 0)
+                    floatsSwitch(position, smodel);
+                else stringsSwitch(position, smodel);
+            } break;
+            case 2: {
+                if(smodel.getIntCaseCount() > 0 && smodel.getFloatCaseCount() > 0)
+                {
+                    mainInst.insert(position, InstructionConstants.DUP);
+                    mainInst.insert(position, factory.createInvoke(STR_TYPE_UTILS, "switchComparisonInteger",
+                            Type.BOOLEAN, ARGS_VALUE_1, Constants.INVOKESTATIC));
+                    IFEQ cmp = new IFEQ(null);
+                    mainInst.insert(position, cmp);
+                    integersSwitch(position, smodel);
+                    
+                    cmp.setTarget(mainInst.insert(position, InstructionConstants.NOP));
+                    floatsSwitch(position, smodel);
+                }
+                else
+                {
+                    mainInst.insert(position, InstructionConstants.DUP);
+                    mainInst.insert(position, factory.createInvoke(STR_TYPE_VALUE, "isNumber",
+                            Type.BOOLEAN, NO_ARGS, Constants.INVOKEVIRTUAL));
+                    IFEQ cmp = new IFEQ(null);
+                    mainInst.insert(position, cmp);
+                    if(smodel.getIntCaseCount() > 0)
+                        integersSwitch(position, smodel);
+                    else floatsSwitch(position, smodel);
+                    
+                    cmp.setTarget(mainInst.insert(position, InstructionConstants.NOP));
+                    stringsSwitch(position, smodel);
+                }
+            } break;
+            case 3: {
+                mainInst.insert(position, InstructionConstants.DUP);
+                mainInst.insert(position, factory.createInvoke(STR_TYPE_UTILS, "switchComparisonInteger",
+                        Type.BOOLEAN, ARGS_VALUE_1, Constants.INVOKESTATIC));
+                IFEQ cmp = new IFEQ(null);
+                mainInst.insert(position, cmp);
+                integersSwitch(position, smodel);
+                
+                cmp.setTarget(mainInst.insert(position, InstructionConstants.DUP));
+                mainInst.insert(position, factory.createInvoke(STR_TYPE_VALUE, "isNumber",
+                            Type.BOOLEAN, NO_ARGS, Constants.INVOKEVIRTUAL));
+                cmp = new IFEQ(null);
+                mainInst.insert(position, cmp);
+                floatsSwitch(position, smodel);
+                
+                cmp.setTarget(mainInst.insert(position, InstructionConstants.NOP));
+                stringsSwitch(position, smodel);
+            } break;
+        }
+    }
+    
+    private void integersSwitch(InstructionHandle position, SwitchModel smodel)
+    {
+        int[] codes = new int[smodel.getIntCaseCount()];
+        InstructionHandle[] targets = new InstructionHandle[codes.length];
+        
+        int count = -1;
+        for(Case<Integer> c : smodel.intCases())
+        {
+            count++;
+            codes[count] = c.getHashCode();
+            targets[count] = c.getTarget();
+        }
+        
+        SWITCH s = new SWITCH(codes, targets, smodel.getDefaultCase());
+        mainInst.insert(position, factory.createInvoke(STR_TYPE_VALUE, "toJavaInt",
+                Type.INT, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.insert(position, s);
+    }
+    
+    private void floatsSwitch(InstructionHandle position, SwitchModel smodel)
+    {
+        int[] codes = new int[smodel.getFloatCaseCount()];
+        InstructionHandle[] targets = new InstructionHandle[codes.length];
+        
+        int count = -1;
+        for(Case<Float> c : smodel.floatCases())
+        {
+            count++;
+            codes[count] = c.getHashCode();
+            targets[count] = c.getTarget();
+        }
+        
+        SWITCH s = new SWITCH(codes, targets, smodel.getDefaultCase());
+        mainInst.insert(position, factory.createInvoke(STR_TYPE_VALUE, "toJavaFloat",
+                Type.FLOAT, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.insert(position, factory.createInvoke(Float.class.getName(), "floatToIntBits",
+                Type.INT, ARGS_FLOAT, Constants.INVOKESTATIC));
+        mainInst.insert(position, s);
+    }
+    
+    private void stringsSwitch(InstructionHandle position, SwitchModel smodel)
+    {
+        mainInst.insert(position, factory.createInvoke(STR_TYPE_VALUE, "toJavaString",
+                Type.STRING, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.insert(position, InstructionConstants.DUP);
+        InstructionHandle base = mainInst.append(position, factory.createInvoke(String.class.getName(), "hashCode",
+                Type.INT, NO_ARGS, Constants.INVOKEVIRTUAL));
+        
+        HashMap<Integer, LinkedList<Pair<String, InstructionHandle>>> map = new HashMap<>();
+        for(Case<String> c : smodel.stringCases())
+        {
+            Integer hashcode = c.getHashCode();
+            LinkedList<Pair<String, InstructionHandle>> list = map.get(hashcode);
+            if(list == null)
+            {
+                list = new LinkedList<>();
+                map.put(hashcode, list);
+            }
+            list.add(new Pair(c.getValue(), c.getTarget()));
+        }
+        
+        int[] codes = new int[map.size()];
+        InstructionHandle[] targets = new InstructionHandle[codes.length];
+        
+        int count = -1;
+        for(Map.Entry<Integer, LinkedList<Pair<String, InstructionHandle>>> e : map.entrySet())
+        {
+            count++;
+            codes[count] = e.getKey();
+            LinkedList<Pair<String, InstructionHandle>> list = e.getValue();
+            
+            if(list.size() == 1)
+            {
+                Pair<String, InstructionHandle> pair = list.getFirst();
+                targets[count] = mainInst.insert(position, InstructionConstants.POP);
+                createGoto(position, pair.getRight());
+            }
+            else
+            {
+                targets[count] = mainInst.insert(position, InstructionConstants.NOP);
+                int len = list.size(), it = -1;
+                for(Pair<String, InstructionHandle> pair : list)
+                {
+                    it++;
+                    if(it == len - 1)
+                        createGoto(position, pair.getRight());
+                    else
+                    {
+                        if(it < len - 2)
+                            mainInst.insert(position, InstructionConstants.DUP);
+                        mainInst.insert(position, new PUSH(constantPool, pair.getLeft()));
+                        mainInst.insert(position, factory.createInvoke(String.class.getName(), "equals",
+                                Type.BOOLEAN, ARGS_OBJECT, Constants.INVOKEVIRTUAL));
+                        mainInst.insert(position, new IFNE(pair.getRight()));
+                    }
+                }
+            }
+        }
+        mainInst.append(base, new SWITCH(codes, targets, smodel.getDefaultCase()));
+    }
+    
+    
+    
+    
+    
     
     /* BRANCHES */
     public final InstructionHandle computeIf() throws CompilerError
@@ -1430,6 +1604,11 @@ final class BytecodeGenerator
     private InstructionHandle createGoto(InstructionHandle ih)
     {
         return mainInst.append(new GOTO(ih));
+    }
+    
+    private InstructionHandle createGoto(InstructionHandle position, InstructionHandle ih)
+    {
+        return mainInst.insert(position, new GOTO(ih));
     }
     
     private void markBranch(InstructionHandle igoto)
@@ -1677,6 +1856,34 @@ final class BytecodeGenerator
         {
             this.id = id;
             this.enabled = true;
+        }
+    }
+    
+    private static final class Pair<L, R>
+    {
+        private final L left;
+        private final R right;
+        
+        public Pair(L left, R right)
+        {
+            this.left = left;
+            this.right = right;
+        }
+
+        public final L getLeft() { return left; }
+        public final R getRight() { return right; }
+
+        @Override
+        public final int hashCode() { return left.hashCode() ^ right.hashCode(); }
+
+        @Override
+        public final boolean equals(Object o)
+        {
+            if(!(o instanceof Pair))
+                return false;
+            Pair pairo = (Pair) o;
+            return left.equals(pairo.left) &&
+                   right.equals(pairo.right);
         }
     }
     

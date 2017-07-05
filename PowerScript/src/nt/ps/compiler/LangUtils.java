@@ -6,6 +6,8 @@
 package nt.ps.compiler;
 
 import java.util.HashMap;
+import nt.ps.lang.PSDataType;
+import nt.ps.lang.PSNumber;
 import nt.ps.lang.PSObject;
 import nt.ps.lang.PSString;
 import nt.ps.lang.PSValue;
@@ -55,5 +57,10 @@ public final class LangUtils
         return value0.getPSType() == value1.getPSType()
                 ? value0.notEquals(value1)
                 : PSValue.TRUE;
+    }
+    
+    public static final boolean switchComparisonInteger(PSValue value)
+    {
+        return value.getPSType() == PSDataType.NUMBER && !((PSNumber)value).isDecimal();
     }
 }

@@ -40,13 +40,9 @@ public final class SwitchModel
         strs = new HashMap<>();
     }
     
-    public final boolean isMultiswitch()
+    public final int getSwitchTypeCount()
     {
-        return (
-                (ints.isEmpty() ? 0 : 1) +
-                (floats.isEmpty() ? 0 : 1) +
-                (strs.isEmpty() ? 0 : 1)
-        ) > 1;
+        return (ints.isEmpty() ? 0 : 1) + (floats.isEmpty() ? 0 : 1) + (strs.isEmpty() ? 0 : 1);
     }
     
     public final InstructionHandle getStartHandle() { return startHandle; }
@@ -67,6 +63,13 @@ public final class SwitchModel
             throw new CompilerError("\"default:\" already exists");
         defaultTarget = target;
     }
+    public final InstructionHandle getDefaultCase()
+    {
+        if(defaultTarget == null)
+            throw new NullPointerException();
+        return defaultTarget;
+    }
+    public final boolean hasDefaultCase() { return defaultTarget != null; }
     
     public final void addCase(InstructionHandle target, Code code) throws CompilerError
     {

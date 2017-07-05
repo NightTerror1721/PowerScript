@@ -150,6 +150,15 @@ final class CompilerBlock
             case SWITCH: {
                 compileSwitch(command);
             } break;
+            case CASE: {
+                
+            } break;
+            case DEFAULT: {
+                
+            } break;
+            case BREAK: {
+                
+            } break;
         }
     }
     
@@ -162,8 +171,13 @@ final class CompilerBlock
         info.createSwitchModel(ihStart);
         
         compileScope(info);
+        SwitchModel smodel = info.getSwitchModel();
+        if(!smodel.hasDefaultCase())
+            smodel.addDefaultCase(bytecode.nop());
         for(InstructionHandle jump : info.getAllBranchs())
             bytecode.modifyJump(jump);
+        
+        bytecode.computeSwitch(smodel);
     }
     
     private void compileFor(Command command) throws CompilerError
