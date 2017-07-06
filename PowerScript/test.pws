@@ -1,5 +1,23 @@
 global IO;
 
+var test = "two";
+
+/*switch(test)
+{
+	case 1:
+		IO.print("The FIRST case");
+		break;
+	case "two":
+		IO.print("Is in case 2!!");
+		break;
+	case 3.3:
+		IO.print("3 is the case!");
+		break;
+	default:
+		IO.print("Is in DEFAULT");
+	break;
+}*/
+
 for(value, i : [5, 10, 20, 40, "end"])
 	IO.print("Value: "..value.."; iteration: "..i..";");
 

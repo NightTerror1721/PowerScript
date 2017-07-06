@@ -68,6 +68,8 @@ public final class Command extends ParsedCode
             case SWITCH: return SWITCH(line, tuple);
             case CASE: return CASE(line, tuple);
             case DEFAULT: return DEFAULT(line, tuple);
+            case BREAK: return BREAK(line, tuple);
+            case CONTINUE: return CONTINUE(line, tuple);
         }
     }
     
@@ -248,5 +250,19 @@ public final class Command extends ParsedCode
             throw new CompilerError("Invalid default command. Correct form is: \"default:\"");
         
         return new Command(line, CommandWord.DEFAULT);
+    }
+    
+    private static Command BREAK(int line, Tuple tuple) throws CompilerError
+    {
+        if(!tuple.isEmpty())
+            throw new CompilerError("Invalid break command. Correct form is: \"break;\"");
+        return new Command(line, CommandWord.BREAK);
+    }
+    
+    private static Command CONTINUE(int line, Tuple tuple) throws CompilerError
+    {
+        if(!tuple.isEmpty())
+            throw new CompilerError("Invalid continue command. Correct form is: \"continue;\"");
+        return new Command(line, CommandWord.CONTINUE);
     }
 }

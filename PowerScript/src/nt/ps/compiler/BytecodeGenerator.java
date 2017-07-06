@@ -177,6 +177,8 @@ final class BytecodeGenerator
     private final HashMap<String, TempInfo> tempVars = new HashMap<>();
     private int expandId = -1;
     
+    private LocalVariableGen stringSwitchTemp = null;
+    
     private long inheritedFunctionsId = 0;
     
     public BytecodeGenerator(PSClassLoader classLoader, String name, int argsLen, int defaultValues, boolean packExtraArgs)
@@ -1374,15 +1376,18 @@ final class BytecodeGenerator
     
     
     /* SWITCH */
-    public final void computeSwitch(SwitchModel smodel)
+    public final void computeSwitch(SwitchModel smodel) throws CompilerError
     {
-        InstructionHandle position = smodel.getStartHandle();
+        compiler.getStack().pop();
+        InstructionHandle position = smodel.getStartHandle().getNext();
         int count = smodel.getSwitchTypeCount();
         switch(count)
         {
             default: throw new IllegalStateException();
             case 0: {
-                mainInst.append(position, new SWITCH(new int[0], new InstructionHandle[0], smodel.getDefaultCase()));
+                mainInst.insert(position, factory.createInvoke(STR_TYPE_VALUE, "toJavaInt",
+                        Type.INT, NO_ARGS, Constants.INVOKEVIRTUAL));
+                mainInst.insert(position, new SWITCH(new int[]{0}, new InstructionHandle[]{smodel.getDefaultCase()}, smodel.getDefaultCase()));
             } break;
             case 1: {
                 if(smodel.getIntCaseCount() > 0)
@@ -1482,12 +1487,8 @@ final class BytecodeGenerator
     
     private void stringsSwitch(InstructionHandle position, SwitchModel smodel)
     {
-        mainInst.insert(position, factory.createInvoke(STR_TYPE_VALUE, "toJavaString",
-                Type.STRING, NO_ARGS, Constants.INVOKEVIRTUAL));
-        mainInst.insert(position, InstructionConstants.DUP);
-        InstructionHandle base = mainInst.append(position, factory.createInvoke(String.class.getName(), "hashCode",
-                Type.INT, NO_ARGS, Constants.INVOKEVIRTUAL));
-        
+        InstructionHandle base = position.getPrev();
+        boolean temp = false;
         HashMap<Integer, LinkedList<Pair<String, InstructionHandle>>> map = new HashMap<>();
         for(Case<String> c : smodel.stringCases())
         {
@@ -1514,12 +1515,17 @@ final class BytecodeGenerator
             if(list.size() == 1)
             {
                 Pair<String, InstructionHandle> pair = list.getFirst();
-                targets[count] = mainInst.insert(position, InstructionConstants.POP);
-                createGoto(position, pair.getRight());
+                targets[count] = pair.getRight();
             }
             else
             {
-                targets[count] = mainInst.insert(position, InstructionConstants.NOP);
+                if(!temp)
+                {
+                    temp = true;
+                    if(stringSwitchTemp == null)
+                        stringSwitchTemp = mainMethod.addLocalVariable("stringswitch_temp", Type.STRING, null, null);
+                }
+                targets[count] = mainInst.insert(position, new ALOAD(stringSwitchTemp.getIndex()));
                 int len = list.size(), it = -1;
                 for(Pair<String, InstructionHandle> pair : list)
                 {
@@ -1538,7 +1544,17 @@ final class BytecodeGenerator
                 }
             }
         }
+        
         mainInst.append(base, new SWITCH(codes, targets, smodel.getDefaultCase()));
+        mainInst.append(base, factory.createInvoke(String.class.getName(), "hashCode",
+                Type.INT, NO_ARGS, Constants.INVOKEVIRTUAL));
+        if(temp)
+        {
+            mainInst.append(base, new ASTORE(stringSwitchTemp.getIndex()));
+            mainInst.append(base, InstructionConstants.DUP);
+        }
+        mainInst.append(base, factory.createInvoke(STR_TYPE_VALUE, "toJavaString",
+                Type.STRING, NO_ARGS, Constants.INVOKEVIRTUAL));
     }
     
     
@@ -1767,6 +1783,10 @@ final class BytecodeGenerator
     public final InstructionHandle getLastHandle() { return mainInst.getEnd(); }
     public final InstructionHandle getFirstHandle() { return mainInst.getStart(); }
     public final boolean hasAnyInstruction() { return !mainInst.isEmpty(); }
+    public final boolean isNopLastInstruction()
+    {
+        return hasAnyInstruction() && getLastHandle().getInstruction() instanceof NOP;
+    }
     
     
     

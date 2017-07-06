@@ -41,6 +41,9 @@ public final class ScopeInfo
     
     public final ScopeType getScopeType() { return type; }
     
+    public final boolean isBreakable() { return type.isBreakable(); }
+    public final boolean isContinuable() { return type.isContinuable(); }
+    
     public final void setStartReference(InstructionHandle ref)
     {
         if(ref == null)
@@ -109,6 +112,28 @@ public final class ScopeInfo
     
     public static enum ScopeType
     {
-        BASE, IF, ELSEIF, ELSE, WHILE, FOR, FOREACH, SWITCH, TRY, CATCH
+        BASE,
+        IF,
+        ELSEIF,
+        ELSE,
+        WHILE(true, true),
+        FOR(true, true),
+        FOREACH(true, true),
+        SWITCH(true, false),
+        TRY,
+        CATCH;
+        
+        private final boolean breakable;
+        private final boolean continuable;
+        
+        private ScopeType(boolean b, boolean c)
+        {
+            breakable = b;
+            continuable = c;
+        }
+        private ScopeType() { this(false, false); }
+        
+        public final boolean isBreakable() { return breakable; }
+        public final boolean isContinuable() { return continuable; }
     }
 }

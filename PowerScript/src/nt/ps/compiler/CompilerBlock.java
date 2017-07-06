@@ -151,15 +151,56 @@ final class CompilerBlock
                 compileSwitch(command);
             } break;
             case CASE: {
-                
+                compileCase(command);
             } break;
             case DEFAULT: {
-                
+                compileDefault(command);
             } break;
             case BREAK: {
-                
+                compileBreak(command);
+            } break;
+            case CONTINUE: {
+                compileContinue(command);
             } break;
         }
+    }
+    
+    private void compileContinue(Command command) throws CompilerError
+    {
+        if(!scopes.peek().isContinuable())
+            throw new CompilerError("\"continue\" command is not valid in " +
+                    scopes.peek().getScopeType().name().toLowerCase() + " scope");
+        InstructionHandle inst = scopes.peek().getStartReference().getNext();
+        bytecode.jump(inst == null ? bytecode.nop() : inst);
+    }
+    
+    private void compileBreak(Command command) throws CompilerError
+    {
+        if(!scopes.peek().isBreakable())
+            throw new CompilerError("\"break\" command is not valid in " +
+                    scopes.peek().getScopeType().name().toLowerCase() + " scope");
+        scopes.peek().addBranchReference(bytecode.emptyJump());
+    }
+    
+    private void compileDefault(Command command) throws CompilerError
+    {
+        if(scopes.peek().getScopeType() != ScopeType.SWITCH)
+            throw new CompilerError("\"default\" command only works in \"switch\" scope");
+        InstructionHandle last = bytecode.isNopLastInstruction()
+                ? bytecode.getLastHandle()
+                : bytecode.nop();
+        scopes.peek().getSwitchModel().addDefaultCase(last);
+    }
+    
+    private void compileCase(Command command) throws CompilerError
+    {
+        if(scopes.peek().getScopeType() != ScopeType.SWITCH)
+            throw new CompilerError("\"case\" command only works in \"switch\" scope");
+        Literal lit = command.getCode(0);
+        InstructionHandle last = bytecode.isNopLastInstruction()
+                ? bytecode.getLastHandle()
+                : bytecode.nop();
+        scopes.peek().getSwitchModel().addCase(last, lit);
     }
     
     private void compileSwitch(Command command) throws CompilerError
