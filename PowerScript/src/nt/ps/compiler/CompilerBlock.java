@@ -162,7 +162,63 @@ final class CompilerBlock
             case CONTINUE: {
                 compileContinue(command);
             } break;
+            case TRY: {
+                compileTry(command);
+            } break;
+            case CATCH: {
+                throw new CompilerError("\"catch\" command can only put after \"try\" command");
+            }
+            case THROW: {
+                compileThrow(command);
+            } break;
         }
+    }
+    
+    private void compileThrow(Command command) throws CompilerError
+    {
+        int pars = compileMultipleRaises(command.getCode(0));
+        bytecode.computeThrow(pars);
+    }
+    
+    private int compileMultipleRaises(Block pars) throws CompilerError
+    {
+        int len = pars.getCodeCount();
+        if(len < 1)
+            return 0;
+        boolean multiresponse = false;
+        for(int i=0;i<len;i++)
+        {
+            ParsedCode code = pars.getCode(i);
+            if(!multiresponse && code.is(Code.CodeType.OPERATOR) && ((Operator)code).getSymbol().isCallable())
+                multiresponse = true;
+            compileOperation(code, false, true, false);
+        }
+        if(multiresponse)
+            bytecode.wrapVarargsTail(len);
+        return multiresponse ? -1 : len;
+    }
+    
+    private void compileTry(Command command) throws CompilerError
+    {
+        if(!bytecode.hasAnyInstruction())
+            bytecode.nop();
+        
+        ScopeInfo info = new ScopeInfo(command.getCode(0), ScopeType.TRY);
+        compileScope(info);
+        info.setEndReference(bytecode.emptyJump());
+        
+        if(!scopes.peek().hasMoreCommands() || scopes.peek().peekNextCommand().getName() != CommandName.CATCH)
+            throw new CompilerError("Expected a valid \"catch\" command after \"try\" command");
+        Command catchCommand = scopes.peek().nextCommand();
+        ScopeInfo catchInfo = new ScopeInfo(catchCommand.getCode(1), ScopeType.CATCH);
+        
+        compileScope(catchInfo, () -> {
+            Variable var = vars.createLocal(catchCommand.getCode(0).toString());
+            bytecode.wrapThrowable();
+        }, () -> {
+            bytecode.createTryCatchHandler(info.getStartReference(), info.getEndReference(), info.getEndReference().getNext());
+            bytecode.modifyJump(info.getEndReference());
+        });
     }
     
     private void compileContinue(Command command) throws CompilerError

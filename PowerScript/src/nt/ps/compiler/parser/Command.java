@@ -70,6 +70,10 @@ public final class Command extends ParsedCode
             case DEFAULT: return DEFAULT(line, tuple);
             case BREAK: return BREAK(line, tuple);
             case CONTINUE: return CONTINUE(line, tuple);
+            case TRY: return TRY(line, tuple);
+            case CATCH: return CATCH(line, tuple);
+            case THROW: return THROW(line, tuple);
+            case RETURN: return RETURN(line, tuple);
         }
     }
     
@@ -264,5 +268,66 @@ public final class Command extends ParsedCode
         if(!tuple.isEmpty())
             throw new CompilerError("Invalid continue command. Correct form is: \"continue;\"");
         return new Command(line, CommandWord.CONTINUE);
+    }
+    
+    private static Command TRY(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.length() != 1)
+            throw new CompilerError("Invalid try command. Correct form is: \"try { <...> };\"");
+        Code cscope = tuple.get(0);
+        if(!cscope.is(CodeType.BLOCK) || !((Block)cscope).isScope())
+            throw new CompilerError("Expected a valid scope in try command");
+        
+        return new Command(line, CommandWord.TRY, (Scope) cscope);
+    }
+    
+    private static Command CATCH(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.length() != 1)
+            throw new CompilerError("Invalid catch command. Correct form is: \"catch(<exception_name>) { <...> };\"");
+        Code cid = tuple.get(0);
+        if(!cid.is(CodeType.IDENTIFIER))
+            throw new CompilerError("Expected a valid identifier for exception name in catch command");
+        Code cscope = tuple.get(1);
+        if(!cscope.is(CodeType.BLOCK) || !((Block)cscope).isScope())
+            throw new CompilerError("Expected a valid scope in catch command");
+        
+        return new Command(line, CommandWord.CATCH, (Identifier) cid, (Scope) cscope);
+    }
+    
+    private static Command THROW(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.THROW);
+        if(tuple.get(0).is(CodeType.BLOCK))
+        {
+            Block pars = tuple.get(0);
+            if(pars.isArgumentsList())
+            {
+                if(tuple.length() != 1)
+                    throw new CompilerError("Invalid throw command. Correct form is: \"throw <...>,...; or throw (<...>,...);\"");
+                return new Command(line, CommandWord.THROW, pars);
+            }
+        }
+        Block pars = Block.arguments(tuple, Separator.COMMA);
+        return new Command(line, CommandWord.THROW, pars);
+    }
+    
+    private static Command RETURN(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            return new Command(line, CommandWord.RETURN);
+        if(tuple.get(0).is(CodeType.BLOCK))
+        {
+            Block pars = tuple.get(0);
+            if(pars.isArgumentsList())
+            {
+                if(tuple.length() != 1)
+                    throw new CompilerError("Invalid return command. Correct form is: \"return <...>,...; or return (<...>,...);\"");
+                return new Command(line, CommandWord.RETURN, pars);
+            }
+        }
+        Block pars = Block.arguments(tuple, Separator.COMMA);
+        return new Command(line, CommandWord.RETURN, pars);
     }
 }

@@ -124,6 +124,7 @@ final class BytecodeGenerator
             ARGS_LONG = { Type.LONG },
             ARGS_FLOAT = { Type.FLOAT },
             ARGS_DOUBLE = { Type.DOUBLE },
+            ARGS_THROWABLE = { Type.THROWABLE },
             ARGS_VARARGS_INT = { TYPE_VARARGS, Type.INT },
             ARGS_STRING_VALUE = ARGS_STRING_VALUE_1,
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
@@ -1562,6 +1563,24 @@ final class BytecodeGenerator
     
     
     
+    /* TRY/CATCH */
+    public final InstructionHandle wrapThrowable()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "wrapThrowable",
+                TYPE_VALUE, ARGS_OBJECT, Constants.INVOKESTATIC));
+    }
+    
+    public final void createTryCatchHandler(InstructionHandle tryStart,
+            InstructionHandle tryEnd, InstructionHandle catchStart)
+    {
+        mainMethod.addExceptionHandler(tryStart, tryEnd, catchStart, null);
+    }
+    
+    
+    
+    
+    
+    
     /* BRANCHES */
     public final InstructionHandle computeIf() throws CompilerError
     {
@@ -1654,7 +1673,7 @@ final class BytecodeGenerator
     
     
     
-    private InstructionHandle doReturn(boolean returnAnything)
+    public final InstructionHandle doReturn(boolean returnAnything)
     {
         if(!returnAnything)
             loadEmpty();
@@ -1666,6 +1685,20 @@ final class BytecodeGenerator
             return doReturn(false);
         compiler.getStack().pop();
         return doReturn(true);
+    }
+    
+    
+    public final InstructionHandle computeThrow(int args) throws CompilerError
+    {
+        if(args >= 0)
+        {
+            wrapArgsToArray(args);
+            if(args > 0)
+                compiler.getStack().pop(args);
+        }
+        mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "varargsToThrowable",
+                Type.THROWABLE, ARGS_VARARGS, Constants.INVOKESTATIC));
+        return mainInst.append(InstructionConstants.ATHROW);
     }
     
     
