@@ -1564,16 +1564,18 @@ final class BytecodeGenerator
     
     
     /* TRY/CATCH */
-    public final InstructionHandle wrapThrowable()
+    public final InstructionHandle wrapThrowable(Variable var) throws CompilerError
     {
-        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "wrapThrowable",
-                TYPE_VALUE, ARGS_OBJECT, Constants.INVOKESTATIC));
+        mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "wrapThrowable",
+                TYPE_VALUE, ARGS_THROWABLE, Constants.INVOKESTATIC));
+        compiler.getStack().push();
+        return store(var);
     }
     
     public final void createTryCatchHandler(InstructionHandle tryStart,
             InstructionHandle tryEnd, InstructionHandle catchStart)
     {
-        mainMethod.addExceptionHandler(tryStart, tryEnd, catchStart, null);
+        mainMethod.addExceptionHandler(tryStart, tryEnd, catchStart, Type.THROWABLE);
     }
     
     

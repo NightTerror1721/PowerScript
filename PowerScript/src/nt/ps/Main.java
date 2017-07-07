@@ -12,9 +12,7 @@ import java.io.IOException;
 import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.PSCompilerException;
-import nt.ps.lang.PSValue;
 import nt.ps.lang.core.PSIO;
-import nt.ps.lang.core.PSObjectReference;
 
 /**
  *
@@ -46,7 +44,15 @@ public final class Main
         state.setGlobalValue("IO", new PSIO());
         //state.setGlobalValue("Object", new PSObjectReference());
         
+        double t1 = System.nanoTime();
         PSScript script = CompilerUnit.compile(fis, state, cl, "test");
+        double t2 = System.nanoTime();
         script.execute();
+        double t3 = System.nanoTime();
+        script.execute();
+        double t4 = System.nanoTime();
+        
+        System.out.println("Time to Compile: " + ((t2 - t1) / 1000000) + "ms");
+        System.out.println("Time to Execute: " + ((t4 - t3) / 1000000) + "ms");
     }
 }

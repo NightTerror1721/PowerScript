@@ -283,16 +283,19 @@ public final class Command extends ParsedCode
     
     private static Command CATCH(int line, Tuple tuple) throws CompilerError
     {
-        if(tuple.length() != 1)
+        if(tuple.length() != 2)
             throw new CompilerError("Invalid catch command. Correct form is: \"catch(<exception_name>) { <...> };\"");
         Code cid = tuple.get(0);
-        if(!cid.is(CodeType.IDENTIFIER))
+        if(!cid.is(CodeType.BLOCK))
+            throw new CompilerError("Expected a valid identifier for exception name in catch command");
+        Block bid = (Block) cid;
+        if(!bid.getCode(0).is(CodeType.IDENTIFIER))
             throw new CompilerError("Expected a valid identifier for exception name in catch command");
         Code cscope = tuple.get(1);
         if(!cscope.is(CodeType.BLOCK) || !((Block)cscope).isScope())
             throw new CompilerError("Expected a valid scope in catch command");
         
-        return new Command(line, CommandWord.CATCH, (Identifier) cid, (Scope) cscope);
+        return new Command(line, CommandWord.CATCH, bid.getCode(0), (Scope) cscope);
     }
     
     private static Command THROW(int line, Tuple tuple) throws CompilerError

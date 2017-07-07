@@ -214,7 +214,7 @@ final class CompilerBlock
         
         compileScope(catchInfo, () -> {
             Variable var = vars.createLocal(catchCommand.getCode(0).toString());
-            bytecode.wrapThrowable();
+            bytecode.wrapThrowable(var);
         }, () -> {
             bytecode.createTryCatchHandler(info.getStartReference(), info.getEndReference(), info.getEndReference().getNext());
             bytecode.modifyJump(info.getEndReference());
