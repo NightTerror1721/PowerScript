@@ -460,7 +460,7 @@ public final class BytecodeGenerator
         return ih;
     }
     
-    private InstructionHandle insertClosureDefaults(BytecodeGenerator closure, InstructionHandle last)
+    private InstructionHandle insertClosureDefaults(BytecodeGenerator closure, InstructionHandle last) throws CompilerError
     {
         if(closure.defaultValues <= 0 || closure.argsLen <= 0)
             return last;
@@ -532,7 +532,7 @@ public final class BytecodeGenerator
     
     public final InstructionHandle callStorePropertyAccess(String property, boolean pop) throws CompilerError
     {
-        compiler.getStack().pop(3);
+        compiler.getStack().pop(2);
         compiler.getStack().push();
         mainInst.append(new PUSH(constantPool, property));
         mainInst.append(InstructionConstants.SWAP);
@@ -554,8 +554,9 @@ public final class BytecodeGenerator
         return mainInst.append(new ALOAD(id));
     }
     
-    public final InstructionHandle loadSelf()
+    public final InstructionHandle loadSelf() throws CompilerError
     {
+        compiler.getStack().push();
         return mainInst.append(new ALOAD(SELF_ID));
     }
     
@@ -1709,7 +1710,7 @@ public final class BytecodeGenerator
             if(args > 0)
                 compiler.getStack().pop(args);
         }
-        else loadEmpty();
+        else if(args == 0) loadEmpty();
         return mainInst.append(InstructionConstants.ARETURN);
     }
     

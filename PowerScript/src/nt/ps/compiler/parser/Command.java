@@ -37,7 +37,7 @@ public final class Command extends ParsedCode
     
     public final <C extends ParsedCode> C getCode(int index) { return (C) code[index]; }
     
-    public final CommandName getName() { return command.getName(); }
+    public final CommandName getName() { return command != null ? command.getName() : null; }
     
     @Override
     public final CodeType getCodeType() { return CodeType.COMMAND; }

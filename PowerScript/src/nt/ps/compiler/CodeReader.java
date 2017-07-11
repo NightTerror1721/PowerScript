@@ -202,6 +202,8 @@ public final class CodeReader
     
     public final boolean hasNext() { return source.length != 0 && index < size; }
     
+    public final int getMaxIndex() { return size; }
+    
     public final int getCurrentIndex() { return index; }
     
     public final char setIndex(int index) { return move(index,true); }

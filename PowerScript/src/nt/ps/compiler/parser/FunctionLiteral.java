@@ -104,7 +104,7 @@ public class FunctionLiteral extends ParsedCode
                     ParsedCode plit = ap.getAssignation();
                     if(!plit.is(CodeType.LITERAL))
                         throw new CompilerError("Only is valid a single literal in right part of default identifier in function definition. <identifier = literal>");
-                    spars[count] = ap.getLocation(0).toString();
+                    spars[count] = ap.getLocation(0).getCode().toString();
                     ldefs[count - (spars.length - ldefs.length)] = (Literal) plit;
                 } break;
                 default: throw new CompilerError("Unexpected code. Expected only a valid identifier or varargs identifier");
@@ -145,6 +145,13 @@ public class FunctionLiteral extends ParsedCode
     
     public final int getDefaultCount() { return defs == null ? 0 : defs.length; }
     public final Literal getDefault(int index) { return defs[index]; }
+    
+    public final Literal[] getDefaults()
+    {
+        Literal[] copy = new Literal[defs.length];
+        System.arraycopy(defs, 0, copy, 0, defs.length);
+        return copy;
+    }
     
     public final Scope getScope() { return scope; }
     

@@ -217,16 +217,20 @@ public final class Tuple
         }
         if(it.end() || pars == null)
             throw new CompilerError("Expected arguments list in function definition");
-        ParsedCode identifier;
-        if(call >= 0)
+        int end = it.value;
+        ParsedCode identifier = null;
+        if(start < end)
         {
-            Code[] sub = new Code[it.value - 2];
-            int sublen = call - start;
-            System.arraycopy(code, start, sub, 0, sublen);
-            System.arraycopy(code, call + 1, sub, sublen, sub.length - sublen);
-            identifier = new Tuple(sub).pack();
+            if(call >= 0)
+            {
+                Code[] sub = new Code[it.value - 2];
+                int sublen = call - start;
+                System.arraycopy(code, start, sub, 0, sublen);
+                System.arraycopy(code, call + 1, sub, sublen, sub.length - sublen);
+                identifier = new Tuple(sub).pack();
+            }
+            else identifier = subTuple(start, it.value - 1).pack();
         }
-        else identifier = subTuple(start, it.value - 1).pack();
         
         it.increase();
         if(it.end())
@@ -238,7 +242,7 @@ public final class Tuple
         Scope scope = (Scope) cscope;
         
         FunctionLiteral function;
-        if(start == it.value)
+        if(start == end)
             function = FunctionLiteral.closure(pars, scope);
         else function = FunctionLiteral.function(identifier, pars, scope);
         

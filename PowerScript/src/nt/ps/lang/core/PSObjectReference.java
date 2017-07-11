@@ -51,13 +51,19 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             default: return UNDEFINED;
             case "toString": return TO_STRING;
             case "deepToString": return DEEP_TO_STRING;
+            case "setProperty": return SET_PROPERTY;
+            case "getProperty": return GET_PROPERTY;
         }
     }
     
     
     private static final PSValue
             TO_STRING = PSFunction.function((arg0) -> new PSString(toString(arg0, false))),
-            DEEP_TO_STRING = PSFunction.function((arg0) -> new PSString(toString(arg0, true)));
+            DEEP_TO_STRING = PSFunction.function((arg0) -> new PSString(toString(arg0, true))),
+            SET_PROPERTY = PSFunction.voidFunction((arg0, arg1, arg2) -> {
+                arg0.toPSObject().setProperty(arg1.toJavaString(), arg2);
+            }),
+            GET_PROPERTY = PSFunction.function((arg0, arg1) -> arg0.toPSObject().getProperty(arg1.toJavaString()));
     
     private static String toString(PSValue value, boolean deep)
     {

@@ -618,6 +618,10 @@ final class CompilerBlock
                     errors.addErrors(childErrors);
                     return;
                 }
+                
+                int len = function.getDefaultCount();
+                for(int i=0;i<len;i++)
+                    bytecode.loadLiteral(function.getDefault(i));
 
                 Class<? extends PSFunction> functionClass = childCompiler.getCompiledClass();
                 bytecode.createFunction(functionClass, childGenerator, childCompiler.vars.getUpPointers());
@@ -631,6 +635,10 @@ final class CompilerBlock
                 errors.addErrors(childErrors);
                 return;
             }
+            
+            int len = function.getDefaultCount();
+                for(int i=0;i<len;i++)
+                    bytecode.loadLiteral(function.getDefault(i));
 
             Class<? extends PSFunction> functionClass = childCompiler.getCompiledClass();
             bytecode.createFunction(functionClass, childGenerator, childCompiler.vars.getUpPointers());

@@ -1,5 +1,9 @@
 global IO;
 
+var objtest = {};
+
+objtest.done = 50;
+
 function factorial(x)
 {
 	return x < 2 ? 1 : x * factorial(x - 1);
@@ -28,9 +32,30 @@ function print(tag, vars...)
 	IO.print(tag, vars.expand());
 }
 
+var assign = function(obj, varname, value = null)
+{
+	Object.setProperty(obj, varname, value);
+};
+
 print("ROOT", "ola", "k", "ase");
 
-/*switch(test)
+assign(objtest, "[]", print);
+
+objtest.toString = function() { return Object.toString(self); };
+
+IO.print(objtest);
+
+assign(objtest, "boperator::+", function(value)
+{
+	if(typeof(self.value) !== "number")
+		self.value = 0;
+	self.value += value;
+	return self.value;
+});
+
+IO.print(objtest + 250);
+
+switch(test)
 {
 	case 1:
 		IO.print("The FIRST case");
@@ -44,9 +69,9 @@ print("ROOT", "ola", "k", "ase");
 	default:
 		IO.print("Is in DEFAULT");
 	break;
-}*/
+}
 
-/*for(value, i : [5, 10, 20, 40, "end"])
+for(value, i : [5, 10, 20, 40, "end"])
 	IO.print("Value: "..value.."; iteration: "..i..";");
 
 if(5 > 4 && (10 === 9 || 10 === 10))
@@ -65,7 +90,7 @@ var it = 0;
 while(it < 11)
 	IO.print("Iteration number: "..!(++it));
 
-var local = 650;
+local = 650;
 local = local === 650 ? local * 2 : local - 50;
 
 var arr = [45, null, "this is sparta", [], 5.65f];
@@ -112,7 +137,7 @@ IO.print((65,)..["hola", "k", "ase"]);
 for(var it, pow = 0, 0; it < 12; it, pow = it + 1, it * it)
 {
 	IO.print("Iteration number: "..pow);
-}*/
+}
 
 
 

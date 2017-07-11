@@ -162,6 +162,11 @@ public final class CompilerUnit
                                 sb.addCode(Block.argumentsToFor(tuple, line));
                             else sb.addCode(Block.arguments(tuple, Separator.COLON));
                         }
+                        else if(sb.getCodeCount() > 0 && sb.getLastCode() == OperatorSymbol.FUNCTION)
+                        {
+                            Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
+                            sb.addCode(Block.arguments(tuple, Separator.COMMA));
+                        }
                         else
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
@@ -219,10 +224,14 @@ public final class CompilerUnit
                             Scope scope = parseScope(errors, scopeSource);
                             sb.decode();
                             sb.addCode(scope);
+                            if(sb.getCodeCount() > 2 && sb.getCode(sb.getCodeCount() - 3) == OperatorSymbol.FUNCTION)
+                                break;
                             switch(colonMode)
                             {
                                 case ENDS: break base_loop;
-                                case IGNORE: break;
+                                case IGNORE:
+                                    sb.addCode(Separator.COLON);
+                                    break main_switch;
                                 case ERROR: throw new CompilerError("Unexpected End of Instruction ';'");
                                 default: throw new IllegalStateException();
                             }
