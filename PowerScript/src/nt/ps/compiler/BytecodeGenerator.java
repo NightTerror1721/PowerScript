@@ -33,7 +33,7 @@ import org.apache.bcel.generic.*;
  *
  * @author mpasc
  */
-final class BytecodeGenerator
+public final class BytecodeGenerator
 {
     public static final String
             STR_TYPE_VALUE = PSValue.class.getName(),
@@ -118,6 +118,7 @@ final class BytecodeGenerator
             ARGS_STRING_VARARGS = { Type.STRING, TYPE_VARARGS },
             ARGS_VALUE_VARARGS = { TYPE_VALUE, TYPE_VARARGS },
             ARGS_A_VALUE = { new ArrayType(TYPE_VALUE, 1) },
+            ARGS_GLOBALS_A_VALUE = { TYPE_GLOBALS, new ArrayType(TYPE_VALUE, 1) },
             ARGS_GLOBALS = { TYPE_GLOBALS },
             ARGS_OBJECT = { Type.OBJECT },
             ARGS_INT = { Type.INT },
@@ -147,7 +148,7 @@ final class BytecodeGenerator
     private static final int LOCAL_FIRST_ID = 2;
     private static final int SELF_ID = 1;
     private static final int INTERNAL_THIS_ID = 0;
-    private static final int LOCAL_FIRST_REFERENCE = 1;
+    private static final int LOCAL_FIRST_REFERENCE = 0;
     private static final int SELF_REFERENCE = 0;
     
     
@@ -169,8 +170,7 @@ final class BytecodeGenerator
     private final int defaultValues;
     private final boolean packExtraArgs;
     
-    private final HashMap<Integer, Integer> localVars = new HashMap<>();
-    private int localVarsCount = 0;
+    private final LocalVariableManager localVars;
     
     private final HashSet<Integer> pointerVars = new HashSet<>();
     private final LinkedList<BranchInfo> branchInfo = new LinkedList<>();
@@ -224,9 +224,10 @@ final class BytecodeGenerator
         this.constInst = new InstructionList();
         this.factory = new InstructionFactory(this.mainClass, this.constantPool);
         this.mainMethod = functionId.createMethod(className, this.mainInst, this.constantPool);
+        this.localVars = new LocalVariableManager(mainMethod);
         
         initLocalVariables();
-        createGlobalsSetter();
+        createGlobalsField();
     }
     
     final void setCompiler(CompilerBlock compiler)
@@ -238,9 +239,8 @@ final class BytecodeGenerator
         this.compiler = compiler;
     }
     
-    private void createGlobalsSetter()
+    private void createGlobalsField()
     {
-        InstructionList envs = new InstructionList();
         FieldGen field = new FieldGen(
                 Constants.ACC_PRIVATE,
                 TYPE_GLOBALS,
@@ -248,24 +248,6 @@ final class BytecodeGenerator
                 constantPool
         );
         mainClass.addField(field.getField());
-        MethodGen mg = new MethodGen(
-                Constants.ACC_PUBLIC | Constants.ACC_FINAL,
-                Type.VOID,
-                ARGS_GLOBALS,
-                new String[] { "g" },
-                STR_FUNC_SET_GLOBALS,
-                STR_TYPE_FUNCTION,
-                envs,
-                constantPool
-        );
-        envs.append(InstructionConstants.THIS);
-        envs.append(new ALOAD(1));
-        envs.append(factory.createFieldAccess(className,STR_GLOBALS_ATTRIBUTE,
-                TYPE_GLOBALS, Constants.PUTFIELD));
-        envs.append(InstructionConstants.RETURN);
-        mg.setMaxStack();
-        mainClass.addMethod(mg.getMethod());
-        envs.dispose();
     }
     
     private void initLocalVariables()
@@ -275,7 +257,11 @@ final class BytecodeGenerator
         if(!functionId.isVarargs())
         {
             for(int i=0;i<argsLen;i++)
-                localVars.put(i + LOCAL_FIRST_REFERENCE, i + LOCAL_FIRST_ID);
+            {
+                int reference = i + LOCAL_FIRST_REFERENCE;
+                int id = i + LOCAL_FIRST_ID;
+                localVars.registerParameter(reference, id);
+            }
         }
         else
         {
@@ -336,7 +322,7 @@ final class BytecodeGenerator
         }
         
         if(type == CompilerBlockType.SCRIPT)
-            mainClass.addEmptyConstructor(Constants.ACC_PUBLIC);
+            createScriptConstructor();
         resolveAllBranches();
         mainMethod.setMaxStack();
         mainClass.addMethod(mainMethod.getMethod());
@@ -386,6 +372,22 @@ final class BytecodeGenerator
         instr.dispose();*/
     }
     
+    private void createScriptConstructor()
+    {
+        InstructionList il = new InstructionList();
+        il.append(InstructionConstants.THIS);
+        il.append(new INVOKESPECIAL(constantPool.addMethodref(mainClass.getSuperclassName(),"<init>","()V")));
+        il.append(InstructionConstants.THIS);
+        il.append(new ALOAD(1));
+        il.append(factory.createFieldAccess(className,STR_GLOBALS_ATTRIBUTE,
+                TYPE_GLOBALS, Constants.PUTFIELD));
+        il.append(InstructionConstants.RETURN);
+        MethodGen mg = new MethodGen(Constants.ACC_PUBLIC, Type.VOID, ARGS_GLOBALS,
+                new String[]{ "g" },"<init>",className,il,constantPool);
+        mg.setMaxStack();
+        mainClass.addMethod(mg.getMethod());
+    }
+    
     public final void initiateUpPointersArray(int count)
     {
         InstructionList il = new InstructionList();
@@ -393,16 +395,21 @@ final class BytecodeGenerator
         il.append(new INVOKESPECIAL(constantPool.addMethodref(mainClass.getSuperclassName(),"<init>","()V")));
         il.append(InstructionConstants.THIS);
         il.append(new ALOAD(1));
+        il.append(factory.createFieldAccess(className,STR_GLOBALS_ATTRIBUTE,
+                TYPE_GLOBALS, Constants.PUTFIELD));
+        il.append(InstructionConstants.THIS);
+        il.append(new ALOAD(2));
         il.append(factory.createPutField(className, STR_UP_POINTERS, TYPE_ARRAY_VALUE));
         il.append(InstructionConstants.RETURN);
-        MethodGen mg = new MethodGen(Constants.ACC_PUBLIC, Type.VOID, ARGS_A_VALUE,
-                new String[]{},"<init>",className,il,constantPool);
+        MethodGen mg = new MethodGen(Constants.ACC_PUBLIC, Type.VOID, ARGS_GLOBALS_A_VALUE,
+                new String[]{ "g", "ups" },"<init>",className,il,constantPool);
         mg.setMaxStack();
         mainClass.addMethod(mg.getMethod());
     }
     
     private InstructionHandle createInheritedUpPointers(List<Variable> vars)
     {
+        mainInst.append(new PUSH(constantPool, vars.size()));
         InstructionHandle ih = mainInst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
         int count = 0;
         for(Variable var : vars)
@@ -413,9 +420,10 @@ final class BytecodeGenerator
                 throw new IllegalStateException();
             if(!pref.isLocalPointer() && !pref.isUpPointer())
             {
-                castLocaltoPointer(pref.getReference());
+                castLocaltoPointer(pref);
                 pref.switchToLocalPointer();
             }
+            mainInst.append(new PUSH(constantPool, count++));
             if(pref.isUpPointer())
             {
                 mainInst.append(InstructionConstants.THIS);
@@ -424,28 +432,31 @@ final class BytecodeGenerator
                 mainInst.append(InstructionConstants.AALOAD);
             }
             else loadLocal(pref.getReference());
-            mainInst.append(new PUSH(constantPool, count++));
             ih = mainInst.append(new AASTORE());
         }
         return ih;
     }
     
-    private InstructionHandle castLocaltoPointer(int reference)
+    private InstructionHandle castLocaltoPointer(Variable var)
     {
         //Integer idx = localVars.get(slot);
-        if(pointerVars.contains(reference)/* || idx == null*/)
+        if(pointerVars.contains(var.getReference())/* || idx == null*/)
             throw new IllegalStateException();
         mainInst.append(factory.createNew(TYPE_POINTER));
         mainInst.append(InstructionConstants.DUP);
-        loadLocal(reference);
+        if(var.isInitiated())
+            loadLocal(var.getReference());
+        else loadUndefined();
         mainInst.append(factory.createInvoke(
                 STR_TYPE_POINTER,
                 "<init>",
                 Type.VOID,
                 new Type[] { TYPE_VALUE },
                 Constants.INVOKESPECIAL));
-        InstructionHandle ih = storeLocal(reference);
-        pointerVars.add(reference);
+        InstructionHandle ih = storeLocal(var.getReference());
+        if(!var.isInitiated())
+            var.initiate();
+        pointerVars.add(var.getReference());
         return ih;
     }
     
@@ -491,18 +502,15 @@ final class BytecodeGenerator
     {
         mainInst.append(factory.createNew(new ObjectType(functionClass.getName())));
         mainInst.append(InstructionConstants.DUP);
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className,STR_GLOBALS_ATTRIBUTE,TYPE_GLOBALS));
         createInheritedUpPointers(upPointers);
-        mainInst.append(factory.createInvoke(
+        InstructionHandle ih = mainInst.append(factory.createInvoke(
                 functionClass.getName(),
                 "<init>",
                 Type.VOID,
-                ARGS_A_VALUE,
+                ARGS_GLOBALS_A_VALUE,
                 Constants.INVOKESPECIAL));
-        mainInst.append(InstructionConstants.DUP);
-        mainInst.append(InstructionConstants.THIS);
-        mainInst.append(factory.createGetField(className,STR_GLOBALS_ATTRIBUTE,TYPE_GLOBALS));
-        InstructionHandle ih = mainInst.append(factory.createInvoke(functionClass.getName(),STR_FUNC_SET_GLOBALS,
-                Type.VOID,new Type[]{TYPE_GLOBALS},Constants.INVOKEVIRTUAL));
         ih = insertClosureDefaults(functionBytecodeGenerator, ih);
         if(functionBytecodeGenerator.defaultValues > 0)
             compiler.getStack().pop(functionBytecodeGenerator.defaultValues);
@@ -540,9 +548,9 @@ final class BytecodeGenerator
     /* VARIABLES */
     private InstructionHandle loadLocal(int reference)
     {
-        Integer id = localVars.get(reference);
-        if(id == null)
+        if(!localVars.contains(reference))
             throw new IllegalStateException("Variable with reference " + reference + " does not exists");
+        int id = localVars.getId(reference);
         return mainInst.append(new ALOAD(id));
     }
     
@@ -555,25 +563,33 @@ final class BytecodeGenerator
     {
         if(pointerVars.contains(reference))
             throw new IllegalStateException();
-        Integer id = localVars.get(reference);
-        if(id == null)
+        if(!localVars.contains(reference))
             throw new IllegalStateException("Variable with reference " + reference + " does not exists");
+        int id = localVars.getId(reference);
         return mainInst.append(new ASTORE(id));
     }
     
     private void createLocal(int reference)
     {
-        if(localVars.containsKey(reference))
-            throw new IllegalStateException();
-        
-        String name = STR_VAR_PREFIX + (localVarsCount++);
-        LocalVariableGen local = mainMethod.addLocalVariable(name, TYPE_VALUE, null, null);
-        localVars.put(reference, local.getIndex());
+        localVars.create(reference);
+    }
+    public final Variable createLocal(Variable var)
+    {
+        if(!var.isLocal())
+            throw new IllegalArgumentException();
+        createLocal(var.getReference());
+        return var;
+    }
+    public final void removeLocal(Variable var)
+    {
+        if(!var.isLocal())
+            throw new IllegalArgumentException();
+        localVars.remove(var.getReference());
     }
     
     private InstructionHandle loadLocalPointer(int reference)
     {
-        if(!localVars.containsKey(reference) || !pointerVars.contains(reference))
+        if(!localVars.contains(reference) || !pointerVars.contains(reference))
             throw new IllegalStateException();
         loadLocal(reference);
         return mainInst.append(factory.createInvoke(STR_TYPE_VALUE,"getPointerValue",
@@ -582,7 +598,7 @@ final class BytecodeGenerator
     
     private InstructionHandle storeLocalPointer(int reference)
     {
-        if(!localVars.containsKey(reference) || !pointerVars.contains(reference))
+        if(!localVars.contains(reference) || !pointerVars.contains(reference))
             throw new IllegalStateException();
         loadLocal(reference);
         mainInst.append(InstructionConstants.SWAP);
@@ -666,10 +682,14 @@ final class BytecodeGenerator
         compiler.getStack().pop();
         switch(var.getVariableType())
         {
-            case LOCAL:
-                if(!localVars.containsKey(var.getReference()))
+            case LOCAL: {
+                if(!localVars.contains(var.getReference()))
                     createLocal(var.getReference());
-                return storeLocal(var.getReference());
+                InstructionHandle ih = storeLocal(var.getReference());
+                if(!var.isInitiated())
+                    var.initiate();
+                return ih;
+            }
             case LOCAL_POINTER: return storeLocalPointer(var.getReference());
             case UP_POINTER: return storeUpPointer(var.getReference());
             case GLOBAL: return storeGlobal(var.getName());
@@ -1675,18 +1695,22 @@ final class BytecodeGenerator
     
     
     
-    public final InstructionHandle doReturn(boolean returnAnything)
+    public final InstructionHandle Return()
     {
-        if(!returnAnything)
-            loadEmpty();
+        loadEmpty();
         return mainInst.append(InstructionConstants.ARETURN);
     }
-    public final InstructionHandle Return() throws CompilerError
+    
+    public final InstructionHandle computeReturn(int args) throws CompilerError
     {
-        if(compiler.getStack().getTempUsed() == 0)
-            return doReturn(false);
-        compiler.getStack().pop();
-        return doReturn(true);
+        if(args >= 0)
+        {
+            wrapArgsToArray(args);
+            if(args > 0)
+                compiler.getStack().pop(args);
+        }
+        else loadEmpty();
+        return mainInst.append(InstructionConstants.ARETURN);
     }
     
     
@@ -1859,7 +1883,7 @@ final class BytecodeGenerator
             this.typeArgs = typeArgs;
             this.nameArgs = new String[typeArgs.length];
             for(int i=0;i<this.nameArgs.length-1;i++)
-                this.nameArgs[i+1] = STR_VAR_PREFIX + i;
+                this.nameArgs[i+1] = "par" + i;
             this.nameArgs[0] = STR_SELF;
             
         }
@@ -1886,7 +1910,7 @@ final class BytecodeGenerator
         {
             if(argsLen < 1)
                 return FUNC0;
-            return VALUES[(argsLen > 5 || packExtraArgs ? 5 : argsLen) + defaultValues > 0 ? 5 : 0];
+            return VALUES[(argsLen > 5 || packExtraArgs ? 5 : argsLen) + (defaultValues > 0 ? 5 : 0)];
         }
     }
     

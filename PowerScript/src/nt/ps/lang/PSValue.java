@@ -140,7 +140,7 @@ public abstract class PSValue extends PSVarargs
     
     final int superHashCode() { return super.hashCode(); }
     
-    public PSValue setPointerValue(PSValue value) { throw new PSUnsupportedOperationException(this,"setPointerValue"); }
+    public void setPointerValue(PSValue value) { throw new PSUnsupportedOperationException(this,"setPointerValue"); }
     public PSValue getPointerValue() { throw new PSUnsupportedOperationException(this,"getPointerValue"); }
     
     

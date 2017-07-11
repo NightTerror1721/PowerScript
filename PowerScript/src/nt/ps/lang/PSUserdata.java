@@ -30,7 +30,7 @@ public class PSUserdata extends PSValue
     public final PSValue concat(PSValue value) { return new PSString(toJavaString().concat(value.toJavaString())); }
     
     @Override
-    public final PSValue setPointerValue(PSValue value) { throw new PSUnsupportedOperationException(this,"setPointerValue"); }
+    public final void setPointerValue(PSValue value) { throw new PSUnsupportedOperationException(this,"setPointerValue"); }
     
     @Override
     public final PSValue getPointerValue() { throw new PSUnsupportedOperationException(this,"getPointerValue"); }

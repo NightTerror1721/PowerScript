@@ -113,10 +113,7 @@ public final class PSPointer extends PSValue
     
     
     @Override
-    public final PSValue setPointerValue(PSValue value)
-    {
-        return ref = value == null ? UNDEFINED : value;
-    }
+    public final void setPointerValue(PSValue value) { ref = value == null ? UNDEFINED : value; }
     
     @Override
     public final PSValue getPointerValue() { return ref; }

@@ -20,6 +20,7 @@ import nt.ps.compiler.exception.CompilerError;
 public final class VariablePool
 {
     private final VariablePool parent;
+    private final BytecodeGenerator bytecode;
     private final Stack stack;
     private final PSGlobals globals;
     private final LinkedList<VariableScope> vars;
@@ -27,9 +28,12 @@ public final class VariablePool
     private final HashMap<String, Variable> natives;
     private int upLocalRefs;
     
-    private VariablePool(VariablePool parent, Stack stack, PSGlobals globals)
+    private VariablePool(VariablePool parent, BytecodeGenerator bytecode, Stack stack, PSGlobals globals)
     {
         this.parent = parent;
+        if(bytecode == null)
+            throw new NullPointerException();
+        this.bytecode = bytecode;
         if(stack == null)
             throw new NullPointerException();
         this.stack = stack;
@@ -39,9 +43,9 @@ public final class VariablePool
         natives = new HashMap<>();
         upLocalRefs = 0;
     }
-    public VariablePool(Stack stack, PSGlobals globals) { this(null, stack, globals); }
+    public VariablePool(BytecodeGenerator bytecode, Stack stack, PSGlobals globals) { this(null, bytecode, stack, globals); }
     
-    public final VariablePool createChild(Stack stack) { return new VariablePool(this, stack, globals); }
+    public final VariablePool createChild(BytecodeGenerator bytecode, Stack stack) { return new VariablePool(this, bytecode, stack, globals); }
     
     public final Stack getStack() { return stack; }
     
@@ -61,6 +65,7 @@ public final class VariablePool
                 : scope.getLocalCount() - vars.getLast().getLocalCount();
         if(count > 0)
             stack.deallocateVariables(count);
+        scope.destroyLocals();
     }
     
     public final Variable get(String name, boolean globalModifier) throws CompilerError
@@ -78,7 +83,7 @@ public final class VariablePool
             Variable var = natives.get(name);
             if(var == null)
             {
-                var = new Variable(VariableType.NATIVE, name, -1);
+                var = new Variable(VariableType.NATIVE, name, -1, true);
                 natives.put(name, var);
             }
             return var;
@@ -170,7 +175,7 @@ public final class VariablePool
             
             if(vars.containsKey(name))
                 throw new CompilerError("Variable " + name + " has already exists");
-            Variable var = new Variable(type, name, ref);
+            Variable var = new Variable(type, name, ref, type != VariableType.LOCAL);
             vars.put(var.getName(), var);
             
             return var;
@@ -204,6 +209,13 @@ public final class VariablePool
                 throw new CompilerError("Variable " + name + " does not exists");
             return var;
         }
+        
+        public final void destroyLocals()
+        {
+            vars.values().stream()
+                    .filter(Variable::isLocal)
+                    .forEach(bytecode::removeLocal);
+        }
     }
     
     public final class Variable
@@ -211,9 +223,10 @@ public final class VariablePool
         private VariableType type;
         private final String name;
         private final int ref;
+        private boolean initiated;
         private Variable upPointerRef;
 
-        private Variable(VariableType type, String name, int ref)
+        private Variable(VariableType type, String name, int ref, boolean initiated)
         {
             if(type == null)
                 throw new NullPointerException();
@@ -222,12 +235,21 @@ public final class VariablePool
             this.type = type;
             this.name = name;
             this.ref = ref;
+            this.initiated = initiated;
             upPointerRef = null;
         }
 
         public final String getName() { return name; }
         public final int getReference() { return ref; }
         public final Variable getUpPointerReference() { return upPointerRef; }
+        public final boolean isInitiated() { return initiated; }
+        
+        public final void initiate()
+        {
+            if(initiated)
+                throw new IllegalStateException();
+            initiated = true;
+        }
         
         public final VariableType getVariableType() { return type; }
 

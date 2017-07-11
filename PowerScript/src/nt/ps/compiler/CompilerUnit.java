@@ -22,14 +22,17 @@ import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Block;
 import nt.ps.compiler.parser.Block.Scope;
 import nt.ps.compiler.parser.Code;
+import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Command;
 import nt.ps.compiler.parser.CommandWord;
 import nt.ps.compiler.parser.CommandWord.CommandName;
+import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
 import nt.ps.compiler.parser.OperatorSymbol;
 import nt.ps.compiler.parser.Separator;
 import nt.ps.compiler.parser.Tuple;
+import nt.ps.compiler.parser.VarargsIdentifier;
 import nt.ps.lang.PSFunction;
 
 /**
@@ -83,7 +86,7 @@ public final class CompilerUnit
         BytecodeGenerator bytecode = new BytecodeGenerator(classLoader, name);
         CompilerBlock compilerBlock = new CompilerBlock(baseInfo, globals, CompilerBlockType.SCRIPT, bytecode, errors, null, repository);
         
-        compilerBlock.compile();
+        compilerBlock.compile(true, true);
         if(errors.hasErrors())
             throw new PSCompilerException(errors);
         
@@ -359,7 +362,19 @@ public final class CompilerUnit
                         {
                             if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('.');
-                            sb.addOperator(OperatorSymbol.STRING_CONCAT);
+                            c = source.next();
+                            if(c == '.')
+                            {
+                                sb.decode();
+                                if(!sb.hasCodes() || !sb.getLastCode().is(CodeType.IDENTIFIER))
+                                    throw new CompilerError("Expected a valid identifier before '...' operator: " + sb.getLastCode());
+                                sb.replaceCode(sb.getCodeCount() - 1, new VarargsIdentifier((Identifier) sb.getLastCode()));
+                            }
+                            else
+                            {
+                                sb.addOperator(OperatorSymbol.STRING_CONCAT);
+                                source.move(-1);
+                            }
                         }
                         else
                         {

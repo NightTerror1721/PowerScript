@@ -1,5 +1,12 @@
 global IO;
 
+function factorial(x)
+{
+	return x < 2 ? 1 : x * factorial(x - 1);
+}
+
+IO.print(factorial(5));
+
 var test = "two";
 var local = 650;
 local = local === 650 ? local * 2 : local - 50;
@@ -15,6 +22,13 @@ catch(ex)
 	IO.print(ex.getStackTrace());
 	IO.print(Object.toString(ex));
 }
+
+function print(tag, vars...)
+{
+	IO.print(tag, vars.expand());
+}
+
+print("ROOT", "ola", "k", "ase");
 
 /*switch(test)
 {

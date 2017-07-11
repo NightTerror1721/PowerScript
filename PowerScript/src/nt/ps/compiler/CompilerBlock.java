@@ -57,8 +57,8 @@ final class CompilerBlock
         scopeSource = source;
         scopes = new ScopeStack();
         stack = new Stack();
-        vars = parentVars != null ? parentVars.createChild(stack) : new VariablePool(stack, globals);
         this.bytecode = bytecode;
+        this.vars = parentVars != null ? parentVars.createChild(bytecode, stack) : new VariablePool(bytecode, stack, globals);
         this.globals = globals;
         this.type = type;
         this.errors = errors;
@@ -67,14 +67,21 @@ final class CompilerBlock
         this.bytecode.setCompiler(this);
     }
     
-    public final void compile()
+    public final void compile(boolean createScope, boolean destroyScope)
     {
         if(type == CompilerBlockType.FUNCTION)
             bytecode.createUpPointerSlots();
         
+        if(createScope)
+            vars.createScope();
         compileScope(scopeSource);
+        if(destroyScope)
+        {
+            try { vars.destroyScope(); }
+            catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(-1)); }
+        }
         
-        try { bytecode.Return(); } catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(-1)); }
+        bytecode.Return();
         if(type != CompilerBlockType.SCRIPT)
             bytecode.initiateUpPointersArray(vars.getUpPointers().size());
         
@@ -87,7 +94,8 @@ final class CompilerBlock
         if(!scopes.isEmpty())
             scopeInfo.setStartReference(bytecode.getLastHandle());
         scopes.push(scopeInfo);
-        vars.createScope();
+        if(!scopeInfo.isBase())
+            vars.createScope();
         if(preCompile != null) try
         {
             preCompile.load();
@@ -105,7 +113,8 @@ final class CompilerBlock
         {
             if(postCompile != null)
                 postCompile.load();
-            vars.destroyScope();
+            if(!scopeInfo.isBase())
+                vars.destroyScope();
         }
         catch(CompilerError error) { errors.addError(error, Command.parseErrorCommand(0)); }
         scopes.pop();
@@ -171,7 +180,16 @@ final class CompilerBlock
             case THROW: {
                 compileThrow(command);
             } break;
+            case RETURN: {
+                compileReturn(command);
+            } break;
         }
+    }
+    
+    private void compileReturn(Command command) throws CompilerError
+    {
+        int pars = compileMultipleRaises(command.getCode(0));
+        bytecode.computeReturn(pars);
     }
     
     private void compileThrow(Command command) throws CompilerError
@@ -216,7 +234,7 @@ final class CompilerBlock
             Variable var = vars.createLocal(catchCommand.getCode(0).toString());
             bytecode.wrapThrowable(var);
         }, () -> {
-            bytecode.createTryCatchHandler(info.getStartReference(), info.getEndReference(), info.getEndReference().getNext());
+            bytecode.createTryCatchHandler(info.getStartReference().getNext(), info.getEndReference(), info.getEndReference().getNext());
             bytecode.modifyJump(info.getEndReference());
         });
     }
@@ -482,7 +500,7 @@ final class CompilerBlock
                     bytecode.loadSelf();
             } break;
             case OPERATOR: {
-                compileOperator((Operator) code, isGlobal, multiresult);
+                compileOperator((Operator) code, isGlobal, multiresult || pop);
                 if(pop)
                 {
                     stack.pop();
@@ -582,6 +600,7 @@ final class CompilerBlock
         CompilerBlock childCompiler = new CompilerBlock(info, globals, CompilerBlockType.FUNCTION,
                 childGenerator, childErrors, vars, repository);
         
+        childCompiler.vars.createScope();
         for(int i=0;i<parameters;i++)
         {
             String par = function.getParameterName(i);
@@ -590,24 +609,31 @@ final class CompilerBlock
         if(varargs != null)
             childCompiler.vars.createParameter(varargs);
         
-        childCompiler.compile();
-        
-        if(childErrors.hasErrors())
-        {
-            errors.addErrors(childErrors);
-            return;
-        }
-        
-        Class<? extends PSFunction> functionClass = childCompiler.getCompiledClass();
-        bytecode.createFunction(functionClass, childGenerator, childCompiler.vars.getUpPointers());
-        
         if(assignation != null)
+            assign(AssignationSymbol.ASSIGNATION, assignation, isGlobal, true, true, () -> {
+                childCompiler.compile(false, true);
+        
+                if(childErrors.hasErrors())
+                {
+                    errors.addErrors(childErrors);
+                    return;
+                }
+
+                Class<? extends PSFunction> functionClass = childCompiler.getCompiledClass();
+                bytecode.createFunction(functionClass, childGenerator, childCompiler.vars.getUpPointers());
+            });
+        else
         {
-            bytecode.createTemp("functionTemp");
-            bytecode.storeTemp("functionTemp");
-            assign(null, assignation, isGlobal, false, false, () -> bytecode.loadTemp("functionTemp"));
-            bytecode.loadTemp("functionTemp");
-            bytecode.removeTemp("functionTemp");
+            childCompiler.compile(false, true);
+        
+            if(childErrors.hasErrors())
+            {
+                errors.addErrors(childErrors);
+                return;
+            }
+
+            Class<? extends PSFunction> functionClass = childCompiler.getCompiledClass();
+            bytecode.createFunction(functionClass, childGenerator, childCompiler.vars.getUpPointers());
         }
     }
     
@@ -859,7 +885,7 @@ final class CompilerBlock
                 throw new CompilerError("Variable \"" + name + "\" already exists");
             var = isGlobal
                     ? vars.createGlobal(name)
-                    : vars.createLocal(name);
+                    : bytecode.createLocal(vars.createLocal(name));
         }
         else
         {
@@ -930,13 +956,8 @@ final class CompilerBlock
             throw new NullPointerException();
         try
         {
-            Constructor cns = baseClass.getConstructor();
-            PSFunction function = (PSFunction) cns.newInstance();
-            
-            baseClass.getMethod(BytecodeGenerator.STR_FUNC_SET_GLOBALS, SET_GLOBALS_SIGNATURE)
-                    .invoke(function, globals);
-            
-            return function;
+            Constructor cns = baseClass.getConstructor(SET_GLOBALS_SIGNATURE);
+            return (PSFunction) cns.newInstance(globals);
         }
         catch(IllegalAccessException | IllegalArgumentException | InstantiationException |
                 NoSuchMethodException | SecurityException | InvocationTargetException ex)

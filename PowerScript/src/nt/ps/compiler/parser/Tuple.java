@@ -191,19 +191,42 @@ public final class Tuple
     {
         int start = it.value;
         Block<?> pars = null;
+        int call = -1;
         for(;!it.end();it.increase())
         {
             Code c = code[it.value];
             if(!c.is(CodeType.BLOCK))
-                continue;
+            {
+                if(c == OperatorSymbol.CALL)
+                {
+                    it.increase();
+                    c = code[it.value];
+                    if(!c.is(CodeType.BLOCK))
+                        continue;
+                    call = it.value - 1;
+                }
+                else continue;
+            }
             pars = (Block) c;
             if(!pars.isArgumentsList())
+            {
+                call = -1;
                 continue;
+            }
             break;
         }
         if(it.end() || pars == null)
             throw new CompilerError("Expected arguments list in function definition");
-        ParsedCode identifier = subTuple(start, it.value - 1).pack();
+        ParsedCode identifier;
+        if(call >= 0)
+        {
+            Code[] sub = new Code[it.value - 2];
+            int sublen = call - start;
+            System.arraycopy(code, start, sub, 0, sublen);
+            System.arraycopy(code, call + 1, sub, sublen, sub.length - sublen);
+            identifier = new Tuple(sub).pack();
+        }
+        else identifier = subTuple(start, it.value - 1).pack();
         
         it.increase();
         if(it.end())

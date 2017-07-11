@@ -43,6 +43,7 @@ public final class ScopeInfo
     
     public final boolean isBreakable() { return type.isBreakable(); }
     public final boolean isContinuable() { return type.isContinuable(); }
+    public final boolean isBase() { return type == ScopeType.BASE; }
     
     public final void setStartReference(InstructionHandle ref)
     {

@@ -56,7 +56,7 @@ public final class Stack
             total = vars + temp;
         if(total > MAX_STACK_CAPACITY)
             throw new CompilerError("Stack capacity exceded");
-        return (vars + temp) - 1;
+        return vars - 1;
     }
     
     public final int deallocateVariables(int amount) throws CompilerError
