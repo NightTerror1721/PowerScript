@@ -1,6 +1,12 @@
 global IO;
 
-var objtest = {};
+function* testgen(max)
+{
+	for(var i=0;i<max;i++)
+		yield i;
+}
+
+/*var objtest = {};
 
 objtest.done = 50;
 
@@ -137,7 +143,7 @@ IO.print((65,)..["hola", "k", "ase"]);
 for(var it, pow = 0, 0; it < 12; it, pow = it + 1, it * it)
 {
 	IO.print("Iteration number: "..pow);
-}
+}*/
 
 
 

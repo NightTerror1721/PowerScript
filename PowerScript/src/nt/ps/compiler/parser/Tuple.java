@@ -192,6 +192,14 @@ public final class Tuple
         int start = it.value;
         Block<?> pars = null;
         int call = -1;
+        boolean generator;
+        if(code[it.value].is(CodeType.GENERATOR_IDENTIFIER))
+        {
+            generator = true;
+            it.increase();
+            start = it.value;
+        }
+        else generator = false;
         for(;!it.end();it.increase())
         {
             Code c = code[it.value];
@@ -223,8 +231,8 @@ public final class Tuple
         {
             if(call >= 0)
             {
-                Code[] sub = new Code[it.value - 2];
                 int sublen = call - start;
+                Code[] sub = new Code[sublen];
                 System.arraycopy(code, start, sub, 0, sublen);
                 System.arraycopy(code, call + 1, sub, sublen, sub.length - sublen);
                 identifier = new Tuple(sub).pack();
@@ -243,8 +251,8 @@ public final class Tuple
         
         FunctionLiteral function;
         if(start == end)
-            function = FunctionLiteral.closure(pars, scope);
-        else function = FunctionLiteral.function(identifier, pars, scope);
+            function = FunctionLiteral.closure(generator, pars, scope);
+        else function = FunctionLiteral.function(generator, identifier, pars, scope);
         
         return function;
     }

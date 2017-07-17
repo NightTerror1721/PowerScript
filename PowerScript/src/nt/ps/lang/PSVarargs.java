@@ -124,7 +124,7 @@ public abstract class PSVarargs
     
     
     /* Default Values in functions */
-    static final PSVarargs defaultFunctionVarargs(int min, PSVarargs args, PSVarargs defs)
+    public static final PSVarargs defaultFunctionVarargs(int min, PSVarargs args, PSVarargs defs)
     {
         if(args.numberOfArguments() >= min + defs.numberOfArguments())
             return args;

@@ -26,6 +26,7 @@ import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Command;
 import nt.ps.compiler.parser.CommandWord;
 import nt.ps.compiler.parser.CommandWord.CommandName;
+import nt.ps.compiler.parser.GeneratorIdentifier;
 import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.MutableLiteral;
@@ -162,7 +163,8 @@ public final class CompilerUnit
                                 sb.addCode(Block.argumentsToFor(tuple, line));
                             else sb.addCode(Block.arguments(tuple, Separator.COLON));
                         }
-                        else if(sb.getCodeCount() > 0 && sb.getLastCode() == OperatorSymbol.FUNCTION)
+                        else if(sb.getCodeCount() > 0 &&
+                                (sb.getLastCode() == OperatorSymbol.FUNCTION ||  sb.getLastCode().is(CodeType.GENERATOR_IDENTIFIER)))
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                             sb.addCode(Block.arguments(tuple, Separator.COMMA));
@@ -599,7 +601,10 @@ public final class CompilerUnit
                         }
                         else
                         {
-                            sb.addOperator(OperatorSymbol.MULTIPLY);
+                            sb.decode();
+                            if(sb.getCodeCount() > 0 && sb.getLastCode() == OperatorSymbol.FUNCTION)
+                                sb.addCode(GeneratorIdentifier.GENERATOR);
+                            else sb.addOperator(OperatorSymbol.MULTIPLY);
                             source.move(-1);
                         }
                     } break;

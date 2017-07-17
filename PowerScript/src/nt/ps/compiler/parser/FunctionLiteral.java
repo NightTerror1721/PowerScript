@@ -16,6 +16,7 @@ import nt.ps.compiler.parser.Block.Scope;
 public class FunctionLiteral extends ParsedCode
 {
     private final String name;
+    private final boolean generator;
     private ParsedCode assignation;
     private int assignationMode;
     private final String varargs;
@@ -23,8 +24,9 @@ public class FunctionLiteral extends ParsedCode
     private final Literal[] defs;
     private final Scope scope;
     
-    private FunctionLiteral(ParsedCode assignation, Block<?> pars, Scope scope) throws CompilerError
+    private FunctionLiteral(boolean generator, ParsedCode assignation, Block<?> pars, Scope scope) throws CompilerError
     {
+        this.generator = generator;
         if(assignation == null)
         {
             name = "";
@@ -129,6 +131,7 @@ public class FunctionLiteral extends ParsedCode
         this.scope = scope;
     }
     
+    public final boolean isGenerator() { return generator; }
     public final boolean isClosure() { return name.isEmpty(); }
     public final boolean hasAssignation() { return assignationMode >= 0; }
     public final boolean hasDefaults() { return defs != null; }
@@ -168,15 +171,15 @@ public class FunctionLiteral extends ParsedCode
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     
-    public static final FunctionLiteral closure(Block<?> pars, Scope scope) throws CompilerError
+    public static final FunctionLiteral closure(boolean generator, Block<?> pars, Scope scope) throws CompilerError
     {
-        return new FunctionLiteral(null,pars,scope);
+        return new FunctionLiteral(generator, null, pars, scope);
     }
     
-    public static final FunctionLiteral function(ParsedCode assignation, Block<?> pars, Scope scope) throws CompilerError
+    public static final FunctionLiteral function(boolean generator, ParsedCode assignation, Block<?> pars, Scope scope) throws CompilerError
     {
         if(assignation == null)
             throw new IllegalStateException();
-        return new FunctionLiteral(assignation,pars,scope);
+        return new FunctionLiteral(generator, assignation, pars, scope);
     }
 }

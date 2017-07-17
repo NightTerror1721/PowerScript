@@ -60,7 +60,8 @@ public final class BytecodeGenerator
             STR_TYPE_LINKEDLIST = LinkedList.class.getName(),
             STR_TYPE_UTILS = LangUtils.class.getName(),
             STR_TYPE_PROTOMAP = LangUtils.ProtoMap.class.getName(),
-            STR_TYPE_PROTOOBJECT = LangUtils.ProtoObject.class.getName();
+            STR_TYPE_PROTOOBJECT = LangUtils.ProtoObject.class.getName(),
+            STR_TYPE_GENERATOR_STATE = LangUtils.GeneratorState.class.getName();
     
     public static final ObjectType
             TYPE_VALUE = new ObjectType(STR_TYPE_VALUE),
@@ -87,7 +88,8 @@ public final class BytecodeGenerator
             TYPE_LINKEDLIST = new ObjectType(STR_TYPE_LINKEDLIST),
             TYPE_UTILS = new ObjectType(STR_TYPE_UTILS),
             TYPE_PROTOMAP = new ObjectType(STR_TYPE_PROTOMAP),
-            TYPE_PROTOOBJECT = new ObjectType(STR_TYPE_PROTOOBJECT);
+            TYPE_PROTOOBJECT = new ObjectType(STR_TYPE_PROTOOBJECT),
+            TYPE_GENERATOR_STATE = new ObjectType(STR_TYPE_GENERATOR_STATE);
     
     public static final ArrayType
             TYPE_ARRAY_VALUE = new ArrayType(TYPE_VALUE, 1);
@@ -127,12 +129,16 @@ public final class BytecodeGenerator
             ARGS_DOUBLE = { Type.DOUBLE },
             ARGS_THROWABLE = { Type.THROWABLE },
             ARGS_VARARGS_INT = { TYPE_VARARGS, Type.INT },
+            ARGS_VALUE_VARARGS_INT = { TYPE_VALUE, TYPE_VARARGS, Type.INT },
+            ARGS_INT_VALUE = { Type.INT, TYPE_VALUE },
             ARGS_STRING_VALUE = ARGS_STRING_VALUE_1,
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
             ARGS_JAVAMAP = { new ObjectType(Map.class.getName()) },
             ARGS_HASHMAP = { TYPE_HASHMAP },
             ARGS_JAVA_MAP = { new ObjectType(Map.class.getName()) },
-            ARGS_JAVA_OBJECT_2 = { Type.OBJECT, Type.OBJECT };
+            ARGS_JAVA_OBJECT_2 = { Type.OBJECT, Type.OBJECT },
+            ARGS_VALUE_GENERATOR_STATE = { TYPE_VALUE, TYPE_GENERATOR_STATE },
+            ARGS_ARRAY_VALUE = { TYPE_ARRAY_VALUE };
     
     private static final Type[][][] FUNC_ARGS = {
         { NO_ARGS, ARGS_VALUE_1, ARGS_VALUE_2, ARGS_VALUE_3, ARGS_VALUE_4, ARGS_VARARGS },
@@ -169,6 +175,7 @@ public final class BytecodeGenerator
     private final int argsLen;
     private final int defaultValues;
     private final boolean packExtraArgs;
+    private final boolean generator;
     
     private final LocalVariableManager localVars;
     
@@ -180,16 +187,18 @@ public final class BytecodeGenerator
     
     private LocalVariableGen stringSwitchTemp = null;
     
+    private final LinkedList<InstructionHandle> yields;
+    
     private long inheritedFunctionsId = 0;
     
-    public BytecodeGenerator(PSClassLoader classLoader, String name, int argsLen, int defaultValues, boolean packExtraArgs)
+    public BytecodeGenerator(PSClassLoader classLoader, String name, int argsLen, int defaultValues, boolean packExtraArgs, boolean generator)
     {
-        this(classLoader, name, FunctionId.select(argsLen, defaultValues, packExtraArgs), argsLen, defaultValues, packExtraArgs);
+        this(classLoader, name, FunctionId.select(argsLen, defaultValues, packExtraArgs, generator), argsLen, defaultValues, packExtraArgs, generator);
     }
     
-    public BytecodeGenerator(PSClassLoader classLoader, String name) { this(classLoader, name, FunctionId.SCRIPT, 0, 0, false); }
+    public BytecodeGenerator(PSClassLoader classLoader, String name) { this(classLoader, name, FunctionId.SCRIPT, 0, 0, false, false); }
     
-    private BytecodeGenerator(PSClassLoader classLoader, String className, FunctionId functionId, int argsLen, int defaultValues, boolean packExtraArgs)
+    private BytecodeGenerator(PSClassLoader classLoader, String className, FunctionId functionId, int argsLen, int defaultValues, boolean packExtraArgs, boolean generator)
     {
         if(classLoader == null)
             throw new NullPointerException();
@@ -211,22 +220,28 @@ public final class BytecodeGenerator
         this.argsLen = argsLen;
         this.defaultValues = defaultValues;
         this.packExtraArgs = packExtraArgs;
+        this.generator = generator;
         
         this.mainClass = new ClassGen(
                 className,
                 functionId.getName(),
                 this.fileName,
                 Constants.ACC_PUBLIC | Constants.ACC_FINAL | Constants.ACC_SUPER,
-                new String[] {}
+                generator ? new String[] { "GeneratorCallable" } : new String[] {}
         );
         this.constantPool = this.mainClass.getConstantPool();
         this.mainInst = new InstructionList();
         this.constInst = new InstructionList();
         this.factory = new InstructionFactory(this.mainClass, this.constantPool);
-        this.mainMethod = functionId.createMethod(className, this.mainInst, this.constantPool);
-        this.localVars = new LocalVariableManager(mainMethod);
+        this.mainMethod = generator 
+                ? functionId.createCallGeneratorMethod(className, this.mainInst, this.constantPool)
+                : functionId.createMethod(className, this.mainInst, this.constantPool);
+        this.localVars = new LocalVariableManager(mainMethod, generator);
         
-        initLocalVariables();
+        this.yields = generator ? new LinkedList<>() : null;
+        
+        if(!generator)
+            initLocalVariables();
         createGlobalsField();
     }
     
@@ -302,6 +317,83 @@ public final class BytecodeGenerator
         }
     }
     
+    private void createGeneratorStateInit()
+    {
+        if(!generator)
+            throw new IllegalStateException();
+        InstructionList inst = new InstructionList();
+        int len = packExtraArgs ? argsLen - 1 : argsLen;
+        inst.append(factory.createNew(TYPE_GENERATOR_STATE));
+        inst.append(InstructionConstants.DUP);
+        inst.append(new PUSH(constantPool, localVars.getMaxLocalCount()));
+        inst.append(factory.createNewArray(TYPE_VALUE, (short) 1));
+        for(int i=0;i<len;i++)
+        {
+            inst.append(InstructionConstants.DUP);
+            inst.append(new PUSH(constantPool, i));
+            inst.append(new ALOAD(LOCAL_FIRST_ID));
+            if(i == 0)
+                inst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_SELF,
+                        TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
+            else
+            {
+                inst.append(new PUSH(constantPool, i));
+                inst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_ARG,
+                    TYPE_VALUE, ARGS_INT, Constants.INVOKEVIRTUAL));
+            }
+            inst.append(InstructionConstants.AASTORE);
+        }
+        if(packExtraArgs)
+        {
+            inst.append(InstructionConstants.DUP);
+            inst.append(new PUSH(constantPool, len));
+            inst.append(new ALOAD(LOCAL_FIRST_ID));
+            inst.append(new PUSH(constantPool, len));
+            inst.append(factory.createInvoke(STR_TYPE_VARARGS, "varargsAsPSArray",
+                    TYPE_VALUE, ARGS_VARARGS_INT, Constants.INVOKESTATIC));
+            inst.append(InstructionConstants.AASTORE);
+        }
+        inst.append(factory.createInvoke(
+                STR_TYPE_POINTER,
+                "<init>",
+                Type.VOID,
+                new Type[] { TYPE_VALUE },
+                Constants.INVOKESPECIAL));
+        inst.append(InstructionConstants.ARETURN);
+        
+        MethodGen mg = new MethodGen(
+                Constants.ACC_PUBLIC | Constants.ACC_FINAL,
+                TYPE_GENERATOR_STATE,
+                ARGS_ARRAY_VALUE,
+                new String[]{ "vars" },
+                "<init>",
+                mainClass.getClassName(),
+                inst,
+                mainClass.getConstantPool());
+        mg.setMaxStack();
+        mainClass.addMethod(mg.getMethod());
+        inst.dispose();
+    }
+    
+    private void insertGeneratorSwitch()
+    {
+        if(!generator)
+            throw new IllegalStateException();
+        if(yields.isEmpty())
+            return;
+        InstructionHandle def = mainInst.getStart();
+        yields.addFirst(def);
+        int[] ids = new int[yields.size()];
+        for(int i=0;i<ids.length;i++)
+            ids[i] = i;
+        InstructionHandle[] targets = yields.toArray(new InstructionHandle[yields.size()]);
+        SWITCH s = new SWITCH(ids, targets, def);
+        mainInst.insert(def, new ALOAD(LOCAL_FIRST_ID));
+        mainInst.insert(def, factory.createInvoke(STR_TYPE_GENERATOR_STATE, "getState",
+                Type.INT, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.insert(def, s);
+    }
+    
     private byte[] completeClass(CompilerBlockType type)
     {
         if(!constInst.isEmpty())
@@ -323,6 +415,11 @@ public final class BytecodeGenerator
         
         if(type == CompilerBlockType.SCRIPT)
             createScriptConstructor();
+        if(generator)
+        {
+            createGeneratorStateInit();
+            insertGeneratorSwitch();
+        }
         resolveAllBranches();
         mainMethod.setMaxStack();
         mainClass.addMethod(mainMethod.getMethod());
@@ -500,6 +597,11 @@ public final class BytecodeGenerator
     public final InstructionHandle createFunction(Class<? extends PSFunction> functionClass,
             BytecodeGenerator functionBytecodeGenerator, List<Variable> upPointers) throws CompilerError
     {
+        if(functionBytecodeGenerator.generator)
+        {
+            mainInst.append(factory.createNew(functionBytecodeGenerator.functionId.getName()));
+            mainInst.append(InstructionConstants.DUP);
+        }
         mainInst.append(factory.createNew(new ObjectType(functionClass.getName())));
         mainInst.append(InstructionConstants.DUP);
         mainInst.append(InstructionConstants.THIS);
@@ -511,7 +613,21 @@ public final class BytecodeGenerator
                 Type.VOID,
                 ARGS_GLOBALS_A_VALUE,
                 Constants.INVOKESPECIAL));
-        ih = insertClosureDefaults(functionBytecodeGenerator, ih);
+        if(functionBytecodeGenerator.generator)
+        {
+            if(functionBytecodeGenerator.defaultValues > 0)
+            {
+                wrapArgsToArray(functionBytecodeGenerator.defaultValues);
+                mainInst.append(new PUSH(constantPool,functionBytecodeGenerator.argsLen));
+            }
+            ih = mainInst.append(factory.createInvoke(
+                    functionBytecodeGenerator.functionId.getName(),
+                    "<init>",
+                    Type.VOID,
+                    functionBytecodeGenerator.defaultValues > 0 ? ARGS_VALUE_1 : ARGS_VALUE_VARARGS_INT,
+                    Constants.INVOKESPECIAL));
+        }
+        else ih = insertClosureDefaults(functionBytecodeGenerator, ih);
         if(functionBytecodeGenerator.defaultValues > 0)
             compiler.getStack().pop(functionBytecodeGenerator.defaultValues);
         compiler.getStack().push();
@@ -550,6 +666,13 @@ public final class BytecodeGenerator
     {
         if(!localVars.contains(reference))
             throw new IllegalStateException("Variable with reference " + reference + " does not exists");
+        if(generator)
+        {
+            mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+            mainInst.append(new PUSH(constantPool, reference));
+            return mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "getLocalVariable",
+                    TYPE_VALUE, ARGS_INT, Constants.INVOKEVIRTUAL));
+        }
         int id = localVars.getId(reference);
         return mainInst.append(new ALOAD(id));
     }
@@ -566,6 +689,15 @@ public final class BytecodeGenerator
             throw new IllegalStateException();
         if(!localVars.contains(reference))
             throw new IllegalStateException("Variable with reference " + reference + " does not exists");
+        if(generator)
+        {
+            mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+            mainInst.append(InstructionConstants.SWAP);
+            mainInst.append(new PUSH(constantPool, reference));
+            mainInst.append(InstructionConstants.SWAP);
+            return mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "setLocalVariable",
+                    Type.VOID, ARGS_INT_VALUE, Constants.INVOKEVIRTUAL));
+        }
         int id = localVars.getId(reference);
         return mainInst.append(new ASTORE(id));
     }
@@ -1704,6 +1836,12 @@ public final class BytecodeGenerator
     
     public final InstructionHandle computeReturn(int args) throws CompilerError
     {
+        if(generator)
+        {
+            mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+            mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "finish",
+                Type.VOID, NO_ARGS, Constants.INVOKEVIRTUAL));
+        }
         if(args >= 0)
         {
             wrapArgsToArray(args);
@@ -1717,6 +1855,12 @@ public final class BytecodeGenerator
     
     public final InstructionHandle computeThrow(int args) throws CompilerError
     {
+        if(generator)
+        {
+            mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+            mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "finish",
+                Type.VOID, NO_ARGS, Constants.INVOKEVIRTUAL));
+        }
         if(args >= 0)
         {
             wrapArgsToArray(args);
@@ -1729,13 +1873,37 @@ public final class BytecodeGenerator
     }
     
     
+    public final InstructionHandle computeYield(int args) throws CompilerError
+    {
+        if(!generator)
+            throw new IllegalStateException();
+        if(args == 0)
+            throw new IllegalStateException();
+        int state = yields.size() + 1;
+        mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+        mainInst.append(new PUSH(constantPool, state));
+        mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "update",
+                Type.VOID, ARGS_INT, Constants.INVOKEVIRTUAL));
+        if(args >= 0)
+        {
+            wrapArgsToArray(args);
+            if(args > 0)
+                compiler.getStack().pop(args);
+        }
+        mainInst.append(InstructionConstants.ARETURN);
+        InstructionHandle ih = mainInst.append(InstructionConstants.NOP);
+        yields.add(ih);
+        return ih;
+    }
+    
+    
     
 
     
-    BytecodeGenerator createInstance(int argsLen, int defaultValues, boolean packExtraArgs)
+    BytecodeGenerator createInstance(int argsLen, int defaultValues, boolean packExtraArgs, boolean generator)
     {
         String name = className + '$' + (inheritedFunctionsId++);
-        return new BytecodeGenerator(classLoader, name, argsLen, defaultValues, packExtraArgs);
+        return new BytecodeGenerator(classLoader, name, argsLen, defaultValues, packExtraArgs, generator);
     }
 
     
@@ -1847,6 +2015,7 @@ public final class BytecodeGenerator
     {
         return hasAnyInstruction() && getLastHandle().getInstruction() instanceof NOP;
     }
+    public final boolean isGenerator() { return generator; }
     
     
     
@@ -1869,6 +2038,8 @@ public final class BytecodeGenerator
         FUNC3D(3,  PSFunction.PSDefaultThreeArgsFunction.class, ARGS_VALUE_4),
         FUNC4D(4,  PSFunction.PSDefaultFourArgsFunction.class,  ARGS_VALUE_5),
         FUNCVD(-1, PSFunction.PSDefaultVarargsFunction.class,   ARGS_VALUE_VARARGS),
+        GEN(-1,    LangUtils.Generator.class,                   null),
+        GEND(-1,   LangUtils.GeneratorDefault.class,            null),
         SCRIPT(0,  PSScript.class,                              ARGS_VALUE_1);
         
         private static final FunctionId[] VALUES = values();
@@ -1882,10 +2053,17 @@ public final class BytecodeGenerator
             name = clazz.getName();
             this.numArgs = numArgs;
             this.typeArgs = typeArgs;
-            this.nameArgs = new String[typeArgs.length];
-            for(int i=0;i<this.nameArgs.length-1;i++)
-                this.nameArgs[i+1] = "par" + i;
-            this.nameArgs[0] = STR_SELF;
+            if(typeArgs == null)
+            {
+                this.nameArgs = new String[0];
+            }
+            else
+            {
+                this.nameArgs = new String[typeArgs.length];
+                for(int i=0;i<this.nameArgs.length-1;i++)
+                    this.nameArgs[i+1] = "par" + i;
+                this.nameArgs[0] = STR_SELF;
+            }
             
         }
         
@@ -1895,6 +2073,8 @@ public final class BytecodeGenerator
         
         private MethodGen createMethod(String className, InstructionList instructionsList, ConstantPoolGen constantPool)
         {
+            if(this == GEN || this == GEND)
+                throw new IllegalStateException();
             return new MethodGen(
                     Constants.ACC_PUBLIC | Constants.ACC_FINAL,
                     TYPE_VARARGS,
@@ -1907,10 +2087,44 @@ public final class BytecodeGenerator
             );
         }
         
-        private static FunctionId select(int argsLen, int defaultValues, boolean packExtraArgs)
+        public MethodGen createCreateStateGeneratorMethod(String className, InstructionList instructionsList, ConstantPoolGen constantPool)
+        {
+            if(this != GEN && this != GEND)
+                throw new IllegalStateException();
+            return new MethodGen(
+                    Constants.ACC_PUBLIC | Constants.ACC_FINAL,
+                    TYPE_GENERATOR_STATE,
+                    ARGS_VARARGS,
+                    new String[] { "args" },
+                    "createState",
+                    className,
+                    instructionsList,
+                    constantPool
+            );
+        }
+        
+        public MethodGen createCallGeneratorMethod(String className, InstructionList instructionsList, ConstantPoolGen constantPool)
+        {
+            if(this != GEN && this != GEND)
+                throw new IllegalStateException();
+            return new MethodGen(
+                    Constants.ACC_PUBLIC | Constants.ACC_FINAL,
+                    TYPE_VARARGS,
+                    ARGS_VALUE_GENERATOR_STATE,
+                    new String[] { "self", "state" },
+                    "call",
+                    className,
+                    instructionsList,
+                    constantPool
+            );
+        }
+        
+        private static FunctionId select(int argsLen, int defaultValues, boolean packExtraArgs, boolean generator)
         {
             if(argsLen < 1)
                 return FUNC0;
+            if(generator)
+                return argsLen > 5 || packExtraArgs ? GEND : GEN;
             return VALUES[(argsLen > 5 || packExtraArgs ? 5 : argsLen) + (defaultValues > 0 ? 5 : 0)];
         }
     }

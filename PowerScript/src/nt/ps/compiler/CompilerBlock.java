@@ -183,12 +183,25 @@ final class CompilerBlock
             case RETURN: {
                 compileReturn(command);
             } break;
+            case YIELD: {
+                compileYield(command);
+            } break;
         }
+    }
+    
+    private void compileYield(Command command) throws CompilerError
+    {
+        if(!bytecode.isGenerator())
+            throw new CompilerError("\"yield\" command only works on generator functions");
+        int pars = compileMultipleRaises(command.getCode(0));
+        bytecode.computeYield(pars);
     }
     
     private void compileReturn(Command command) throws CompilerError
     {
         int pars = compileMultipleRaises(command.getCode(0));
+        if(bytecode.isGenerator() && pars > 0)
+            throw new CompilerError("\"return\" command cannot return any in generator functions");
         bytecode.computeReturn(pars);
     }
     
@@ -591,12 +604,13 @@ final class CompilerBlock
         String varargs = function.isVarargs() ? function.getVarargsParameterName() : null;
         int defualts = function.getDefaultCount();
         int parameters = function.getParameterCount();
+        boolean generator = function.isGenerator();
         ParsedCode assignation = function.hasAssignation() ? function.getAssignation() : null;
         ScopeInfo info = new ScopeInfo(function.getScope(), ScopeType.BASE);
         
         CompilerErrors childErrors = new CompilerErrors();
         BytecodeGenerator childGenerator = bytecode.createInstance(varargs != null ? parameters + 1 : parameters,
-                defualts, varargs != null);
+                defualts, varargs != null, generator);
         CompilerBlock childCompiler = new CompilerBlock(info, globals, CompilerBlockType.FUNCTION,
                 childGenerator, childErrors, vars, repository);
         

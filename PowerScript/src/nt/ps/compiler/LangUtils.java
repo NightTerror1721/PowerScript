@@ -12,6 +12,7 @@ import nt.ps.exception.PSException;
 import nt.ps.exception.PSRuntimeException;
 import nt.ps.lang.PSDataType;
 import nt.ps.lang.PSFunction;
+import nt.ps.lang.PSIterator;
 import nt.ps.lang.PSNumber;
 import nt.ps.lang.PSObject;
 import nt.ps.lang.PSString;
@@ -154,6 +155,164 @@ public final class LangUtils
         {
             super(message, cause.throwable);
             this.errors = errors;
+        }
+    }
+    
+    public static final class GeneratorState
+    {
+        private final PSValue[] vars;
+        private int state;
+        private boolean end;
+        
+        public GeneratorState(PSValue[] vars)
+        {
+            this.vars = vars;
+            this.state = 0;
+            this.end = false;
+        }
+        
+        public final void update(int state) { this.state = state; }
+        public final void finish()
+        {
+            state = -1;
+            end = true;
+        }
+        
+        public final int getState() { return state; }
+        
+        public final void setLocalVariable(int reference, PSValue value) { vars[reference] = value; }
+        public final PSValue getLocalVariable(int reference) { return vars[reference]; }
+    }
+    
+    public static interface GeneratorCallable
+    {
+        GeneratorState createState(PSVarargs args);
+        PSVarargs call(PSValue self, GeneratorState state);
+    }
+    
+    public static final class GeneratorIterator extends PSIterator
+    {
+        private final GeneratorCallable callable;
+        private final GeneratorState state;
+        private final PSValue self;
+        
+        public GeneratorIterator(GeneratorCallable callable, PSValue self, PSVarargs args)
+        {
+            this.callable = callable;
+            this.state = callable.createState(args);
+            this.self = self;
+        }
+        
+        @Override
+        public final boolean hasNext() { return !state.end; }
+
+        @Override
+        public final PSVarargs next()
+        {
+            if(state.end)
+                return EMPTY;
+            return callable.call(self, state);
+        }
+    }
+    
+    public static final class Generator extends PSFunction
+    {
+        private final GeneratorCallable callable;
+        
+        public Generator(PSValue callable)
+        {
+            this.callable = (GeneratorCallable) callable;
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self)
+        {
+            return new GeneratorIterator(callable, self, EMPTY);
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0)
+        {
+            return new GeneratorIterator(callable, self, arg0);
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1)
+        {
+            return new GeneratorIterator(callable, self, varargsOf(arg0, arg1));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2)
+        {
+            return new GeneratorIterator(callable, self, varargsOf(arg0, arg1, arg2));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+        {
+            return new GeneratorIterator(callable, self, varargsOf(arg0, arg1, arg2, arg3));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSVarargs args)
+        {
+            return new GeneratorIterator(callable, self, args);
+        }
+    }
+    
+    public static final class GeneratorDefault extends PSFunction
+    {
+        private final GeneratorCallable callable;
+        private final int nodefaultArgs;
+        private final PSVarargs defs;
+        
+        public GeneratorDefault(PSValue callable, PSVarargs defaults, int totalArgs)
+        {
+            this.callable = (GeneratorCallable) callable;
+            this.defs = defaults;
+            this.nodefaultArgs = totalArgs - defaults.numberOfArguments();
+        }
+        
+        private PSVarargs insertDefaults(PSVarargs args)
+        {
+            return defaultFunctionVarargs(nodefaultArgs,args,defs);
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self)
+        {
+            return new GeneratorIterator(callable, self, insertDefaults(EMPTY));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0)
+        {
+            return new GeneratorIterator(callable, self, insertDefaults(arg0));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1)
+        {
+            return new GeneratorIterator(callable, self, insertDefaults(varargsOf(arg0, arg1)));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2)
+        {
+            return new GeneratorIterator(callable, self, insertDefaults(varargsOf(arg0, arg1, arg2)));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+        {
+            return new GeneratorIterator(callable, self, insertDefaults(varargsOf(arg0, arg1, arg2, arg3)));
+        }
+        
+        @Override
+        public final PSVarargs innerCall(PSValue self, PSVarargs args)
+        {
+            return new GeneratorIterator(callable, self, insertDefaults(args));
         }
     }
 }

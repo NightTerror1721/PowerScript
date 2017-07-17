@@ -44,7 +44,7 @@ public abstract class Code
     {
         IDENTIFIER, COMMAND_WORD, LITERAL, MUTABLE_LITERAL, SEPARATOR, BLOCK, FUNCTION,
         SELF, OPERATOR_SYMBOL, OPERATOR, COMMAND, ASSIGNATION, ASSIGNATION_SYMBOL,
-        VARARGS_IDENTIFIER, DECLARATION;
+        VARARGS_IDENTIFIER, DECLARATION, GENERATOR_IDENTIFIER;
     }
     
     static final <CP extends Code> HashMap<String, CP> collect(Class<CP> clazz, Function<CP, String> collector)

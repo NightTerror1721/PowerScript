@@ -74,6 +74,7 @@ public final class Command extends ParsedCode
             case CATCH: return CATCH(line, tuple);
             case THROW: return THROW(line, tuple);
             case RETURN: return RETURN(line, tuple);
+            case YIELD: return YIELD(line, tuple);
         }
     }
     
@@ -332,5 +333,23 @@ public final class Command extends ParsedCode
         }
         Block pars = Block.arguments(tuple, Separator.COMMA);
         return new Command(line, CommandWord.RETURN, pars);
+    }
+    
+    private static Command YIELD(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.YIELD);
+        if(tuple.get(0).is(CodeType.BLOCK))
+        {
+            Block pars = tuple.get(0);
+            if(pars.isArgumentsList())
+            {
+                if(tuple.length() != 1)
+                    throw new CompilerError("Invalid yield command. Correct form is: \"yield <...>,...; or yield (<...>,...);\"");
+                return new Command(line, CommandWord.YIELD, pars);
+            }
+        }
+        Block pars = Block.arguments(tuple, Separator.COMMA);
+        return new Command(line, CommandWord.YIELD, pars);
     }
 }
