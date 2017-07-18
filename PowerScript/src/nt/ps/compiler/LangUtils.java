@@ -195,6 +195,7 @@ public final class LangUtils
         private final GeneratorCallable callable;
         private final GeneratorState state;
         private final PSValue self;
+        private PSVarargs next;
         
         public GeneratorIterator(GeneratorCallable callable, PSValue self, PSVarargs args)
         {
@@ -204,14 +205,25 @@ public final class LangUtils
         }
         
         @Override
-        public final boolean hasNext() { return !state.end; }
+        public final boolean hasNext()
+        {
+            if(state.end)
+                return false;
+            if(next == null)
+                next = callable.call(self, state);
+            return !state.end;
+        }
 
         @Override
         public final PSVarargs next()
         {
             if(state.end)
                 return EMPTY;
-            return callable.call(self, state);
+            if(next == null)
+                return callable.call(self, state);
+            PSVarargs temp = next;
+            next = null;
+            return temp;
         }
     }
     
@@ -264,19 +276,24 @@ public final class LangUtils
     public static final class GeneratorDefault extends PSFunction
     {
         private final GeneratorCallable callable;
-        private final int nodefaultArgs;
-        private final PSVarargs defs;
+        private int nodefaultArgs;
+        private PSVarargs defs;
         
-        public GeneratorDefault(PSValue callable, PSVarargs defaults, int totalArgs)
+        public GeneratorDefault(PSValue callable)
         {
             this.callable = (GeneratorCallable) callable;
-            this.defs = defaults;
-            this.nodefaultArgs = totalArgs - defaults.numberOfArguments();
         }
         
         private PSVarargs insertDefaults(PSVarargs args)
         {
             return defaultFunctionVarargs(nodefaultArgs,args,defs);
+        }
+        
+        public static final GeneratorDefault insertDefaults(PSVarargs defaults, int totalArgs, GeneratorDefault generator)
+        {
+            generator.defs = defaults;
+            generator.nodefaultArgs = totalArgs - defaults.numberOfArguments();
+            return generator;
         }
         
         @Override

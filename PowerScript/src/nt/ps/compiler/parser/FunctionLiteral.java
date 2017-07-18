@@ -144,7 +144,7 @@ public class FunctionLiteral extends ParsedCode
     public final int getParameterCount() { return pars.length; }
     public final String getParameterName(int index) { return pars[index]; }
     
-    public final String getVarargsParameterName() { return isClosure() ? null : varargs; }
+    public final String getVarargsParameterName() { return varargs; }
     
     public final int getDefaultCount() { return defs == null ? 0 : defs.length; }
     public final Literal getDefault(int index) { return defs[index]; }

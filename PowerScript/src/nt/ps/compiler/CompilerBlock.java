@@ -345,7 +345,7 @@ final class CompilerBlock
         {
             ScopeInfo info = new ScopeInfo(command.getCode(2), ScopeType.FOREACH);
             final String tempVar = createTempForVar();
-            compileOperation(command.getCode(1), false, true, false);
+            compileOperation(command.getCode(1), false, false, false);
             bytecode.createIteratorInstance();
             bytecode.storeTemp(tempVar);
             stack.pop();
@@ -619,9 +619,15 @@ final class CompilerBlock
         {
             String par = function.getParameterName(i);
             childCompiler.vars.createParameter(par);
+            if(generator)
+                childGenerator.createParameterInGenerator(i);
         }
         if(varargs != null)
+        {
             childCompiler.vars.createParameter(varargs);
+            if(generator)
+                childGenerator.createParameterInGenerator(parameters);
+        }
         
         if(assignation != null)
             assign(AssignationSymbol.ASSIGNATION, assignation, isGlobal, true, true, () -> {
