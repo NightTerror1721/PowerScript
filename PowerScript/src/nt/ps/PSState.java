@@ -9,7 +9,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 import nt.ps.lang.PSValue;
+import nt.ps.lang.core.PSArrayReference;
+import nt.ps.lang.core.PSBooleanReference;
+import nt.ps.lang.core.PSIteratorReference;
+import nt.ps.lang.core.PSMapReference;
+import nt.ps.lang.core.PSNumberReference;
 import nt.ps.lang.core.PSObjectReference;
+import nt.ps.lang.core.PSStringReference;
+import nt.ps.lang.core.PSTupleReference;
 
 /**
  *
@@ -20,10 +27,15 @@ public final class PSState extends PSGlobals
     private final HashMap<String, PSValue> globals = new HashMap<>();
     private final HashMap<String, PSValue> natives = new HashMap<>();
     
+    private final PSClassLoader classLoader;
+    
     public PSState()
     {
         super(null);
+        classLoader = new PSClassLoader(getClass().getClassLoader());
     }
+    
+    public final PSClassLoader getClassLoader() { return classLoader; }
     
     public static final PSState createDefaultInstance()
     {
@@ -35,6 +47,13 @@ public final class PSState extends PSGlobals
     public final void insertDefaultNatives()
     {
         natives.put("Object", new PSObjectReference());
+        natives.put("Array", new PSArrayReference());
+        natives.put("Tuple", new PSTupleReference());
+        natives.put("Boolean", new PSBooleanReference());
+        natives.put("Number", new PSNumberReference());
+        natives.put("String", new PSStringReference());
+        natives.put("Map", new PSMapReference());
+        natives.put("Iterator", new PSIteratorReference());
     }
     
     @Override

@@ -11,6 +11,7 @@ package nt.ps.lang;
  */
 public abstract class PSIterator extends PSValue
 {
+    
     @Override
     public final PSDataType getPSType() { return PSDataType.ITERATOR; }
     

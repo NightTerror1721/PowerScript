@@ -6,14 +6,17 @@
 package nt.ps.lang.core;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Collectors;
 import nt.ps.lang.PSDataType;
 import nt.ps.lang.PSFunction;
+import nt.ps.lang.PSIterator;
 import nt.ps.lang.PSObject;
 import nt.ps.lang.PSObject.Property;
 import nt.ps.lang.PSString;
 import nt.ps.lang.PSValue;
+import nt.ps.lang.PSVarargs;
 
 /**
  *
@@ -53,6 +56,7 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             case "deepToString": return DEEP_TO_STRING;
             case "setProperty": return SET_PROPERTY;
             case "getProperty": return GET_PROPERTY;
+            case "properties": return PROPERTIES;
         }
     }
     
@@ -63,7 +67,27 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             SET_PROPERTY = PSFunction.voidFunction((arg0, arg1, arg2) -> {
                 arg0.toPSObject().setProperty(arg1.toJavaString(), arg2);
             }),
-            GET_PROPERTY = PSFunction.function((arg0, arg1) -> arg0.toPSObject().getProperty(arg1.toJavaString()));
+            GET_PROPERTY = PSFunction.function((arg0, arg1) -> arg0.toPSObject().getProperty(arg1.toJavaString())),
+            PROPERTIES = PSFunction.function((arg0) -> {
+                return new PSIterator()
+                {
+                    private final Iterator<Property> it = arg0.toPSObject().properties().iterator();
+                    private final PSValue[] array = new PSValue[2];
+                    private final PSVarargs ret = varargsOf(array);
+                    
+                    @Override
+                    public final boolean hasNext() { return it.hasNext(); }
+
+                    @Override
+                    public final PSVarargs next()
+                    {
+                        Property p = it.next();
+                        array[0] = valueOf(p.getName());
+                        array[1] = p.getValue();
+                        return ret;
+                    }
+                };
+            });
     
     private static String toString(PSValue value, boolean deep)
     {

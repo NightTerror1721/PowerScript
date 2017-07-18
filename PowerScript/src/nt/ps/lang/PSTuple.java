@@ -38,6 +38,9 @@ public final class PSTuple extends PSValue implements Iterable<PSValue>
     public PSTuple(Supplier<PSValue[]> s) { this(s.get()); }
     public PSTuple() { tuple = new PSValue[0]; }
     
+    public final PSValue asPSArray() { return new PSArray(tuple); }
+    public final PSValue copy() { return new PSTuple(Arrays.copyOf(tuple, tuple.length)); }
+    
     @Override
     public final PSDataType getPSType() { return PSDataType.TUPLE; }
     

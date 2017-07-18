@@ -37,6 +37,9 @@ public final class PSArray extends PSValue implements Iterable<PSValue>
     public PSArray(Supplier<List<PSValue>> s) { array = s.get(); }
     public PSArray() { array = new ArrayList<>(); }
     
+    public final PSValue asPSTuple() { return new PSTuple(array); }
+    public final PSValue copy() { return new PSArray(new ArrayList<>(array)); }
+    
     @Override
     public final PSDataType getPSType() { return PSDataType.ARRAY; }
     

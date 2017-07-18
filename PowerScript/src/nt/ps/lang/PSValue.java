@@ -369,4 +369,18 @@ public abstract class PSValue extends PSVarargs
             }
         };
     }
+    
+    public static final Iterable<PSVarargs> iterate(PSValue value)
+    {
+        return () -> new Iterator<PSVarargs>()
+        {
+            private final PSIterator it = value.createIterator();
+            
+            @Override
+            public final boolean hasNext() { return it.hasNext(); }
+
+            @Override
+            public final PSVarargs next() { return it.next(); }
+        };
+    }
 }
