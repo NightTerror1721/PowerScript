@@ -9,8 +9,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 import nt.ps.lang.PSValue;
+import nt.ps.lang.core.EvalFunction;
 import nt.ps.lang.core.PSArrayReference;
 import nt.ps.lang.core.PSBooleanReference;
+import nt.ps.lang.core.PSFunctionReference;
 import nt.ps.lang.core.PSIteratorReference;
 import nt.ps.lang.core.PSMapReference;
 import nt.ps.lang.core.PSNumberReference;
@@ -54,6 +56,8 @@ public final class PSState extends PSGlobals
         natives.put("String", new PSStringReference());
         natives.put("Map", new PSMapReference());
         natives.put("Iterator", new PSIteratorReference());
+        natives.put("Function", new PSFunctionReference(this));
+        natives.put("eval", new EvalFunction(this));
     }
     
     @Override

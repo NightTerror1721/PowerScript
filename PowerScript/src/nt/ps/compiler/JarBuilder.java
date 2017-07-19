@@ -97,7 +97,7 @@ public final class JarBuilder
     {
         try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file)))
         {
-            CompilerUnit.compile(bis, env, classLoader, name, acc);
+            CompilerUnit.compile(bis, env, classLoader, name, acc, false);
         }
         catch(Throwable ex)
         {

@@ -45,7 +45,7 @@ public final class Main
         //state.setGlobalValue("Object", new PSObjectReference());
         
         double t1 = System.nanoTime();
-        PSScript script = CompilerUnit.compile(fis, state, cl, "test");
+        PSScript script = CompilerUnit.compile(fis, state, cl, "test", false);
         double t2 = System.nanoTime();
         script.execute();
         double t3 = System.nanoTime();

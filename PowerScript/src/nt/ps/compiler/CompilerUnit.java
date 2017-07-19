@@ -5,6 +5,7 @@
  */
 package nt.ps.compiler;
 
+import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
@@ -57,17 +58,17 @@ public final class CompilerUnit
         this.repository = repository;
     }
     
-    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name, ClassRepository repository) throws PSCompilerException
+    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name, ClassRepository repository, boolean eval) throws PSCompilerException
     {
         CodeReader sourceBase = new CodeReader(input);
         CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals, repository);
         
-        PSScript script = compiler.compile();
+        PSScript script = compiler.compile(eval);
         return script;
     }
-    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name) throws PSCompilerException
+    public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name, boolean eval) throws PSCompilerException
     {
-        return compile(input, globals, classLoader, name, null);
+        return compile(input, globals, classLoader, name, null, eval);
     }
     
     public static final void compileAsJar(File jarFile, File sourceRoot, File... sources) throws IOException, PSCompilerException
@@ -75,7 +76,56 @@ public final class CompilerUnit
         JarBuilder.createJar(jarFile, sourceRoot, sources);
     }
     
-    private PSScript compile() throws PSCompilerException
+    public static final PSFunction compileFunction(PSGlobals globals, PSClassLoader classLoader, String name, String code, String... args) throws IOException, PSCompilerException
+    {
+        CodeReader sourceBase;
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(code.getBytes()))
+        {
+            sourceBase = new CodeReader(bais);
+        }
+        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals, null);
+        
+        PSFunction func = compiler.compileFunction(args);
+        return func;
+    }
+    
+    private PSFunction compileFunction(String[] args) throws PSCompilerException
+    {
+        CompilerErrors errors = new CompilerErrors();
+        
+        Scope base = parseAllInstructions(errors);
+        if(errors.hasErrors())
+            throw new PSCompilerException(errors);
+        
+        ScopeInfo baseInfo = new ScopeInfo(base, ScopeInfo.ScopeType.BASE);
+        BytecodeGenerator bytecode = new BytecodeGenerator(classLoader, name, args.length, 0, false, false);
+        CompilerBlock compilerBlock = new CompilerBlock(baseInfo, globals, CompilerBlockType.FUNCTION, bytecode, errors, null, false, repository);
+        VariablePool vars = compilerBlock.getVariables();
+        
+        try
+        {
+            for(String arg : args)
+            {
+                Identifier.checkValidIdentifier(arg);
+                vars.createParameter(arg);
+            }
+        }
+        catch(CompilerError ex)
+        {
+            errors.addError(ex, Command.parseErrorCommand(0));
+        }
+        if(errors.hasErrors())
+            throw new PSCompilerException(errors);
+        
+        compilerBlock.compile(true, true);
+        if(errors.hasErrors())
+            throw new PSCompilerException(errors);
+        
+        Class<? extends PSFunction> baseClass = compilerBlock.getCompiledClass();
+        return (PSScript) CompilerBlock.buildFunctionInstance(baseClass, globals);
+    }
+    
+    private PSScript compile(boolean eval) throws PSCompilerException
     {
         CompilerErrors errors = new CompilerErrors();
         
@@ -85,7 +135,7 @@ public final class CompilerUnit
         
         ScopeInfo baseInfo = new ScopeInfo(base, ScopeInfo.ScopeType.BASE);
         BytecodeGenerator bytecode = new BytecodeGenerator(classLoader, name);
-        CompilerBlock compilerBlock = new CompilerBlock(baseInfo, globals, CompilerBlockType.SCRIPT, bytecode, errors, null, repository);
+        CompilerBlock compilerBlock = new CompilerBlock(baseInfo, globals, CompilerBlockType.SCRIPT, bytecode, errors, null, eval, repository);
         
         compilerBlock.compile(true, true);
         if(errors.hasErrors())

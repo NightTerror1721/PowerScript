@@ -2018,6 +2018,12 @@ public final class BytecodeGenerator
         }
     }
     
+    public final InstructionHandle varargsToValue()
+    {
+        return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, STR_FUNC_SELF,
+                TYPE_VALUE, NO_ARGS, Constants.INVOKEVIRTUAL));
+    }
+    
     
     
     

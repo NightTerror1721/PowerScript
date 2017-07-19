@@ -49,10 +49,11 @@ final class CompilerBlock
     private final CompilerBlockType type;
     private final CompilerErrors errors;
     private final ClassRepository repository;
+    private final boolean eval;
     private Class<? extends PSFunction> compiledClass;
     
     public CompilerBlock(ScopeInfo source, PSGlobals globals, CompilerBlockType type, BytecodeGenerator bytecode,
-            CompilerErrors errors, VariablePool parentVars, ClassRepository repository)
+            CompilerErrors errors, VariablePool parentVars, boolean eval, ClassRepository repository)
     {
         scopeSource = source;
         scopes = new ScopeStack();
@@ -63,6 +64,7 @@ final class CompilerBlock
         this.type = type;
         this.errors = errors;
         this.repository = repository;
+        this.eval = eval;
         
         this.bytecode.setCompiler(this);
     }
@@ -124,9 +126,13 @@ final class CompilerBlock
     
     private void compileCommand(Command command) throws CompilerError
     {
+        boolean evalEnd = eval && scopes.size() < 2 && !scopes.peek().hasMoreCommands();
+        
         if(command.isOperationsCommand())
         {
-            compileOperation(command.getCode(0), false, false, true);
+            if(evalEnd)
+                compileReturn(command);
+            else compileOperation(command.getCode(0), false, false, true);
             return;
         }
         
@@ -135,13 +141,27 @@ final class CompilerBlock
             case VAR: {
                 ParsedCode pc = command.getCode(0);
                 if(pc.is(CodeType.ASSIGNATION))
-                    compileAssignation((Assignation) pc, false, true);
+                {
+                    if(evalEnd)
+                    {
+                        compileAssignation((Assignation) pc, false, true, true, false);
+                        bytecode.computeReturn(1);
+                    }
+                    else compileAssignation((Assignation) pc, false, true, false, true);
+                }
                 else compileDeclaration((Declaration) pc, false);
             } break;
             case GLOBAL: {
                 ParsedCode pc = command.getCode(0);
                 if(pc.is(CodeType.ASSIGNATION))
-                    compileAssignation((Assignation) pc, true, true);
+                {
+                    if(evalEnd)
+                    {
+                        compileAssignation((Assignation) pc, true, true, true, false);
+                        bytecode.computeReturn(1);
+                    }
+                    else compileAssignation((Assignation) pc, true, true, false, true);
+                }
                 else compileDeclaration((Declaration) pc, true);
             } break;
             case IF: {
@@ -465,9 +485,8 @@ final class CompilerBlock
         return bytecode.computeIf();
     }
     
-    private boolean compileOperation(ParsedCode code, boolean isGlobal, boolean multiresult, boolean pop) throws CompilerError
+    private void compileOperation(ParsedCode code, boolean isGlobal, boolean multiresult, boolean pop) throws CompilerError
     {
-        boolean multiresponse = false;
         switch(code.getCodeType())
         {
             case IDENTIFIER: {
@@ -521,14 +540,12 @@ final class CompilerBlock
                 }
             } break;
             case ASSIGNATION: {
-                if(!pop)
-                    throw new CompilerError("Cannot use assignation here: " + code);
-                compileAssignation((Assignation) code, isGlobal, false);
+                /*if(!pop)
+                    throw new CompilerError("Cannot use assignation here: " + code);*/
+                compileAssignation((Assignation) code, isGlobal, false, multiresult, pop);
             } break;
             default: throw CompilerError.unexpectedCode(code);
         }
-        
-        return multiresponse;
     }
     
     private void compileMutableLiteral(MutableLiteral literal, boolean isGlobal) throws CompilerError
@@ -612,7 +629,7 @@ final class CompilerBlock
         BytecodeGenerator childGenerator = bytecode.createInstance(varargs != null ? parameters + 1 : parameters,
                 defualts, varargs != null, generator);
         CompilerBlock childCompiler = new CompilerBlock(info, globals, CompilerBlockType.FUNCTION,
-                childGenerator, childErrors, vars, repository);
+                childGenerator, childErrors, vars, false, repository);
         
         childCompiler.vars.createScope();
         for(int i=0;i<parameters;i++)
@@ -815,7 +832,7 @@ final class CompilerBlock
     }
     
     
-    private void compileAssignation(Assignation assignation, boolean isGlobal, boolean createVars) throws CompilerError
+    private void compileAssignation(Assignation assignation, boolean isGlobal, boolean createVars, boolean multiresult, boolean pop) throws CompilerError
     {
         int len = assignation.getPartCount();
         AssignationSymbol symbol = assignation.getSymbol();
@@ -823,7 +840,8 @@ final class CompilerBlock
         {
             AssignationPart part = assignation.getPart(i);
             if(part.getLocationCount() == 1)
-                assign(symbol, part.getLocation(0).getCode(), isGlobal, createVars, false, () -> compileOperation(part.getAssignation(), isGlobal, false, false));
+                assign(symbol, part.getLocation(0).getCode(), isGlobal, createVars, !pop && len == 1,
+                        () -> compileOperation(part.getAssignation(), isGlobal, false, false));
             else
             {
                 compileOperation(part.getAssignation(), isGlobal, true, false);
@@ -835,7 +853,40 @@ final class CompilerBlock
                     final int index = j;
                     assign(symbol, loc.getCode(), isGlobal, createVars, false, () -> bytecode.loadExpand(index));
                 }
+                if(!pop && len == 1)
+                {
+                    for(int j=0;j<count;j++)
+                    {
+                        Location loc = part.getLocation(j);
+                        compileOperation(loc.getCode(), isGlobal, false, false);
+                    }
+                    bytecode.wrapArgsToArray(count);
+                    stack.pop(count);
+                    stack.push(1);
+                    if(!multiresult)
+                        bytecode.varargsToValue();
+                }
             }
+        }
+        if(!pop && len > 1)
+        {
+            int usedVars = 0;
+            for(int i=0;i<len;i++)
+            {
+                AssignationPart part = assignation.getPart(i);
+                int count = part.getLocationCount();
+                usedVars += count;
+                for(int j=0;j<count;j++)
+                {
+                    Location loc = part.getLocation(j);
+                    compileOperation(loc.getCode(), isGlobal, false, false);
+                }
+            }
+            bytecode.wrapArgsToArray(usedVars);
+            stack.pop(usedVars);
+            stack.push(1);
+            if(!multiresult)
+                bytecode.varargsToValue();
         }
     }
     
