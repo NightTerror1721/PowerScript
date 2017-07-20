@@ -5,15 +5,25 @@
  */
 package nt.ps;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import nt.ps.compiler.CompilerUnit;
+import nt.ps.compiler.exception.PSCompilerException;
 import nt.ps.lang.PSValue;
+import nt.ps.lang.PSVarargs;
 import nt.ps.lang.core.EvalFunction;
 import nt.ps.lang.core.PSArrayReference;
 import nt.ps.lang.core.PSBooleanReference;
@@ -88,6 +98,82 @@ public final class PSState extends PSGlobals
     public final void setStdout(Writer writer) { stdout = Objects.requireNonNull(writer); }
     public final void setStderr(Writer writer) { stderr = Objects.requireNonNull(writer); }
     public final void setStdin(Reader reader) { stdin = Objects.requireNonNull(reader); }
+    
+    
+    public final PSScript compile(InputStream input, String name) throws PSCompilerException
+    {
+        return CompilerUnit.compile(input, this, classLoader, name, false);
+    }
+    public final PSScript compile(InputStream input, String name, PSValue globalsWrapped) throws PSCompilerException
+    {
+        PSGlobals child = PSGlobals.wrap(this, globalsWrapped);
+        return CompilerUnit.compile(input, child, classLoader, name, false);
+    }
+    public final PSScript compile(InputStream input, String name, Map<String, PSValue> globalsWrapped) throws PSCompilerException
+    {
+        PSGlobals child = PSGlobals.valueOf(this, globalsWrapped);
+        return CompilerUnit.compile(input, child, classLoader, name, false);
+    }
+    
+    public final PSScript compile(File file, String name) throws IOException, PSCompilerException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return CompilerUnit.compile(fis, this, classLoader, name, false);
+        }
+    }
+    public final PSScript compile(File file, String name, PSValue globalsWrapped) throws IOException, PSCompilerException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            PSGlobals child = PSGlobals.wrap(this, globalsWrapped);
+            return CompilerUnit.compile(fis, child, classLoader, name, false);
+        }
+    }
+    public final PSScript compile(File file, String name, Map<String, PSValue> globalsWrapped) throws IOException, PSCompilerException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            PSGlobals child = PSGlobals.valueOf(this, globalsWrapped);
+            return CompilerUnit.compile(fis, child, classLoader, name, false);
+        }
+    }
+    
+    public final PSVarargs eval(String code) throws PSCompilerException
+    {
+        try(ByteArrayInputStream bais = new ByteArrayInputStream(code.getBytes()))
+        {
+            PSClassLoader cl = new PSClassLoader(classLoader);
+            PSScript script = CompilerUnit.compile(bais, this, cl, UUID.randomUUID().toString(), true);
+            return script.call();
+        }
+        catch(IOException ex) { throw new IllegalArgumentException(ex); }
+    }
+    
+    public final PSVarargs eval(String code, PSValue globalsWrapped) throws PSCompilerException
+    {
+        try(ByteArrayInputStream bais = new ByteArrayInputStream(code.getBytes()))
+        {
+            PSClassLoader cl = new PSClassLoader(classLoader);
+            PSGlobals child = PSGlobals.wrap(this, globalsWrapped);
+            PSScript script = CompilerUnit.compile(bais, child, cl, UUID.randomUUID().toString(), true);
+            return script.call();
+        }
+        catch(IOException ex) { throw new IllegalArgumentException(ex); }
+    }
+    
+    public final PSVarargs eval(String code, Map<String, PSValue> globalsWrapped) throws PSCompilerException
+    {
+        try(ByteArrayInputStream bais = new ByteArrayInputStream(code.getBytes()))
+        {
+            PSClassLoader cl = new PSClassLoader(classLoader);
+            PSGlobals child = PSGlobals.valueOf(this, globalsWrapped);
+            PSScript script = CompilerUnit.compile(bais, child, cl, UUID.randomUUID().toString(), true);
+            return script.call();
+        }
+        catch(IOException ex) { throw new IllegalArgumentException(ex); }
+    }
+    
     
     @Override
     protected final PSValue innerGetGlobalValue(String name) { return globals.get(name); }
