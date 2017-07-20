@@ -1319,9 +1319,8 @@ public final class BytecodeGenerator
         mainInst.append(InstructionConstants.DUP);
         element.doOperation();
         compiler.getStack().pop();
-        mainInst.append(factory.createInvoke(STR_TYPE_HASHMAP, "put",
-                Type.OBJECT, ARGS_JAVA_OBJECT_2, Constants.INVOKEVIRTUAL));
-        return mainInst.append(InstructionConstants.POP);
+        return mainInst.append(factory.createInvoke(STR_TYPE_PROTOOBJECT, "put",
+                Type.VOID, ARGS_STRING_VALUE, Constants.INVOKEVIRTUAL));
     }
     
     public final InstructionHandle endObjectLiteral()

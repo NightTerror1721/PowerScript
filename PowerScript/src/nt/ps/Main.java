@@ -41,7 +41,7 @@ public final class Main
         PSClassLoader cl = new PSClassLoader(Main.class.getClassLoader());
         
         PSState state = PSState.createDefaultInstance();
-        state.setGlobalValue("IO", new PSIO());
+        state.setGlobalValue("IO", new PSIO(state));
         //state.setGlobalValue("Object", new PSObjectReference());
         
         double t1 = System.nanoTime();

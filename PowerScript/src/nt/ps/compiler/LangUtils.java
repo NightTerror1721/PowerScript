@@ -15,6 +15,7 @@ import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSIterator;
 import nt.ps.lang.PSNumber;
 import nt.ps.lang.PSObject;
+import nt.ps.lang.PSObject.Property;
 import nt.ps.lang.PSString;
 import nt.ps.lang.PSTuple;
 import nt.ps.lang.PSUserdata;
@@ -37,11 +38,13 @@ public final class LangUtils
         public ProtoMap(int initialCapacity, float loadFactor) { super(initialCapacity, loadFactor); }
     }
     
-    public static final class ProtoObject extends HashMap<String, PSValue>
+    public static final class ProtoObject extends HashMap<String, Property>
     {
         public ProtoObject() { super(); }
         public ProtoObject(int initialCapacity) { super(initialCapacity); }
         public ProtoObject(int initialCapacity, float loadFactor) { super(initialCapacity, loadFactor); }
+        
+        public final void put(String name, PSValue value) { put(name, new Property(value, false)); }
     }
     
     public static final PSValue operatorTypeof(PSValue value)
@@ -76,7 +79,7 @@ public final class LangUtils
     
     public static final PSValue wrapThrowable(Throwable th)
     {
-        HashMap<String, PSValue> map = new HashMap<>();
+        ProtoObject map = new ProtoObject();
         map.put("message", new PSString(th.getMessage()));
         Throwable cause = th.getCause();
         map.put("cause", cause == null ? PSValue.NULL : wrapThrowable(cause));

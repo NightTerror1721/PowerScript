@@ -8,7 +8,7 @@ package nt.ps.lang.core;
 import java.util.HashMap;
 import nt.ps.lang.PSMap;
 import nt.ps.lang.PSNumber;
-import nt.ps.lang.PSObject.Property;
+import nt.ps.lang.PSObject.PropertyEntry;
 import nt.ps.lang.PSString;
 import nt.ps.lang.PSValue;
 import nt.ps.lang.PSVarargs;
@@ -32,7 +32,7 @@ public final class PSMapReference extends PrimitiveReference
             case MAP: return new PSMap(arg0.toJavaMap());
             case OBJECT: {
                 HashMap<PSValue, PSValue> map = new HashMap<>();
-                for(Property p : arg0.toPSObject().properties())
+                for(PropertyEntry p : arg0.toPSObject().properties())
                     map.put(new PSString(p.getName()), p.getValue());
                 return new PSMap(map);
             }

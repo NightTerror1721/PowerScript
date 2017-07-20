@@ -14,6 +14,7 @@ import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSIterator;
 import nt.ps.lang.PSObject;
 import nt.ps.lang.PSObject.Property;
+import nt.ps.lang.PSObject.PropertyEntry;
 import nt.ps.lang.PSString;
 import nt.ps.lang.PSValue;
 import nt.ps.lang.PSVarargs;
@@ -37,7 +38,7 @@ public final class PSObjectReference extends ImmutableCoreLibrary
                 Map<PSValue, PSValue> map = arg0.toJavaMap();
                 return new PSObject(new HashMap<>(map.entrySet().stream().collect(Collectors.toMap(
                         e -> e.getKey().toJavaString(),
-                        e -> e.getValue()
+                        e -> new Property(e.getValue(), false)
                 ))));
             }
             case OBJECT: {
@@ -57,6 +58,10 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             case "setProperty": return SET_PROPERTY;
             case "getProperty": return GET_PROPERTY;
             case "properties": return PROPERTIES;
+            case "freeze": return FREEZE;
+            case "freezeProperty": return FREEZE_PROPERTY;
+            case "isFrozen": return IS_FROZEN;
+            case "isPropertyFrozen": return IS_PROPERTY_FROZEN;
         }
     }
     
@@ -71,7 +76,7 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             PROPERTIES = PSFunction.function((arg0) -> {
                 return new PSIterator()
                 {
-                    private final Iterator<Property> it = arg0.toPSObject().properties().iterator();
+                    private final Iterator<PropertyEntry> it = arg0.toPSObject().properties().iterator();
                     private final PSValue[] array = new PSValue[2];
                     private final PSVarargs ret = varargsOf(array);
                     
@@ -81,13 +86,20 @@ public final class PSObjectReference extends ImmutableCoreLibrary
                     @Override
                     public final PSVarargs next()
                     {
-                        Property p = it.next();
+                        PropertyEntry p = it.next();
                         array[0] = valueOf(p.getName());
                         array[1] = p.getValue();
                         return ret;
                     }
                 };
-            });
+            }),
+            FREEZE = PSFunction.function((arg0) -> { 
+                arg0.toPSObject().setFrozen(true);
+                return arg0;
+            }),
+            FREEZE_PROPERTY = PSFunction.voidFunction((arg0, arg1) -> arg0.toPSObject().setPropertyFrozen(arg1.toJavaString(), true)),
+            IS_FROZEN = PSFunction.function((arg0) -> arg0.toPSObject().isFrozen() ? TRUE : FALSE),
+            IS_PROPERTY_FROZEN = PSFunction.function((arg0, arg1) -> arg0.toPSObject().isPropertyFrozen(arg1.toJavaString()) ? TRUE : FALSE);
     
     private static String toString(PSValue value, boolean deep)
     {
@@ -107,7 +119,7 @@ public final class PSObjectReference extends ImmutableCoreLibrary
         if(deep && obj.hasParent())
             sb.append("<super>: ").append(toString(obj.getParent(), true)).append('\n');
         
-        for(Property p : obj.properties())
+        for(PropertyEntry p : obj.properties())
         {
             sb.append('\t').append(p.getName()).append(": ")
                     .append(toString(p.getValue(), deep).replace("\n", "\n\t")).append('\n');

@@ -9,6 +9,8 @@ var testgen = function*(vars...)
 	}
 }
 
+System.exit(0);
+
 for(value : testgen(10))
 	IO.print(value);
 
