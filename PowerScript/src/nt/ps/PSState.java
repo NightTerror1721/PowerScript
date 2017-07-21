@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.PSCompilerException;
 import nt.ps.lang.PSValue;
@@ -144,7 +143,7 @@ public final class PSState extends PSGlobals
         try(ByteArrayInputStream bais = new ByteArrayInputStream(code.getBytes()))
         {
             PSClassLoader cl = new PSClassLoader(classLoader);
-            PSScript script = CompilerUnit.compile(bais, this, cl, UUID.randomUUID().toString(), true);
+            PSScript script = CompilerUnit.compile(bais, this, cl, randomName(), true);
             return script.call();
         }
         catch(IOException ex) { throw new IllegalArgumentException(ex); }
@@ -156,7 +155,7 @@ public final class PSState extends PSGlobals
         {
             PSClassLoader cl = new PSClassLoader(classLoader);
             PSGlobals child = PSGlobals.wrap(this, globalsWrapped);
-            PSScript script = CompilerUnit.compile(bais, child, cl, UUID.randomUUID().toString(), true);
+            PSScript script = CompilerUnit.compile(bais, child, cl, randomName(), true);
             return script.call();
         }
         catch(IOException ex) { throw new IllegalArgumentException(ex); }
@@ -168,7 +167,7 @@ public final class PSState extends PSGlobals
         {
             PSClassLoader cl = new PSClassLoader(classLoader);
             PSGlobals child = PSGlobals.valueOf(this, globalsWrapped);
-            PSScript script = CompilerUnit.compile(bais, child, cl, UUID.randomUUID().toString(), true);
+            PSScript script = CompilerUnit.compile(bais, child, cl, randomName(), true);
             return script.call();
         }
         catch(IOException ex) { throw new IllegalArgumentException(ex); }
@@ -214,5 +213,11 @@ public final class PSState extends PSGlobals
     final boolean hasNativeValue0(String name)
     {
         return natives.containsKey(name);
+    }
+    
+    private static String randomName()
+    {
+        long nano = System.nanoTime();
+        return "lambda_" + Long.toHexString(nano) + Long.toHexString(System.currentTimeMillis());
     }
 }

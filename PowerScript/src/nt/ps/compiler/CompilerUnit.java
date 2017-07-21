@@ -48,20 +48,22 @@ public final class CompilerUnit
     private final String name;
     private final PSGlobals globals;
     private final ClassRepository repository;
+    private final boolean eval;
     
-    private CompilerUnit(CodeReader source, PSClassLoader classLoader, String name, PSGlobals globals, ClassRepository repository)
+    private CompilerUnit(CodeReader source, PSClassLoader classLoader, String name, PSGlobals globals, ClassRepository repository, boolean eval)
     {
         this.source = Objects.requireNonNull(source);
         this.classLoader = Objects.requireNonNull(classLoader);
         this.name = Objects.requireNonNull(name);
         this.globals = Objects.requireNonNull(globals);
         this.repository = repository;
+        this.eval = eval;
     }
     
     public static final PSScript compile(InputStream input, PSGlobals globals, PSClassLoader classLoader, String name, ClassRepository repository, boolean eval) throws PSCompilerException
     {
         CodeReader sourceBase = new CodeReader(input);
-        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals, repository);
+        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals, repository, eval);
         
         PSScript script = compiler.compile(eval);
         return script;
@@ -83,7 +85,7 @@ public final class CompilerUnit
         {
             sourceBase = new CodeReader(bais);
         }
-        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals, null);
+        CompilerUnit compiler = new CompilerUnit(sourceBase, classLoader, name, globals, null, false);
         
         PSFunction func = compiler.compileFunction(args);
         return func;
@@ -672,7 +674,7 @@ public final class CompilerUnit
                 }
             }
             
-            if(!sb.isEmpty())
+            if(!sb.isEmpty() && !eval)
                 throw new CompilerError("Unexpected End of File");
         }
         catch(EOFException ex)

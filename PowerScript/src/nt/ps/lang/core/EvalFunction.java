@@ -7,7 +7,6 @@ package nt.ps.lang.core;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.UUID;
 import nt.ps.PSGlobals;
 import nt.ps.PSScript;
 import nt.ps.PSState;
@@ -40,7 +39,7 @@ public final class EvalFunction extends PSFunction.PSThreeArgsFunction
         PSGlobals globals = arg1 == UNDEFINED || arg1 == NULL ?
                 PSGlobals.instance(state) : PSGlobals.wrap(state, FALSE);
         PSValue subSelf = arg2 == UNDEFINED ? NULL : arg2;
-        String name = UUID.randomUUID().toString();
+        String name = randomName();
         try(ByteArrayInputStream bais = new ByteArrayInputStream(code.getBytes()))
         {
             PSScript script = CompilerUnit.compile(bais, globals, state.getClassLoader(), name, null, true);
@@ -53,4 +52,9 @@ public final class EvalFunction extends PSFunction.PSThreeArgsFunction
         }
     }
     
+    private static String randomName()
+    {
+        long nano = System.nanoTime();
+        return "lambda_" + Long.toHexString(nano) + Long.toHexString(System.currentTimeMillis());
+    }
 }

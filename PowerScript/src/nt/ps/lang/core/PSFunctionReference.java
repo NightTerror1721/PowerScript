@@ -6,7 +6,6 @@
 package nt.ps.lang.core;
 
 import java.io.IOException;
-import java.util.UUID;
 import nt.ps.PSState;
 import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.PSCompilerException;
@@ -53,7 +52,7 @@ public final class PSFunctionReference extends ImmutableCoreLibrary
         String[] sargs = new String[args.numberOfArguments() - 1];
         for(int i=0;i<sargs.length;i++)
             sargs[i] = args.arg(i).toJavaString();
-        String name = UUID.randomUUID().toString();
+        String name = randomName();
         String code = args.arg(args.numberOfArguments() - 1).toJavaString();
         try
         {
@@ -73,5 +72,11 @@ public final class PSFunctionReference extends ImmutableCoreLibrary
         {
             default: return UNDEFINED;
         }
+    }
+    
+    private static String randomName()
+    {
+        long nano = System.nanoTime();
+        return "lambda_" + Long.toHexString(nano) + Long.toHexString(System.currentTimeMillis());
     }
 }

@@ -108,7 +108,7 @@ public final class VariablePool
         return vars.getFirst().createUpPointer(var);
     }
     
-    public final boolean exists(String name, boolean inCurrentScope)
+    public final boolean exists(String name, boolean inCurrentScope, boolean globalModifier) throws CompilerError
     {
         if(globals.hasNativeValue(name))
             return true;
@@ -123,7 +123,12 @@ public final class VariablePool
             if(scope.exists(name))
                 return true;
         }
-        return parent != null && parent.exists(name, false);
+        if(parent != null && parent.exists(name, inCurrentScope, globalModifier))
+            return true;
+        if(!globalModifier)
+            return false;
+        createGlobal(name);
+        return true;
     }
     
     public final Variable createLocal(String name) throws CompilerError

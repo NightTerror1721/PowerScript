@@ -131,8 +131,13 @@ final class CompilerBlock
         if(command.isOperationsCommand())
         {
             if(evalEnd)
-                compileReturn(command);
-            else compileOperation(command.getCode(0), false, false, true);
+            {
+                int pars = compileMultipleRaises(Block.parenthesis(command.getCode(0)));
+                if(bytecode.isGenerator() && pars > 0)
+                    throw new CompilerError("\"return\" command cannot return any in generator functions");
+                bytecode.computeReturn(pars);
+            }
+            else compileOperation(command.getCode(0), true, false, true);
             return;
         }
         
@@ -242,7 +247,7 @@ final class CompilerBlock
             ParsedCode code = pars.getCode(i);
             if(!multiresponse && code.is(Code.CodeType.OPERATOR) && ((Operator)code).getSymbol().isCallable())
                 multiresponse = true;
-            compileOperation(code, false, true, false);
+            compileOperation(code, true, true, false);
         }
         if(multiresponse)
             bytecode.wrapVarargsTail(len);
@@ -312,7 +317,7 @@ final class CompilerBlock
     
     private void compileSwitch(Command command) throws CompilerError
     {
-        compileOperation(command.<Block>getCode(0).getCode(0), false, false, false);
+        compileOperation(command.<Block>getCode(0).getCode(0), true, false, false);
         InstructionHandle ihStart = bytecode.getLastHandle();
         
         ScopeInfo info = new ScopeInfo(command.getCode(1), ScopeType.SWITCH);
@@ -348,12 +353,12 @@ final class CompilerBlock
                 }
                 if(command.getCode(1) != null)
                 {
-                    compileOperation(command.getCode(1), false, false, false);
+                    compileOperation(command.getCode(1), true, false, false);
                     ih[0] = bytecode.computeIf();
                 }
             }, () -> {
                 if(command.getCode(2) != null)
-                    compileOperation(command.getCode(2), false, false, true);
+                    compileOperation(command.getCode(2), true, false, true);
                 bytecode.jump(info.getStartReference().getNext());
                 if(ih[0] != null)
                     bytecode.modifyJump(ih[0]);
@@ -365,7 +370,7 @@ final class CompilerBlock
         {
             ScopeInfo info = new ScopeInfo(command.getCode(2), ScopeType.FOREACH);
             final String tempVar = createTempForVar();
-            compileOperation(command.getCode(1), false, false, false);
+            compileOperation(command.getCode(1), true, false, false);
             bytecode.createIteratorInstance();
             bytecode.storeTemp(tempVar);
             stack.pop();
@@ -425,7 +430,7 @@ final class CompilerBlock
             bytecode.nop();
         InstructionHandle startTag = bytecode.getLastHandle();
         
-        compileOperation(command.<Block>getCode(0).getFirstCode(), false, false, false);
+        compileOperation(command.<Block>getCode(0).getFirstCode(), true, false, false);
         InstructionHandle condTag = bytecode.computeIf();
         
         ScopeInfo info = new ScopeInfo(command.getCode(1), ScopeType.WHILE);
@@ -481,7 +486,7 @@ final class CompilerBlock
     
     private InstructionHandle compileConditionalIf(Block cond) throws CompilerError
     {
-        compileOperation(cond.getFirstCode(), false, false, false);
+        compileOperation(cond.getFirstCode(), true, false, false);
         return bytecode.computeIf();
     }
     
@@ -492,7 +497,7 @@ final class CompilerBlock
             case IDENTIFIER: {
                 if(!pop)
                 {
-                    Variable var = checkAndGetVar(code.toString(), isGlobal);
+                    Variable var = checkAndGetVar(code.toString(), true);
                     bytecode.load(var);
                 }
             } break;
@@ -501,7 +506,7 @@ final class CompilerBlock
                     bytecode.loadLiteral((Literal) code);
             } break;
             case MUTABLE_LITERAL: {
-                compileMutableLiteral((MutableLiteral) code, isGlobal);
+                compileMutableLiteral((MutableLiteral) code, true);
                 if(pop)
                 {
                     stack.pop();
@@ -512,7 +517,7 @@ final class CompilerBlock
                 Block b = (Block) code;
                 if(!b.isParenthesis())
                     throw CompilerError.unexpectedCode(code);
-                compileOperation(b.getFirstCode(), isGlobal, multiresult, false);
+                compileOperation(b.getFirstCode(), true, multiresult, false);
                 if(pop)
                 {
                     stack.pop();
@@ -520,7 +525,7 @@ final class CompilerBlock
                 }
             } break;
             case FUNCTION: {
-                compileFunction((FunctionLiteral) code, isGlobal);
+                compileFunction((FunctionLiteral) code, true);
                 if(pop)
                 {
                     stack.pop();
@@ -532,7 +537,7 @@ final class CompilerBlock
                     bytecode.loadSelf();
             } break;
             case OPERATOR: {
-                compileOperator((Operator) code, isGlobal, multiresult || pop);
+                compileOperator((Operator) code, true, multiresult || pop);
                 if(pop)
                 {
                     stack.pop();
@@ -896,7 +901,7 @@ final class CompilerBlock
         for(int i=0;i<len;i++)
         {
             String name = declaration.getIdentifier(i).toString();
-            if(vars.exists(name, true))
+            if(vars.exists(name, true, false))
                 throw new CompilerError("Variable \"" + name + "\" already exists");
             if(isGlobal)
             {
@@ -960,7 +965,7 @@ final class CompilerBlock
         Variable var;
         if(createVars)
         {
-            if(vars.exists(name, true))
+            if(vars.exists(name, true, false))
                 throw new CompilerError("Variable \"" + name + "\" already exists");
             var = isGlobal
                     ? vars.createGlobal(name)
@@ -968,7 +973,7 @@ final class CompilerBlock
         }
         else
         {
-            if(!vars.exists(name, false))
+            if(!vars.exists(name, false, isGlobal))
                 throw new CompilerError("Variable \"" + name + "\" does not exists");
             var = vars.get(name, false);
         }
@@ -1022,7 +1027,7 @@ final class CompilerBlock
     
     private Variable checkAndGetVar(String nameVar, boolean globalModifier) throws CompilerError
     {
-        if(!vars.exists(nameVar, false))
+        if(!vars.exists(nameVar, false, globalModifier))
             throw new CompilerError("Identifier \"" + nameVar + "\" not found");
         return vars.get(nameVar, globalModifier);
     }
