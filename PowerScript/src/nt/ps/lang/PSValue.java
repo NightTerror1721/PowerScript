@@ -211,7 +211,7 @@ public abstract class PSValue extends PSVarargs
     public static final PSValue valueOf(Boolean value) { return value ? TRUE : FALSE; }
     public static final PSValue valueOf(Character value) { return new PSString(value.toString()); }
     public static final PSValue valueOf(String value) { return new PSString(value); }
-    public static final PSValue valueOf(List<PSValue> value) { return new PSArray(value); }
+    public static final PSValue valueOf(List<? extends PSValue> value) { return new PSArray(value); }
     public static final PSValue valueOf(Map<PSValue, PSValue> value) { return new PSMap(value); }
     public static final PSValue valueOf(PSValue... values) { return new PSArray(values); }
     

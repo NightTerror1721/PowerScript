@@ -77,7 +77,7 @@ public interface Statement extends InstructionCode
             StringJoiner joiner = new StringJoiner(", ");
             for(String varname : varnames)
                 joiner.add(varname);
-            return (global ? "global " : "local ") + joiner + " = " + self.toCode();
+            return (global ? "" : "local ") + joiner + " = " + self.toCode();
         };
     }
     
@@ -89,7 +89,7 @@ public interface Statement extends InstructionCode
             StringJoiner joiner = new StringJoiner(", ");
             for(String varname : varnames)
                 joiner.add(varname);
-            return (global ? "global " : "local ") + joiner;
+            return (global ? "" : "local ") + joiner;
         };
     }
     

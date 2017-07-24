@@ -21,7 +21,7 @@ public abstract class PSGlobals
 {
     private final PSGlobals parent;
     
-    PSGlobals(PSGlobals parent) { this.parent = parent; }
+    protected PSGlobals(PSGlobals parent) { this.parent = parent; }
     
     public final PSValue getGlobalValue(String name)
     {
