@@ -17,18 +17,18 @@ import nt.ps.exception.PSRuntimeException;
  */
 public final class PSObject extends PSValue
 {
-    private final PSObject parent;
+    private final PSValue parent;
     private final Map<String, Property> properties;
     private boolean frozen;
     
-    PSObject(Map<String, Property> properties, PSObject parent)
+    PSObject(Map<String, Property> properties, PSValue parent)
     {
         if(properties == null)
             throw new NullPointerException();
         this.properties = properties;
         this.parent = parent;
     }
-    PSObject(PSObject parent) { this(new HashMap<>(),parent); }
+    PSObject(PSValue parent) { this(new HashMap<>(), parent); }
     public PSObject(Map<String, Property> properties) { this(properties,null); }
     public PSObject() { this(new HashMap<>(),null); }
     
@@ -50,25 +50,28 @@ public final class PSObject extends PSValue
     
     public final void setPropertyFrozen(String name, boolean frozen)
     {
-        Property p = property(name);
+        Property p = properties.get(name);
         if(p == null)
             throw new PSRuntimeException("Property \"" + name + "\" not found");
         p.frozen = frozen;
     }
     public final boolean isPropertyFrozen(String name)
     {
-        Property p = property(name);
+        Property p = properties.get(name);
         if(p == null)
             throw new PSRuntimeException("Property \"" + name + "\" not found");
         return p.frozen;
     }
     
-    private Property property(String name)
+    private PSValue property(String name)
     {
         Property prop = properties.get(name);
-        return prop == null
-                ? parent != null ? parent.property(name) : null
-                : prop;
+        if(prop != null)
+            return prop.value;
+        if(parent == null)
+            return null;
+        PSValue v = parent.getProperty(name);
+        return v == null || v == UNDEFINED ? null : v;
     }
     
     @Override
@@ -80,66 +83,66 @@ public final class PSObject extends PSValue
     @Override
     public final int toJavaInt()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_NUMBER)) == null
                 ? super.toJavaInt()
-                : prop.value.innerCall(this).self().toJavaInt();
+                : prop.innerCall(this).self().toJavaInt();
     }
     @Override
     public final long toJavaLong()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_NUMBER)) == null
                 ? super.toJavaLong()
-                : prop.value.innerCall(this).self().toJavaLong();
+                : prop.innerCall(this).self().toJavaLong();
     }
     @Override
     public final float toJavaFloat()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_NUMBER)) == null
                 ? super.toJavaFloat()
-                : prop.value.innerCall(this).self().toJavaFloat();
+                : prop.innerCall(this).self().toJavaFloat();
     }
     @Override
     public final double toJavaDouble()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_NUMBER)) == null
                 ? super.toJavaDouble()
-                : prop.value.innerCall(this).self().toJavaDouble();
+                : prop.innerCall(this).self().toJavaDouble();
     }
     @Override
     public final boolean toJavaBoolean()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_BOOLEAN)) == null
                 ? super.toJavaBoolean()
-                : prop.value.innerCall(this).self().toJavaBoolean();
+                : prop.innerCall(this).self().toJavaBoolean();
     }
     @Override
     public final String toJavaString()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_STRING)) == null
                 ? super.toJavaString()
-                : prop.value.innerCall(this).self().toJavaString();
+                : prop.innerCall(this).self().toJavaString();
     }
     @Override
     public final List<PSValue> toJavaList()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_ARRAY)) == null
                 ? super.toJavaList()
-                : prop.value.innerCall(this).self().toJavaList();
+                : prop.innerCall(this).self().toJavaList();
     }
     @Override
     public final Map<PSValue, PSValue> toJavaMap()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.TO_MAP)) == null
                 ? super.toJavaMap()
-                : prop.value.innerCall(this).self().toJavaMap();
+                : prop.innerCall(this).self().toJavaMap();
     }
 
     @Override
@@ -151,10 +154,10 @@ public final class PSObject extends PSValue
     @Override
     public final int hashCode()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.HASH_CODE)) == null
                 ? superHashCode()
-                : prop.value.innerCall(this).self().toJavaInt();
+                : prop.innerCall(this).self().toJavaInt();
     }
     
     
@@ -162,198 +165,198 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue plus(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_PLUS)) == null
                 ? super.plus(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue minus(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_MINUS)) == null
                 ? super.minus(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue multiply(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_MULTIPLY)) == null
                 ? super.multiply(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue divide(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_DIVIDE)) == null
                 ? super.divide(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue module(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_MODULE)) == null
                 ? super.module(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue negative()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_NEGATIVE)) == null
                 ? super.negative()
-                : prop.value.innerCall(this).self();
+                : prop.innerCall(this).self();
     }
     @Override
     public final PSValue increase()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_INCREASE)) == null
                 ? super.increase()
-                : prop.value.innerCall(this).self();
+                : prop.innerCall(this).self();
     }
     @Override
     public final PSValue decrease()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_DECREASE)) == null
                 ? super.decrease()
-                : prop.value.innerCall(this).self();
+                : prop.innerCall(this).self();
     }
     
     @Override
     public final PSValue shiftLeft(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_SHIFT_LEFT)) == null
                 ? super.shiftLeft(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue shiftRight(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_SHIFT_RIGHT)) == null
                 ? super.shiftRight(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue logicAnd(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_LOGIC_AND)) == null
                 ? super.logicAnd(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue logicOr(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_LOGIC_OR)) == null
                 ? super.logicOr(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue logicNot()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_LOGIC_NOT)) == null
                 ? super.logicNot()
-                : prop.value.innerCall(this).self();
+                : prop.innerCall(this).self();
     }
     @Override
     public final PSValue logicXor(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_LOGIC_XOR)) == null
                 ? super.logicXor(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     
     @Override
     public final PSValue equals(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_EQUALS)) == null
                 ? super.equals(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue notEquals(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_NOTEQUALS)) == null
                 ? super.notEquals(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue greaterThan(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_GREATER)) == null
                 ? super.greaterThan(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue smallerThan(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_SMALLER)) == null
                 ? super.smallerThan(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue greaterOrEqualsThan(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_GREATER_EQUALS)) == null
                 ? super.greaterOrEqualsThan(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue smallerOrEqualsThan(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_SMALLER_EQUALS)) == null
                 ? super.smallerOrEqualsThan(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     @Override
     public final PSValue negate()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_NEGATE)) == null
                 ? super.negate()
-                : prop.value.innerCall(this).self();
+                : prop.innerCall(this).self();
     }
     
     @Override
     public final PSValue contains(PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.CONTAINS)) == null
                 ? super.contains(value)
-                : prop.value.innerCall(this,value).self();
+                : prop.innerCall(this,value).self();
     }
     
     @Override
     public final PSValue set(PSValue key, PSValue value)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_SET)) == null
                 ? super.set(key,value)
-                : prop.value.innerCall(this,key,value).self();
+                : prop.innerCall(this,key,value).self();
     }
     @Override
     public final PSValue get(PSValue key)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_GET)) == null
                 ? super.get(key)
-                : prop.value.innerCall(this,key).self();
+                : prop.innerCall(this,key).self();
     }
     
     /* Object Operations */
@@ -379,66 +382,66 @@ public final class PSObject extends PSValue
     @Override
     public final PSValue getProperty(String name)
     {
-        Property prop;
-        return (prop = property(name)) == null ? UNDEFINED : prop.value;
+        PSValue prop;
+        return (prop = property(name)) == null ? UNDEFINED : prop;
     }
     
     @Override
     protected final PSVarargs innerCall(PSValue self)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
                 ? super.innerCall(self)
-                : prop.value.innerCall(self).self();
+                : prop.innerCall(self).self();
     }
     @Override
     protected final PSVarargs innerCall(PSValue self, PSValue arg0)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
                 ? super.innerCall(self, arg0)
-                : prop.value.innerCall(self, arg0).self();
+                : prop.innerCall(self, arg0).self();
     }
     @Override
     protected final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
                 ? super.innerCall(self, arg0, arg1)
-                : prop.value.innerCall(self, arg0, arg1).self();
+                : prop.innerCall(self, arg0, arg1).self();
     }
     @Override
     protected final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
                 ? super.innerCall(self, arg0, arg1, arg2)
-                : prop.value.innerCall(self, arg0, arg1, arg2).self();
+                : prop.innerCall(self, arg0, arg1, arg2).self();
     }
     @Override
     protected final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
                 ? super.innerCall(self, arg0, arg1, arg2, arg3)
-                : prop.value.innerCall(self, arg0, arg1, arg2, arg3).self();
+                : prop.innerCall(self, arg0, arg1, arg2, arg3).self();
     }
     @Override
     protected final PSVarargs innerCall(PSValue self, PSVarargs args)
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
                 ? super.innerCall(self, args)
-                : prop.value.innerCall(self, args).self();
+                : prop.innerCall(self, args).self();
     }
     
     @Override
     public final PSIterator createIterator()
     {
-        Property prop;
+        PSValue prop;
         return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
                 ? super.createIterator()
-                : prop.value.innerCall(this).self().toPSIterator();
+                : prop.innerCall(this).self().toPSIterator();
     }
     
     
@@ -446,54 +449,54 @@ public final class PSObject extends PSValue
     public final PSValue createNewInstance()
     {
         PSObject instance = new PSObject(new HashMap<>(), this);
-        Property init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
-            init.value.innerCall(instance);
+            init.innerCall(instance);
         return instance;
     }
     @Override
     public final PSValue createNewInstance(PSValue arg0)
     {
         PSObject instance = new PSObject(new HashMap<>(), this);
-        Property init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
-            init.value.innerCall(instance,arg0);
+            init.innerCall(instance,arg0);
         return instance;
     }
     @Override
     public final PSValue createNewInstance(PSValue arg0, PSValue arg1)
     {
         PSObject instance = new PSObject(new HashMap<>(), this);
-        Property init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
-            init.value.innerCall(instance,arg0,arg1);
+            init.innerCall(instance,arg0,arg1);
         return instance;
     }
     @Override
     public final PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2)
     {
         PSObject instance = new PSObject(new HashMap<>(), this);
-        Property init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
-            init.value.innerCall(instance,arg0,arg1,arg2);
+            init.innerCall(instance,arg0,arg1,arg2);
         return instance;
     }
     @Override
     public final PSValue createNewInstance(PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
     {
         PSObject instance = new PSObject(new HashMap<>(), this);
-        Property init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
-            init.value.innerCall(instance,arg0,arg1,arg2,arg3);
+            init.innerCall(instance,arg0,arg1,arg2,arg3);
         return instance;
     }
     @Override
     public final PSValue createNewInstance(PSVarargs args)
     {
         PSObject instance = new PSObject(new HashMap<>(), this);
-        Property init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
+        PSValue init = instance.property(ObjectSpecialOpsNames.OPERATOR_NEW);
         if(init != null)
-            init.value.innerCall(instance,args);
+            init.innerCall(instance,args);
         return instance;
     }
     
