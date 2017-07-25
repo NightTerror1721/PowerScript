@@ -45,7 +45,7 @@ public abstract class PSValue extends PSVarargs
     public float toJavaFloat() { throw new PSUnsupportedOperationException(this,"toJavaFloat"); }
     public double toJavaDouble() { throw new PSUnsupportedOperationException(this,"toJavaDouble"); }
     public boolean toJavaBoolean() { return true; }
-    public String toJavaString() { return getPSType().getTypeName() + "::" + super.toString(); }
+    public String toJavaString() { return getPSType().getTypeName() + "::" + Integer.toHexString(super.hashCode()); }
     public List<PSValue> toJavaList() { throw new PSUnsupportedOperationException(this,"toJavaList"); }
     public Map<PSValue, PSValue> toJavaMap() { throw new PSUnsupportedOperationException(this,"toJavaMap"); }
     

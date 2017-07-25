@@ -1,0 +1,26 @@
+
+Query = Object.freeze({
+	
+	constructor: function() {
+		self._id = Number.long(Math.random() * Number.MAX_INTEGER);
+		Object.freezeProperty(self, "_id");
+	},
+	
+	toString: function() { return "query"; },
+	equals: function(query) {
+		return query instanceof Query && self._id == query._id;
+	},
+	notEquals: function(query) { return !(self == query); }
+});
+
+IO.print(Object.toString(Query));
+IO.print(new Query());
+
+
+
+
+Color = Object.extends(Query, {
+	constructor: function(r, g, b) {
+		Query.constructor.call(self);
+	}
+});

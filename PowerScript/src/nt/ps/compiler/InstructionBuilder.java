@@ -70,7 +70,7 @@ final class InstructionBuilder
     {
         if(!isEmpty())
         {
-            boolean unary = codes.isEmpty() || !codes.getLast().isValidCodeObject();
+            boolean unary = codes.isEmpty() || !codes.getLast().isValidCodeObject() || codes.getLast().isElevatorCommand();
             Code code = Literal.decode(sb.toString());
             if(code == null)
             {

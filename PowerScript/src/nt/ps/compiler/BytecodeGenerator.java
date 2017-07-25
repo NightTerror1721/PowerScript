@@ -644,9 +644,11 @@ public final class BytecodeGenerator
     public final InstructionHandle callStoreAccess(boolean pop) throws CompilerError
     {
         compiler.getStack().pop(3);
-        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "set",
+        InstructionHandle ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "set",
                 TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKEVIRTUAL));
-        return mainInst.append(InstructionConstants.POP);
+        if(pop)
+            ih = mainInst.append(InstructionConstants.POP);
+        return ih;
     }
     
     public final InstructionHandle callStorePropertyAccess(String property, boolean pop) throws CompilerError
@@ -655,9 +657,11 @@ public final class BytecodeGenerator
         compiler.getStack().push();
         mainInst.append(new PUSH(constantPool, property));
         mainInst.append(InstructionConstants.SWAP);
-        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "setProperty",
+        InstructionHandle ih = mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "setProperty",
                 TYPE_VALUE, ARGS_STRING_VALUE, Constants.INVOKEVIRTUAL));
-        return mainInst.append(InstructionConstants.POP);
+        if(pop)
+            ih = mainInst.append(InstructionConstants.POP);
+        return ih;
     }
     
     
@@ -844,12 +848,14 @@ public final class BytecodeGenerator
     public final InstructionHandle storeUndefined(Variable var) throws CompilerError
     {
         loadUndefined();
+        compiler.getStack().push();
         return store(var);
     }
     
     public final InstructionHandle storeNull(Variable var) throws CompilerError
     {
         loadNull();
+        compiler.getStack().push();
         return store(var);
     }
     
@@ -862,33 +868,39 @@ public final class BytecodeGenerator
     public final InstructionHandle storeLiteral(Variable var, boolean literal) throws CompilerError
     {
         loadBoolean(literal);
+        compiler.getStack().push();
         return store(var);
     }
     
     public final InstructionHandle storeLiteral(Variable var, int literal) throws CompilerError
     {
         loadConstant(PSValue.valueOf(literal));
+        compiler.getStack().push();
         return store(var);
     }
     public final InstructionHandle storeLiteral(Variable var, long literal) throws CompilerError
     {
         loadConstant(PSValue.valueOf(literal));
+        compiler.getStack().push();
         return store(var);
     }
     public final InstructionHandle storeLiteral(Variable var, float literal) throws CompilerError
     {
         loadConstant(PSValue.valueOf(literal));
+        compiler.getStack().push();
         return store(var);
     }
     public final InstructionHandle storeLiteral(Variable var, double literal) throws CompilerError
     {
         loadConstant(PSValue.valueOf(literal));
+        compiler.getStack().push();
         return store(var);
     }
     
     public final InstructionHandle storeLiteral(Variable var, String literal) throws CompilerError
     {
         loadConstant(PSValue.valueOf(literal));
+        compiler.getStack().push();
         return store(var);
     }
     
@@ -2151,10 +2163,10 @@ public final class BytecodeGenerator
         
         private static FunctionId select(int argsLen, int defaultValues, boolean packExtraArgs, boolean generator)
         {
-            if(argsLen < 1)
-                return FUNC0;
             if(generator)
                 return defaultValues > 0 ? GEND : GEN;
+            if(argsLen < 1)
+                return FUNC0;
             return VALUES[(argsLen > 5 || packExtraArgs ? 5 : argsLen) + (defaultValues > 0 ? 5 : 0)];
         }
     }

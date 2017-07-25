@@ -62,6 +62,7 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             case "freezeProperty": return FREEZE_PROPERTY;
             case "isFrozen": return IS_FROZEN;
             case "isPropertyFrozen": return IS_PROPERTY_FROZEN;
+            case "extends": return EXTENDS;
         }
     }
     
@@ -99,7 +100,8 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             }),
             FREEZE_PROPERTY = PSFunction.voidFunction((arg0, arg1) -> arg0.toPSObject().setPropertyFrozen(arg1.toJavaString(), true)),
             IS_FROZEN = PSFunction.function((arg0) -> arg0.toPSObject().isFrozen() ? TRUE : FALSE),
-            IS_PROPERTY_FROZEN = PSFunction.function((arg0, arg1) -> arg0.toPSObject().isPropertyFrozen(arg1.toJavaString()) ? TRUE : FALSE);
+            IS_PROPERTY_FROZEN = PSFunction.function((arg0, arg1) -> arg0.toPSObject().isPropertyFrozen(arg1.toJavaString()) ? TRUE : FALSE),
+            EXTENDS = PSFunction.function((arg0, arg1) -> PSObject.createExtended(arg0.toPSObject(), arg1.toPSObject()));
     
     private static String toString(PSValue value, boolean deep)
     {

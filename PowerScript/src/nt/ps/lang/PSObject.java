@@ -21,20 +21,27 @@ public final class PSObject extends PSValue
     private final Map<String, Property> properties;
     private boolean frozen;
     
-    PSObject(Map<String, Property> properties, PSValue parent)
+    PSObject(Map<String, Property> properties, PSValue parent, boolean frozen)
     {
         if(properties == null)
             throw new NullPointerException();
         this.properties = properties;
         this.parent = parent;
     }
-    PSObject(PSValue parent) { this(new HashMap<>(), parent); }
-    public PSObject(Map<String, Property> properties) { this(properties,null); }
-    public PSObject() { this(new HashMap<>(),null); }
+    PSObject(PSValue parent, boolean frozen) { this(new HashMap<>(), parent, frozen); }
+    public PSObject(Map<String, Property> properties) { this(properties, null, false); }
+    public PSObject() { this(new HashMap<>(), null, false); }
     
     public final PSObject copy()
     {
-        return new PSObject(new HashMap<>(properties), parent);
+        return new PSObject(new HashMap<>(properties), parent, frozen);
+    }
+    
+    public static final PSObject createExtended(PSObject parent, PSObject object)
+    {
+        HashMap<String, Property> map = new HashMap<>(parent.properties);
+        map.putAll(object.properties);
+        return new PSObject(map, parent, object.frozen);
     }
     
     public final PSValue getParent() { return parent; }
@@ -439,7 +446,7 @@ public final class PSObject extends PSValue
     public final PSIterator createIterator()
     {
         PSValue prop;
-        return (prop = property(ObjectSpecialOpsNames.OPERATOR_CALL)) == null
+        return (prop = property(ObjectSpecialOpsNames.ITERATOR)) == null
                 ? super.createIterator()
                 : prop.innerCall(this).self().toPSIterator();
     }

@@ -47,7 +47,6 @@ public final class CommandWord extends Code
             CONTINUE = new CommandWord(CommandName.CONTINUE),
             BREAK = new CommandWord(CommandName.BREAK),
             GLOBAL = new CommandWord(CommandName.GLOBAL),
-            OPERATOR = new CommandWord(CommandName.OPERATOR),
             TRY = new CommandWord(CommandName.TRY),
             CATCH = new CommandWord(CommandName.CATCH),
             THROW = new CommandWord(CommandName.THROW),
@@ -61,7 +60,7 @@ public final class CommandWord extends Code
     public enum CommandName
     {
         VAR, IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, RETURN, YIELD, CONTINUE,
-        BREAK, GLOBAL, OPERATOR, TRY, CATCH, THROW, CONST;
+        BREAK, GLOBAL, TRY, CATCH, THROW, CONST;
         
         private final String name = name().toLowerCase();
     }

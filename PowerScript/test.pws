@@ -1,4 +1,80 @@
-global IO;
+
+var utils = import("utils.pwd");
+
+Vector2 = Object.freeze({
+	constructor: function(x, y) {
+		self.x = x ? x : 0;
+		self.y = y ? y : 0;
+	},
+	
+	toString: function() { return "["..self.x..", "..self.y.."]"; },
+	
+	__plus__: function(value) {
+		if(typeof(value) === "object" && value instanceof Vector2) {
+			return new Vector2(self.x + value.x, self.y + value.y);
+		}
+		return new Vector2(self.x + value, self.y + value);
+	},
+	
+	toArray: function() { return [self.x, self.y]; },
+	toMap: function() { return ["x": self.x, "y": self.y]; },
+	
+	iterator: function*() {
+		yield self.x;
+		yield self.y;
+	},
+	
+	toNumber: function() { return self.x / self.y; },
+	
+	__get__: function(key) {
+		switch(key) {
+			case 0:
+			case "x":
+				return self.x;
+			case 1:
+			case "y":
+				return self.y;
+			default: return null;
+		}
+	},
+	
+	__set__: function(key, value) {
+		switch(key) {
+			case 0:
+			case "x":
+				return self.x = Number.double(value);
+			case 1:
+			case "y":
+				return self.y = Number.double(value);
+			default: return null;
+		}
+	},
+	
+	keys: ("x", "y", 0, 1)
+});
+
+var vec = new Vector2(5, null);
+IO.print(vec);
+IO.print(typeof(Array(vec)));
+IO.print(Array(vec));
+
+IO.print(Map(vec));
+
+IO.print(vec + new Vector2());
+
+IO.print(Object.toString(Vector2));
+
+for(value : vec)
+	IO.print(value);
+
+IO.print(Number.int(vec));
+
+IO.print(vec);
+IO.print(vec[0]);
+IO.print(vec["y"]);
+
+
+/*global IO;
 
 var testgen = function*(vars...)
 {
@@ -7,7 +83,7 @@ var testgen = function*(vars...)
 		//IO.print(i);
 		yield i;
 	}
-}
+};
 
 //System.exit(0);
 
@@ -151,7 +227,7 @@ IO.print((65,)..["hola", "k", "ase"]);
 for(var it, pow = 0, 0; it < 12; it, pow = it + 1, it * it)
 {
 	IO.print("Iteration number: "..pow);
-}
+}*/
 
 
 

@@ -19,40 +19,40 @@ public final class ObjectSpecialOpsNames
     public static final String TO_ARRAY = "toArray";
     public static final String TO_MAP = "toMap";
     
-    public static final String OPERATOR_PLUS = "boperator::+";
-    public static final String OPERATOR_MINUS = "boperator::-";
-    public static final String OPERATOR_MULTIPLY = "boperator::*";
-    public static final String OPERATOR_DIVIDE = "boperator::/";
-    public static final String OPERATOR_MODULE = "boperator::%";
-    public static final String OPERATOR_NEGATIVE = "uoperator::-";
-    public static final String OPERATOR_INCREASE = "uoperator::++";
-    public static final String OPERATOR_DECREASE = "uoperator::--";
+    public static final String OPERATOR_PLUS = "__plus__";
+    public static final String OPERATOR_MINUS = "__minus__";
+    public static final String OPERATOR_MULTIPLY = "__multiply__";
+    public static final String OPERATOR_DIVIDE = "__divide__";
+    public static final String OPERATOR_MODULE = "__module__";
+    public static final String OPERATOR_NEGATIVE = "__negative__";
+    public static final String OPERATOR_INCREASE = "__increase__";
+    public static final String OPERATOR_DECREASE = "__decrease__";
     
-    public static final String OPERATOR_SHIFT_LEFT = "boperator::<<";
-    public static final String OPERATOR_SHIFT_RIGHT = "boperator::>>";
-    public static final String OPERATOR_LOGIC_AND = "boperator::&";
-    public static final String OPERATOR_LOGIC_OR = "boperator::|";
-    public static final String OPERATOR_LOGIC_NOT = "uoperator::~";
-    public static final String OPERATOR_LOGIC_XOR = "boperator::^";
+    public static final String OPERATOR_SHIFT_LEFT = "__sfleft__";
+    public static final String OPERATOR_SHIFT_RIGHT = "__sfright__";
+    public static final String OPERATOR_LOGIC_AND = "__and__";
+    public static final String OPERATOR_LOGIC_OR = "__or__";
+    public static final String OPERATOR_LOGIC_NOT = "__not__";
+    public static final String OPERATOR_LOGIC_XOR = "__xor__";
     
-    public static final String OPERATOR_EQUALS = "boperator::==";
-    public static final String OPERATOR_NOTEQUALS = "boperator::!=";
-    public static final String OPERATOR_GREATER = "boperator::>";
-    public static final String OPERATOR_SMALLER = "boperator::<";
-    public static final String OPERATOR_GREATER_EQUALS = "boperator::>=";
-    public static final String OPERATOR_SMALLER_EQUALS = "boperator::<=";
-    public static final String OPERATOR_NEGATE = "uoperator::!";
+    public static final String OPERATOR_EQUALS = "equals";
+    public static final String OPERATOR_NOTEQUALS = "notEquals";
+    public static final String OPERATOR_GREATER = "__greater__";
+    public static final String OPERATOR_SMALLER = "__smaller__";
+    public static final String OPERATOR_GREATER_EQUALS = "__gratereq__";
+    public static final String OPERATOR_SMALLER_EQUALS = "__smallereq__";
+    public static final String OPERATOR_NEGATE = "__negate__";
     
     public static final String CONTAINS = "contains";
     
-    public static final String OPERATOR_SET = "toperator::[]=";
-    public static final String OPERATOR_GET = "boperator::[]";
+    public static final String OPERATOR_SET = "__set__";
+    public static final String OPERATOR_GET = "__get__";
     
-    public static final String OPERATOR_CALL = "operator::()";
+    public static final String OPERATOR_CALL = "__call__";
     
     public static final String ITERATOR = "iterator";
     
-    public static final String OPERATOR_NEW = "operator::new";
+    public static final String OPERATOR_NEW = "constructor";
     
     public static final String HASH_CODE = "hashCode";
 }

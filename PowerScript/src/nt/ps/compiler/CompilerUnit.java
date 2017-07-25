@@ -207,7 +207,7 @@ public final class CompilerUnit
                     case '(': {
                         CodeReader scopeSource = extractScope(source, '(', ')');
                         sb.decode();
-                        if(sb.getCodeCount() > 0 && sb.getLastCode().is(Code.CodeType.COMMAND_WORD))
+                        if(sb.getCodeCount() > 0 && sb.getLastCode().is(Code.CodeType.COMMAND_WORD) && !sb.getLastCode().isElevatorCommand())
                         {
                             int line = scopeSource.getCurrentLine();
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.IGNORE);
@@ -225,7 +225,7 @@ public final class CompilerUnit
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
 
-                            if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject()) //Parenthesis or Tuple
+                            if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject() || sb.getLastCode().isElevatorCommand()) //Parenthesis or Tuple
                             {
                                 if(tuple.has(Separator.COMMA))
                                     sb.addCode(MutableLiteral.tuple(tuple));
@@ -251,7 +251,7 @@ public final class CompilerUnit
                         Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                         sb.decode();
                         
-                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject()) //Array or Map
+                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject() || sb.getLastCode().isElevatorCommand()) //Array or Map
                         {
                             if(tuple.has(Separator.TWO_POINTS))
                                 sb.addCode(MutableLiteral.map(tuple));
@@ -267,7 +267,7 @@ public final class CompilerUnit
                     case '{': {
                         CodeReader scopeSource = extractScope(source, '{', '}');
                         
-                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject()) //Object
+                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject() || sb.getLastCode().isElevatorCommand()) //Object
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                             sb.decode();
@@ -278,7 +278,8 @@ public final class CompilerUnit
                             Scope scope = parseScope(errors, scopeSource);
                             sb.decode();
                             sb.addCode(scope);
-                            if(sb.getCodeCount() > 2 && sb.getCode(sb.getCodeCount() - 3) == OperatorSymbol.FUNCTION)
+                            if(sb.getCodeCount() > 2 && (sb.getCode(sb.getCodeCount() - 3) == OperatorSymbol.FUNCTION ||
+                                    sb.getCode(sb.getCodeCount() - 3) == GeneratorIdentifier.GENERATOR))
                                 break;
                             switch(colonMode)
                             {
@@ -441,7 +442,7 @@ public final class CompilerUnit
                         }
                         else
                         {
-                            if(!sb.isEmpty() && Character.isDigit(sb.getLastChar()))
+                            if(!sb.isEmpty() && isInteger(sb.get()))
                                 sb.append('.');
                             else sb.addOperator(OperatorSymbol.PROPERTY_ACCESS);
                             source.move(-1);
@@ -725,6 +726,14 @@ public final class CompilerUnit
             }
         }
         catch(EOFException ex) { throw CompilerError.invalidChar(cstart); }
+    }
+    
+    private static boolean isInteger(String str)
+    {
+        for(char c : str.toCharArray())
+            if(!Character.isDigit(c))
+                return false;
+        return true;
     }
     
     private enum ColonMode { ENDS, IGNORE, ERROR }

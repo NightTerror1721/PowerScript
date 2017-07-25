@@ -24,6 +24,7 @@ import nt.ps.compiler.exception.PSCompilerException;
 import nt.ps.lang.PSValue;
 import nt.ps.lang.PSVarargs;
 import nt.ps.lang.core.EvalFunction;
+import nt.ps.lang.core.ImportFunction;
 import nt.ps.lang.core.PSArrayReference;
 import nt.ps.lang.core.PSBooleanReference;
 import nt.ps.lang.core.PSFunctionReference;
@@ -88,6 +89,11 @@ public final class PSState extends PSGlobals
         natives.put("Math", new PSMath());
         natives.put("System", new PSSystem());
         natives.put("eval", new EvalFunction(this));
+    }
+    
+    public final void insertDefaultImportFunction()
+    {
+        natives.put("import", new ImportFunction(this));
     }
     
     public final Writer getStdout() { return stdout; }

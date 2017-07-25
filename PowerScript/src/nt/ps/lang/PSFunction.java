@@ -5,6 +5,8 @@
  */
 package nt.ps.lang;
 
+import java.util.List;
+
 /**
  *
  * @author Asus
@@ -22,6 +24,20 @@ public abstract class PSFunction extends PSValue
     
     @Override
     public int hashCode() { return superHashCode(); }
+    
+    @Override
+    public final PSValue setProperty(String name, PSValue value) { return super.setProperty(name, value); }
+    
+    @Override
+    public final PSValue getProperty(String name)
+    {
+        switch(name)
+        {
+            default: return UNDEFINED;
+            case "call": return CALL;
+            case "apply": return APPLY;
+        }
+    }
     
     
     
@@ -624,4 +640,13 @@ public abstract class PSFunction extends PSValue
     public interface VoidVarargsM<T extends PSValue> { void invoke(T self, PSVarargs args); }
     @FunctionalInterface
     public interface VarargsM<T extends PSValue> { PSVarargs invoke(T self, PSVarargs args); }
+    
+    
+    private static final PSValue CALL = varMethod((self, args) -> self.innerCall(args.self(), subVarargs(args, 1)));
+    private static final PSValue APPLY = method((self, arg0, arg1) -> {
+        List<PSValue> list = arg1.toJavaList();
+        PSVarargs args = varargsOf(list.toArray(new PSValue[list.size()]));
+        arg0 = arg0 == UNDEFINED ? NULL : arg0;
+        return self.innerCall(arg0, args);
+    });
 }

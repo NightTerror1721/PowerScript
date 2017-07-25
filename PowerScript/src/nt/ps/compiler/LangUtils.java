@@ -54,6 +54,8 @@ public final class LangUtils
     
     public static final PSValue operatorInstanceof(PSValue object, PSValue parent)
     {
+        if(!object.isObject())
+            return PSValue.FALSE;
         PSObject obj = object.toPSObject();
         return obj.getParent()== parent ? PSValue.TRUE : PSValue.FALSE;
     }

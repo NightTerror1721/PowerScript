@@ -26,7 +26,9 @@ public abstract class PSGlobals
     public final PSValue getGlobalValue(String name)
     {
         PSValue value;
-        return (value = innerGetGlobalValue(name)) == null ? PSValue.UNDEFINED : value;
+        return (value = innerGetGlobalValue(name)) == null
+                ? parent == null ? PSValue.UNDEFINED : parent.getGlobalValue(name)
+                : value;
     }
     protected abstract PSValue innerGetGlobalValue(String name);
     
@@ -111,7 +113,11 @@ public abstract class PSGlobals
         }
         
         @Override
-        public final PSValue innerGetGlobalValue(String name) { return globals.getProperty(name); }
+        public final PSValue innerGetGlobalValue(String name)
+        {
+            PSValue value;
+            return (value = globals.getProperty(name)) == PSValue.UNDEFINED ? null : value;
+        }
 
         @Override
         public final void innerSetGlobalValue(String name, PSValue value) { globals.setProperty(name,value); }

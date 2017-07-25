@@ -39,6 +39,10 @@ public abstract class Code
     
     public boolean isParsedCode() { return false; }
     public boolean isValidCodeObject() { return false; }
+    public final boolean isElevatorCommand()
+    {
+        return this == CommandWord.RETURN || this == CommandWord.THROW || this == CommandWord.YIELD;
+    }
     
     public enum CodeType
     {
