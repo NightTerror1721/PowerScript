@@ -1,5 +1,8 @@
 
 var utils = import("utils.pwd");
+static valuess = 65;
+
+IO.print(valuess);
 
 Vector2 = Object.freeze({
 	constructor: function(x, y) {
@@ -39,6 +42,7 @@ Vector2 = Object.freeze({
 	},
 	
 	__set__: function(key, value) {
+		valuess++;
 		switch(key) {
 			case 0:
 			case "x":

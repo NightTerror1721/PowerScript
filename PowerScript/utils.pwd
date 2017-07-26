@@ -17,10 +17,23 @@ IO.print(Object.toString(Query));
 IO.print(new Query());
 
 
+function counter()
+{
+	static value = 0;
+	return value++;
+}
 
 
-Color = Object.extends(Query, {
+
+Color = Object.extends(Query, Object.freeze({
 	constructor: function(r, g, b) {
-		Query.constructor.call(self);
+		Object.superConstructor(self);
+		
+		
 	}
-});
+}));
+
+IO.print(new Color()._id);
+
+for(var i=0;i<100;i++)
+	IO.print("count: "..counter());

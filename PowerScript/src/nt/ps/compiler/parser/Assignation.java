@@ -38,6 +38,15 @@ public final class Assignation extends ParsedCode
         return true;
     }
     
+    public final boolean hasIdentifiersAndLiteralsOnly()
+    {
+        for(int i=0;i<parts.length;i++)
+            if(!parts[i].isIdentifiersAndLiteralOnly())
+                return false;
+        return true;
+    }
+
+    
     @Override
     public String toString() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
@@ -150,6 +159,13 @@ public final class Assignation extends ParsedCode
                 if(!loc.isIdentifier())
                     return false;
             return true;
+        }
+        public final boolean isIdentifiersAndLiteralOnly()
+        {
+            for(Location loc : locations)
+                if(!loc.isIdentifier())
+                    return false;
+            return assignation.is(CodeType.LITERAL);
         }
         
     }

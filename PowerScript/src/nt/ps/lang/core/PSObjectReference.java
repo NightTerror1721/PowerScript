@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Collectors;
+import nt.ps.lang.ObjectSpecialOpsNames;
 import nt.ps.lang.PSDataType;
 import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSIterator;
@@ -63,6 +64,9 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             case "isFrozen": return IS_FROZEN;
             case "isPropertyFrozen": return IS_PROPERTY_FROZEN;
             case "extends": return EXTENDS;
+            case "prototype": return PROTOTYPE;
+            case "super": return SUPER;
+            case "superConstructor": return SUPER_CONSTRUCTOR;
         }
     }
     
@@ -101,7 +105,24 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             FREEZE_PROPERTY = PSFunction.voidFunction((arg0, arg1) -> arg0.toPSObject().setPropertyFrozen(arg1.toJavaString(), true)),
             IS_FROZEN = PSFunction.function((arg0) -> arg0.toPSObject().isFrozen() ? TRUE : FALSE),
             IS_PROPERTY_FROZEN = PSFunction.function((arg0, arg1) -> arg0.toPSObject().isPropertyFrozen(arg1.toJavaString()) ? TRUE : FALSE),
-            EXTENDS = PSFunction.function((arg0, arg1) -> PSObject.createExtended(arg0.toPSObject(), arg1.toPSObject()));
+            EXTENDS = PSFunction.function((arg0, arg1) -> PSObject.createExtended(arg0.toPSObject(), arg1.toPSObject())),
+            PROTOTYPE = PSFunction.function((arg0) -> {
+                PSValue parent = arg0.toPSObject().getParent();
+                return parent == null ? NULL : parent;
+            }),
+            SUPER = PSFunction.function((arg0) -> {
+                PSValue parent = getSuper(arg0.toPSObject());
+                return parent == null ? NULL : parent;
+            }),
+            SUPER_CONSTRUCTOR = PSFunction.voidVarFunction((args) -> {
+                PSObject self = args.self().toPSObject();
+                PSValue parent = getSuper(self);
+                if(parent == null)
+                    return;
+                PSValue constructor = parent.getProperty(ObjectSpecialOpsNames.OPERATOR_NEW);
+                if(constructor != null && constructor != UNDEFINED)
+                    constructor.invoke("call", args);
+            });
     
     private static String toString(PSValue value, boolean deep)
     {
@@ -131,6 +152,13 @@ public final class PSObjectReference extends ImmutableCoreLibrary
         return sb.toString();
     }
     
+    private static PSValue getSuper(PSObject object)
+    {
+        PSValue proto = object.getParent();
+        if(proto == null || !proto.isObject())
+            return null;
+        return proto.toPSObject().getParent();
+    }
     
     
 }

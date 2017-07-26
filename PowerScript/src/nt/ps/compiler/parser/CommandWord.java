@@ -50,7 +50,8 @@ public final class CommandWord extends Code
             TRY = new CommandWord(CommandName.TRY),
             CATCH = new CommandWord(CommandName.CATCH),
             THROW = new CommandWord(CommandName.THROW),
-            CONST = new CommandWord(CommandName.CONST);
+            CONST = new CommandWord(CommandName.CONST),
+            STATIC = new CommandWord(CommandName.STATIC);
     
     private static final HashMap<String, CommandWord> HASH = collect(CommandWord.class, k -> k.name.name);
     
@@ -60,7 +61,7 @@ public final class CommandWord extends Code
     public enum CommandName
     {
         VAR, IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, RETURN, YIELD, CONTINUE,
-        BREAK, GLOBAL, TRY, CATCH, THROW, CONST;
+        BREAK, GLOBAL, TRY, CATCH, THROW, CONST, STATIC;
         
         private final String name = name().toLowerCase();
     }

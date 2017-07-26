@@ -27,6 +27,7 @@ public final class VariablePool
     private final LinkedList<Variable> upPointers;
     private final HashMap<String, Variable> natives;
     private int upLocalRefs;
+    private int staticCount;
     
     private VariablePool(VariablePool parent, BytecodeGenerator bytecode, Stack stack, PSGlobals globals)
     {
@@ -42,6 +43,7 @@ public final class VariablePool
         upPointers = new LinkedList<>();
         natives = new HashMap<>();
         upLocalRefs = 0;
+        staticCount = 0;
     }
     public VariablePool(BytecodeGenerator bytecode, Stack stack, PSGlobals globals) { this(null, bytecode, stack, globals); }
     
@@ -155,6 +157,14 @@ public final class VariablePool
         return scope.createLocal(name);
     }
     
+    public final Variable createStatic(String name) throws CompilerError
+    {
+        VariableScope scope = vars.getLast();
+        if(scope.exists(name))
+            throw CompilerError.varAlreadyExists(name);
+        return scope.createStatic(name);
+    }
+    
     public final List<Variable> getUpPointers() { return Collections.unmodifiableList(upPointers); }
     
     
@@ -180,7 +190,7 @@ public final class VariablePool
             
             if(vars.containsKey(name))
                 throw new CompilerError("Variable " + name + " has already exists");
-            Variable var = new Variable(type, name, ref, type != VariableType.LOCAL);
+            Variable var = new Variable(type, name, ref, type != VariableType.LOCAL && type != VariableType.STATIC);
             vars.put(var.getName(), var);
             
             return var;
@@ -204,6 +214,15 @@ public final class VariablePool
             upPointers.add(var);
             return var;
         }
+        
+        public final Variable createStatic(String name) throws CompilerError
+        {
+            Variable var = create(VariableType.STATIC, name, staticCount++);
+            var.staticClassName = bytecode.getClassName();
+            return var;
+        }
+        
+        
         
         public final int getLocalCount() { return count; }
         public final boolean exists(String name) { return vars.containsKey(name); }
@@ -230,6 +249,7 @@ public final class VariablePool
         private final int ref;
         private boolean initiated;
         private Variable upPointerRef;
+        private String staticClassName;
 
         private Variable(VariableType type, String name, int ref, boolean initiated)
         {
@@ -247,6 +267,7 @@ public final class VariablePool
         public final String getName() { return name; }
         public final int getReference() { return ref; }
         public final Variable getUpPointerReference() { return upPointerRef; }
+        public final String getStaticClassName() { return staticClassName; }
         public final boolean isInitiated() { return initiated; }
         
         public final void initiate()
@@ -262,6 +283,7 @@ public final class VariablePool
         public final boolean isGlobal() { return type == VariableType.GLOBAL; }
         public final boolean isLocalPointer() { return type == VariableType.LOCAL_POINTER; }
         public final boolean isUpPointer() { return type == VariableType.UP_POINTER; }
+        public final boolean isStatic() { return type == VariableType.STATIC; }
         public final boolean isNative() { return type == VariableType.NATIVE; }
         
         public final Variable switchToLocalPointer()
@@ -274,5 +296,5 @@ public final class VariablePool
         
     }
     
-    public static enum VariableType { LOCAL, GLOBAL, LOCAL_POINTER, UP_POINTER, NATIVE };
+    public static enum VariableType { LOCAL, GLOBAL, LOCAL_POINTER, UP_POINTER, STATIC, NATIVE };
 }

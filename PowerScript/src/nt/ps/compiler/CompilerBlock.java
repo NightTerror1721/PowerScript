@@ -211,6 +211,51 @@ final class CompilerBlock
             case YIELD: {
                 compileYield(command);
             } break;
+            case STATIC: {
+                compileStatic(command);
+            } break;
+        }
+    }
+    
+    private void compileStatic(Command command) throws CompilerError
+    {
+        ParsedCode code = command.getCode(0);
+        if(code.is(CodeType.DECLARATION))
+        {
+            Declaration d = (Declaration) code;
+            int len = d.getIdentifierCount();
+            for(int i=0;i<len;i++)
+            {
+                String name = d.getIdentifier(i).toString();
+                if(vars.exists(name, true, false))
+                    throw new CompilerError("Variable \"" + name + "\" already exists");
+                Variable var = vars.createStatic(name);
+                bytecode.createStatic(var, Literal.UNDEFINED);
+            }
+        }
+        else
+        {
+            Assignation a = (Assignation) code;
+            int len = a.getPartCount();
+            for(int i=0;i<len;i++)
+            {
+                AssignationPart part = a.getPart(i);
+                int count = part.getLocationCount();
+                for(int j=0;j<count;j++)
+                {
+                    Location loc = part.getLocation(j);
+                    String name = loc.getCode().toString();
+                    if(vars.exists(name, true, false))
+                        throw new CompilerError("Variable \"" + name + "\" already exists");
+                    Variable var = vars.createStatic(name);
+                    if(j == 0)
+                    {
+                        Literal lit = (Literal) part.getAssignation();
+                        bytecode.createStatic(var, lit);
+                    }
+                    else bytecode.createStatic(var, Literal.UNDEFINED);
+                }
+            }
         }
     }
     

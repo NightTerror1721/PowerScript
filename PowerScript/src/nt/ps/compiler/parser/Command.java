@@ -75,6 +75,7 @@ public final class Command extends ParsedCode
             case THROW: return THROW(line, tuple);
             case RETURN: return RETURN(line, tuple);
             case YIELD: return YIELD(line, tuple);
+            case STATIC: return STATIC(line, tuple);
         }
     }
     
@@ -351,5 +352,23 @@ public final class Command extends ParsedCode
         }
         Block pars = Block.arguments(tuple, Separator.COMMA);
         return new Command(line, CommandWord.YIELD, pars);
+    }
+    
+    private static Command STATIC(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.STATIC);
+        ParsedCode code = tuple.pack(true);
+        switch(code.getCodeType())
+        {
+            case ASSIGNATION:
+                if(!((Assignation) code).hasIdentifiersAndLiteralsOnly())
+                    throw new CompilerError("In \"static\" can put only identifier in left part and literals in right part");
+            case DECLARATION:
+                break;
+            default: throw new CompilerError("Expected a valid assignation or declaration in \"static\" command");
+        }
+        
+        return new Command(line, CommandWord.STATIC, code);
     }
 }

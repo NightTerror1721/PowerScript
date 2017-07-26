@@ -151,6 +151,7 @@ public final class BytecodeGenerator
             STR_VAR_PREFIX = "var",
             STR_TEMP_PREFIX = "temp",
             STR_CONSTANT_PREFIX = "cnt",
+            STR_STATIC_PREFIX = "stc",
             STR_SELF = "self";
     
     private static final int LOCAL_FIRST_ID = 2;
@@ -190,6 +191,8 @@ public final class BytecodeGenerator
     private LocalVariableGen stringSwitchTemp = null;
     
     private final LinkedList<InstructionHandle> yields;
+    
+    private final HashMap<Integer, String> statics = new HashMap<>();
     
     private long inheritedFunctionsId = 0;
     
@@ -801,6 +804,22 @@ public final class BytecodeGenerator
                 Constants.INVOKEVIRTUAL));
     }
     
+    private InstructionHandle loadStatic(int reference, String className)
+    {
+        if(!statics.containsKey(reference))
+            throw new IllegalStateException();
+        String referenceName = STR_STATIC_PREFIX + reference;
+        return mainInst.append(factory.createGetStatic(className, referenceName, TYPE_VALUE));
+    }
+    
+    private InstructionHandle storeStatic(int reference, String className)
+    {
+        if(!statics.containsKey(reference))
+            throw new IllegalStateException();
+        String referenceName = STR_STATIC_PREFIX + reference;
+        return mainInst.append(factory.createPutStatic(className, referenceName, TYPE_VALUE));
+    }
+    
     private InstructionHandle loadNative(String namevar)
     {
         mainInst.append(InstructionConstants.THIS);
@@ -819,6 +838,7 @@ public final class BytecodeGenerator
             case LOCAL_POINTER: return loadLocalPointer(var.getReference());
             case UP_POINTER: return loadUpPointer(var.getReference());
             case GLOBAL: return loadGlobal(var.getName());
+            case STATIC: return loadStatic(var.getReference(), var.getStaticClassName());
             case NATIVE: return loadNative(var.getName());
             default: throw new IllegalStateException();
         }
@@ -840,6 +860,7 @@ public final class BytecodeGenerator
             case LOCAL_POINTER: return storeLocalPointer(var.getReference());
             case UP_POINTER: return storeUpPointer(var.getReference());
             case GLOBAL: return storeGlobal(var.getName());
+            case STATIC: return storeStatic(var.getReference(), var.getStaticClassName());
             case NATIVE: throw new CompilerError("Native variables cannot be store");
             default: throw new IllegalStateException();
         }
@@ -1005,14 +1026,16 @@ public final class BytecodeGenerator
         return mainInst.append(new PUSH(constantPool, string));
     }
     
-    public final InstructionHandle loadUndefined()
+    public final InstructionHandle loadUndefined() { return loadUndefined(mainInst); }
+    public final InstructionHandle loadUndefined(InstructionList ilist)
     {
-        return mainInst.append(factory.createFieldAccess(STR_TYPE_VALUE,"UNDEFINED",TYPE_VALUE,Constants.GETSTATIC));
+        return ilist.append(factory.createFieldAccess(STR_TYPE_VALUE,"UNDEFINED",TYPE_VALUE,Constants.GETSTATIC));
     }
     
-    public final InstructionHandle loadNull()
+    public final InstructionHandle loadNull() { return loadNull(mainInst); }
+    public final InstructionHandle loadNull(InstructionList ilist)
     {
-        return mainInst.append(factory.createFieldAccess(STR_TYPE_VALUE,"NULL",TYPE_VALUE,Constants.GETSTATIC));
+        return ilist.append(factory.createFieldAccess(STR_TYPE_VALUE,"NULL",TYPE_VALUE,Constants.GETSTATIC));
     }
     
     public final InstructionHandle loadEmpty()
@@ -1020,9 +1043,10 @@ public final class BytecodeGenerator
         return mainInst.append(factory.createFieldAccess(STR_TYPE_VARARGS,"EMPTY",TYPE_VARARGS,Constants.GETSTATIC));
     }
     
-    public final InstructionHandle loadBoolean(boolean b)
+    public final InstructionHandle loadBoolean(boolean b) { return loadBoolean(mainInst, b); }
+    public final InstructionHandle loadBoolean(InstructionList ilist, boolean b)
     {
-        return mainInst.append(factory.createFieldAccess(STR_TYPE_VALUE,
+        return ilist.append(factory.createFieldAccess(STR_TYPE_VALUE,
                 (b ? "TRUE" : "FALSE"),TYPE_VALUE, Constants.GETSTATIC));
     }
     
@@ -1164,6 +1188,127 @@ public final class BytecodeGenerator
         compiler.getStack().push();
         return loadConstant(literal.getValue());
     }
+    
+    
+    public final void createStatic(Variable var, Literal lit)
+    {
+        if(statics.containsKey(var.getReference()))
+            throw new IllegalStateException();
+        String name = STR_STATIC_PREFIX + var.getReference();
+        FieldGen field = new FieldGen(
+                Constants.ACC_PRIVATE | Constants.ACC_STATIC | Constants.ACC_FINAL,
+                TYPE_VALUE,
+                name,
+                constantPool
+        );
+        mainClass.addField(field.getField());
+        statics.put(var.getReference(), name);
+        
+        switch(lit.getValue().getPSType())
+        {
+            case UNDEFINED:
+                loadUndefined(constInst);
+                constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+                break;
+            case NULL:
+                loadNull(constInst);
+                constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+                break;
+            case BOOLEAN:
+                loadBoolean(constInst, lit.getValue().toJavaBoolean());
+                constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+                break;
+            case NUMBER: {
+                PSNumber n = (PSNumber) lit.getValue();
+                if(n.isInteger())
+                    initIntStatic(name, n.toJavaInt());
+                else if(n.isLong())
+                    initLongStatic(name, n.toJavaLong());
+                else if(n.isFloat())
+                    initFloatStatic(name, n.toJavaFloat());
+                else if(n.isDouble())
+                    initDoubleStatic(name, n.toJavaDouble());
+                else throw new IllegalStateException();
+            } break;
+            case STRING:
+                initStringStatic(name, lit.getValue().toJavaString());
+                break;
+            default:
+                throw new IllegalArgumentException("Bad static value");
+        }
+    }
+    
+    private void initIntStatic(String name, int value)
+    {
+        constInst.append(factory.createNew(TYPE_INTEGER));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool, value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_INTEGER,
+                "<init>",
+                Type.VOID,
+                ARGS_INT,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+    }
+    
+    private void initLongStatic(String name, long value)
+    {
+        constInst.append(factory.createNew(TYPE_LONG));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_LONG,
+                "<init>",
+                Type.VOID,
+                ARGS_LONG,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+    }
+    
+    private void initFloatStatic(String name, float value)
+    {
+        constInst.append(factory.createNew(TYPE_FLOAT));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_FLOAT,
+                "<init>",
+                Type.VOID,
+                ARGS_FLOAT,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+    }
+    
+    private void initDoubleStatic(String name, double value)
+    {
+        constInst.append(factory.createNew(TYPE_DOUBLE));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_DOUBLE,
+                "<init>",
+                Type.VOID,
+                ARGS_DOUBLE,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+    }
+    
+    private void initStringStatic(String name, String value)
+    {
+        constInst.append(factory.createNew(TYPE_STRING));
+        constInst.append(InstructionConstants.DUP);
+        constInst.append(new PUSH(constantPool,value));
+        constInst.append(factory.createInvoke(
+                STR_TYPE_STRING,
+                "<init>",
+                Type.VOID,
+                ARGS_STRING,
+                Constants.INVOKESPECIAL));
+        constInst.append(factory.createPutStatic(className,name,TYPE_VALUE));
+    }
+    
+    
     
     
     
@@ -2048,6 +2193,7 @@ public final class BytecodeGenerator
         return hasAnyInstruction() && getLastHandle().getInstruction() instanceof NOP;
     }
     public final boolean isGenerator() { return generator; }
+    public final String getClassName() { return className; }
     
     
     
