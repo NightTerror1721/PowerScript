@@ -145,29 +145,31 @@ final class CompilerBlock
         {
             case VAR: {
                 ParsedCode pc = command.getCode(0);
+                boolean constant = command.getCode(1) == Literal.TRUE;
                 if(pc.is(CodeType.ASSIGNATION))
                 {
                     if(evalEnd)
                     {
-                        compileAssignation((Assignation) pc, false, true, true, false);
+                        compileAssignation((Assignation) pc, false, true, constant, true, false);
                         bytecode.computeReturn(1);
                     }
-                    else compileAssignation((Assignation) pc, false, true, false, true);
+                    else compileAssignation((Assignation) pc, false, true, constant, false, true);
                 }
-                else compileDeclaration((Declaration) pc, false);
+                else compileDeclaration((Declaration) pc, false, constant);
             } break;
             case GLOBAL: {
                 ParsedCode pc = command.getCode(0);
+                boolean constant = command.getCode(1) == Literal.TRUE;
                 if(pc.is(CodeType.ASSIGNATION))
                 {
                     if(evalEnd)
                     {
-                        compileAssignation((Assignation) pc, true, true, true, false);
+                        compileAssignation((Assignation) pc, true, true, constant, true, false);
                         bytecode.computeReturn(1);
                     }
-                    else compileAssignation((Assignation) pc, true, true, false, true);
+                    else compileAssignation((Assignation) pc, true, true, constant, false, true);
                 }
-                else compileDeclaration((Declaration) pc, true);
+                else compileDeclaration((Declaration) pc, true, constant);
             } break;
             case IF: {
                 compileIf(command);
@@ -219,9 +221,12 @@ final class CompilerBlock
     
     private void compileStatic(Command command) throws CompilerError
     {
+        boolean constant = command.getCode(1) == Literal.TRUE;
         ParsedCode code = command.getCode(0);
         if(code.is(CodeType.DECLARATION))
         {
+            if(constant)
+                throw new CompilerError("Cannot declare without initiate a static const variable");
             Declaration d = (Declaration) code;
             int len = d.getIdentifierCount();
             for(int i=0;i<len;i++)
@@ -229,7 +234,7 @@ final class CompilerBlock
                 String name = d.getIdentifier(i).toString();
                 if(vars.exists(name, true, false))
                     throw new CompilerError("Variable \"" + name + "\" already exists");
-                Variable var = vars.createStatic(name);
+                Variable var = vars.createStatic(name, constant);
                 bytecode.createStatic(var, Literal.UNDEFINED);
             }
         }
@@ -247,13 +252,18 @@ final class CompilerBlock
                     String name = loc.getCode().toString();
                     if(vars.exists(name, true, false))
                         throw new CompilerError("Variable \"" + name + "\" already exists");
-                    Variable var = vars.createStatic(name);
+                    Variable var = vars.createStatic(name, constant);
                     if(j == 0)
                     {
                         Literal lit = (Literal) part.getAssignation();
                         bytecode.createStatic(var, lit);
                     }
-                    else bytecode.createStatic(var, Literal.UNDEFINED);
+                    else
+                    {
+                        if(constant)
+                            throw new CompilerError("Cannot declare without initiate a static const variable");
+                        bytecode.createStatic(var, Literal.UNDEFINED);
+                    }
                 }
             }
         }
@@ -314,7 +324,7 @@ final class CompilerBlock
         ScopeInfo catchInfo = new ScopeInfo(catchCommand.getCode(1), ScopeType.CATCH);
         
         compileScope(catchInfo, () -> {
-            Variable var = vars.createLocal(catchCommand.getCode(0).toString());
+            Variable var = vars.createLocal(catchCommand.getCode(0).toString(), false);
             bytecode.wrapThrowable(var);
         }, () -> {
             bytecode.createTryCatchHandler(info.getStartReference().getNext(), info.getEndReference(), info.getEndReference().getNext());
@@ -443,13 +453,13 @@ final class CompilerBlock
         switch(vcode.getCodeType())
         {
             case IDENTIFIER:
-                return new Variable[] { vars.createLocal(vcode.toString()) };
+                return new Variable[] { vars.createLocal(vcode.toString(), false) };
             case DECLARATION: {
                 Declaration dec = (Declaration) vcode;
                 int len = dec.getIdentifierCount();
                 Variable[] foreachVars = new Variable[len];
                 for(int i=0;i<len;i++)
-                    foreachVars[i] = vars.createLocal(dec.getIdentifier(i).toString());
+                    foreachVars[i] = vars.createLocal(dec.getIdentifier(i).toString(), false);
                 return foreachVars;
             }
             default: throw new IllegalStateException();
@@ -592,7 +602,7 @@ final class CompilerBlock
             case ASSIGNATION: {
                 /*if(!pop)
                     throw new CompilerError("Cannot use assignation here: " + code);*/
-                compileAssignation((Assignation) code, isGlobal, false, multiresult, pop);
+                compileAssignation((Assignation) code, isGlobal, false, false, multiresult, pop);
             } break;
             default: throw CompilerError.unexpectedCode(code);
         }
@@ -697,7 +707,7 @@ final class CompilerBlock
         }
         
         if(assignation != null)
-            assign(AssignationSymbol.ASSIGNATION, assignation, isGlobal, true, true, () -> {
+            assign(AssignationSymbol.ASSIGNATION, assignation, isGlobal, true, false, true, () -> {
                 childCompiler.compile(false, true);
         
                 if(childErrors.hasErrors())
@@ -762,7 +772,7 @@ final class CompilerBlock
             {
                 if(operator.isRightOrder())
                 {
-                    assign(AssignationSymbol.ASSIGNATION, operator.getOperand(0), isGlobal, false, false, () -> {
+                    assign(AssignationSymbol.ASSIGNATION, operator.getOperand(0), isGlobal, false, false, false, () -> {
                         compileOperation(operator.getOperand(0), isGlobal, false, false);
                         bytecode.dup();
                         bytecode.callOperator(symbol);
@@ -771,7 +781,7 @@ final class CompilerBlock
                 }
                 else
                 {
-                    assign(AssignationSymbol.ASSIGNATION, operator.getOperand(0), isGlobal, false, true, () -> {
+                    assign(AssignationSymbol.ASSIGNATION, operator.getOperand(0), isGlobal, false, false, true, () -> {
                         compileOperation(operator.getOperand(0), isGlobal, false, false);
                         bytecode.callOperator(symbol);
                     });
@@ -882,7 +892,7 @@ final class CompilerBlock
     }
     
     
-    private void compileAssignation(Assignation assignation, boolean isGlobal, boolean createVars, boolean multiresult, boolean pop) throws CompilerError
+    private void compileAssignation(Assignation assignation, boolean isGlobal, boolean createVars, boolean isConstant, boolean multiresult, boolean pop) throws CompilerError
     {
         int len = assignation.getPartCount();
         AssignationSymbol symbol = assignation.getSymbol();
@@ -890,7 +900,7 @@ final class CompilerBlock
         {
             AssignationPart part = assignation.getPart(i);
             if(part.getLocationCount() == 1)
-                assign(symbol, part.getLocation(0).getCode(), isGlobal, createVars, !pop && len == 1,
+                assign(symbol, part.getLocation(0).getCode(), isGlobal, createVars, isConstant, !pop && len == 1,
                         () -> compileOperation(part.getAssignation(), isGlobal, false, false));
             else
             {
@@ -901,7 +911,7 @@ final class CompilerBlock
                 {
                     Location loc = part.getLocation(j);
                     final int index = j;
-                    assign(symbol, loc.getCode(), isGlobal, createVars, false, () -> bytecode.loadExpand(index));
+                    assign(symbol, loc.getCode(), isGlobal, createVars, isConstant, false, () -> bytecode.loadExpand(index));
                 }
                 if(!pop && len == 1)
                 {
@@ -940,7 +950,7 @@ final class CompilerBlock
         }
     }
     
-    private void compileDeclaration(Declaration declaration, boolean isGlobal) throws CompilerError
+    private void compileDeclaration(Declaration declaration, boolean isGlobal, boolean isConstant) throws CompilerError
     {
         int len = declaration.getIdentifierCount();
         for(int i=0;i<len;i++)
@@ -950,11 +960,11 @@ final class CompilerBlock
                 throw new CompilerError("Variable \"" + name + "\" already exists");
             if(isGlobal)
             {
-                vars.createGlobal(name);
+                vars.createGlobal(name, isConstant);
             }
             else
             {
-                Variable var = vars.createLocal(name);
+                Variable var = vars.createLocal(name, isConstant);
                 bytecode.storeUndefined(var);
             }
         }
@@ -969,14 +979,14 @@ final class CompilerBlock
     
     
     private InstructionHandle assign(AssignationSymbol asymbol, ParsedCode to,
-            boolean isGlobal, boolean createVars, boolean dup, AssignationParametersLoader parametersLoader) throws CompilerError
+            boolean isGlobal, boolean createVars, boolean isConstant, boolean dup, AssignationParametersLoader parametersLoader) throws CompilerError
     {
         if(dup)
             stack.push();
         switch(to.getCodeType())
         {
             default: throw new IllegalArgumentException();
-            case IDENTIFIER: return assignFromIdentifier(asymbol, (Identifier) to, isGlobal, createVars, dup, parametersLoader);
+            case IDENTIFIER: return assignFromIdentifier(asymbol, (Identifier) to, isGlobal, createVars, isConstant, dup, parametersLoader);
             case OPERATOR: {
                 Operator operator = (Operator) to;
                 OperatorSymbol osymbol = operator.getSymbol();
@@ -1004,7 +1014,7 @@ final class CompilerBlock
     }
     
     private InstructionHandle assignFromIdentifier(AssignationSymbol asymbol, Identifier identifier,
-            boolean isGlobal, boolean createVars, boolean dup, AssignationParametersLoader loader) throws CompilerError
+            boolean isGlobal, boolean createVars, boolean isConstant, boolean dup, AssignationParametersLoader loader) throws CompilerError
     {
         String name = identifier.toString();
         Variable var;
@@ -1013,8 +1023,8 @@ final class CompilerBlock
             if(vars.exists(name, true, false))
                 throw new CompilerError("Variable \"" + name + "\" already exists");
             var = isGlobal
-                    ? vars.createGlobal(name)
-                    : bytecode.createLocal(vars.createLocal(name));
+                    ? vars.createGlobal(name, isConstant)
+                    : bytecode.createLocal(vars.createLocal(name, isConstant));
         }
         else
         {

@@ -76,6 +76,7 @@ public final class Command extends ParsedCode
             case RETURN: return RETURN(line, tuple);
             case YIELD: return YIELD(line, tuple);
             case STATIC: return STATIC(line, tuple);
+            case CONST: return CONST(line, tuple);
         }
     }
     
@@ -83,6 +84,12 @@ public final class Command extends ParsedCode
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.VAR);
+        boolean constant = false;
+        if(tuple.get(0) == CommandWord.CONST)
+        {
+            tuple = tuple.subTuple(1);
+            constant = true;
+        }
         ParsedCode code = tuple.pack(true);
         switch(code.getCodeType())
         {
@@ -94,13 +101,19 @@ public final class Command extends ParsedCode
             default: throw new CompilerError("Expected a valid assignation or declaration in \"var\" command");
         }
         
-        return new Command(line, CommandWord.VAR, code);
+        return new Command(line, CommandWord.VAR, code, constant ? Literal.TRUE : Literal.FALSE);
     }
     
     private static Command GLOBAL(int line, Tuple tuple) throws CompilerError
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.GLOBAL);
+        boolean constant = false;
+        if(tuple.get(0) == CommandWord.CONST)
+        {
+            tuple = tuple.subTuple(1);
+            constant = true;
+        }
         ParsedCode code = tuple.pack(true);
         switch(code.getCodeType())
         {
@@ -112,7 +125,7 @@ public final class Command extends ParsedCode
             default: throw new CompilerError("Expected a valid assignation or declaration in \"global\" command");
         }
         
-        return new Command(line, CommandWord.GLOBAL, code);
+        return new Command(line, CommandWord.GLOBAL, code, constant ? Literal.TRUE : Literal.FALSE);
     }
     
     private static Command IF(int line, Tuple tuple) throws CompilerError
@@ -358,6 +371,12 @@ public final class Command extends ParsedCode
     {
         if(tuple.isEmpty())
             throw CompilerError.expectedAny(CommandWord.STATIC);
+        boolean constant = false;
+        if(tuple.get(0) == CommandWord.CONST)
+        {
+            tuple = tuple.subTuple(1);
+            constant = true;
+        }
         ParsedCode code = tuple.pack(true);
         switch(code.getCodeType())
         {
@@ -369,6 +388,27 @@ public final class Command extends ParsedCode
             default: throw new CompilerError("Expected a valid assignation or declaration in \"static\" command");
         }
         
-        return new Command(line, CommandWord.STATIC, code);
+        return new Command(line, CommandWord.STATIC, code, constant ? Literal.TRUE : Literal.FALSE);
+    }
+    
+    private static Command CONST(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.CONST);
+        if(tuple.get(0).is(CodeType.COMMAND_WORD))
+        {
+            CommandName cname = tuple.<CommandWord>get(0).getName();
+            switch(cname)
+            {
+                default: throw new CompilerError("Invalid command in const declaration: " + tuple);
+                case VAR:
+                case GLOBAL:
+                case STATIC:
+                    tuple = tuple.insert(1, CommandWord.CONST);
+                    return decode(line, tuple);
+            }
+        }
+        tuple = tuple.insertAtStart(CommandWord.GLOBAL, CommandWord.CONST);
+        return decode(line, tuple);
     }
 }

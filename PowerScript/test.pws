@@ -1,11 +1,15 @@
 
 var utils = import("utils.pwd");
-static valuess = 65;
+const static valuess = 65;
+const var CLAW = Object.freeze({ power: 50, dash: false });
+const NONNE;
 
 IO.print(valuess);
 
 Vector2 = Object.freeze({
 	constructor: function(x, y) {
+		static ccount = 0;
+		static const ccount2 = 0;
 		self.x = x ? x : 0;
 		self.y = y ? y : 0;
 	},
@@ -42,7 +46,7 @@ Vector2 = Object.freeze({
 	},
 	
 	__set__: function(key, value) {
-		valuess++;
+		//valuess++;
 		switch(key) {
 			case 0:
 			case "x":
@@ -77,8 +81,6 @@ IO.print(vec);
 IO.print(vec[0]);
 IO.print(vec["y"]);
 
-
-/*global IO;
 
 var testgen = function*(vars...)
 {
@@ -139,7 +141,7 @@ objtest.toString = function() { return Object.toString(self); };
 
 IO.print(objtest);
 
-assign(objtest, "boperator::+", function(value)
+assign(objtest, "__plus__", function(value)
 {
 	if(typeof(self.value) !== "number")
 		self.value = 0;
@@ -231,7 +233,7 @@ IO.print((65,)..["hola", "k", "ase"]);
 for(var it, pow = 0, 0; it < 12; it, pow = it + 1, it * it)
 {
 	IO.print("Iteration number: "..pow);
-}*/
+}
 
 
 

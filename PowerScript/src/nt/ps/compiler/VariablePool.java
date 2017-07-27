@@ -85,7 +85,7 @@ public final class VariablePool
             Variable var = natives.get(name);
             if(var == null)
             {
-                var = new Variable(VariableType.NATIVE, name, -1, true);
+                var = new Variable(VariableType.NATIVE, name, -1, true, true);
                 natives.put(name, var);
             }
             return var;
@@ -103,8 +103,8 @@ public final class VariablePool
             return null;
         Variable var = parent.get0(name, globalModifier);
         if(var == null)
-            return globalModifier ? createGlobal(name) : null;
-        if(var.isGlobal())
+            return globalModifier ? createGlobal(name, false) : null;
+        if(var.isGlobal() || var.isStatic())
             return var;
         
         return vars.getFirst().createUpPointer(var);
@@ -129,24 +129,24 @@ public final class VariablePool
             return true;
         if(!globalModifier)
             return false;
-        createGlobal(name);
+        createGlobal(name, false);
         return true;
     }
     
-    public final Variable createLocal(String name) throws CompilerError
+    public final Variable createLocal(String name, boolean isConstant) throws CompilerError
     {
         VariableScope scope = vars.getLast();
         if(scope.exists(name))
             throw CompilerError.varAlreadyExists(name);
-        return scope.createLocal(name);
+        return scope.createLocal(name, isConstant);
     }
     
-    public final Variable createGlobal(String name) throws CompilerError
+    public final Variable createGlobal(String name, boolean isConstant) throws CompilerError
     {
         VariableScope scope = vars.getLast();
         if(scope.exists(name))
             throw CompilerError.varAlreadyExists(name);
-        return scope.createGlobal(name);
+        return scope.createGlobal(name, isConstant);
     }
     
     public final Variable createParameter(String name) throws CompilerError
@@ -154,15 +154,15 @@ public final class VariablePool
         VariableScope scope = vars.getLast();
         if(scope.exists(name))
             throw CompilerError.varAlreadyExists(name);
-        return scope.createLocal(name);
+        return scope.createLocal(name, false);
     }
     
-    public final Variable createStatic(String name) throws CompilerError
+    public final Variable createStatic(String name, boolean isConstant) throws CompilerError
     {
         VariableScope scope = vars.getLast();
         if(scope.exists(name))
             throw CompilerError.varAlreadyExists(name);
-        return scope.createStatic(name);
+        return scope.createStatic(name, isConstant);
     }
     
     public final List<Variable> getUpPointers() { return Collections.unmodifiableList(upPointers); }
@@ -179,7 +179,7 @@ public final class VariablePool
             count = VariablePool.this.vars.isEmpty() ? -1 : VariablePool.this.vars.getLast().count;
         }
         
-        private Variable create(VariableType type, String name, int ref) throws CompilerError
+        private Variable create(VariableType type, String name, int ref, boolean constant) throws CompilerError
         {
             if(type == null)
                 throw new NullPointerException();
@@ -190,34 +190,34 @@ public final class VariablePool
             
             if(vars.containsKey(name))
                 throw new CompilerError("Variable " + name + " has already exists");
-            Variable var = new Variable(type, name, ref, type != VariableType.LOCAL && type != VariableType.STATIC);
+            Variable var = new Variable(type, name, ref, constant, type != VariableType.LOCAL && type != VariableType.STATIC);
             vars.put(var.getName(), var);
             
             return var;
         }
         
-        public final Variable createLocal(String name) throws CompilerError
+        public final Variable createLocal(String name, boolean isConstant) throws CompilerError
         {
             count = stack.allocateVariable();
-            return create(VariableType.LOCAL, name, count);
+            return create(VariableType.LOCAL, name, count, isConstant);
         }
         
-        public final Variable createGlobal(String name) throws CompilerError
+        public final Variable createGlobal(String name, boolean isConstant) throws CompilerError
         {
-            return create(VariableType.GLOBAL, name, -1);
+            return create(VariableType.GLOBAL, name, -1, isConstant);
         }
         
         public final Variable createUpPointer(Variable varRef) throws CompilerError
         {
-            Variable var = create(VariableType.UP_POINTER, varRef.getName(), upLocalRefs++);
+            Variable var = create(VariableType.UP_POINTER, varRef.getName(), upLocalRefs++, varRef.constant);
             var.upPointerRef = varRef;
             upPointers.add(var);
             return var;
         }
         
-        public final Variable createStatic(String name) throws CompilerError
+        public final Variable createStatic(String name, boolean isConstant) throws CompilerError
         {
-            Variable var = create(VariableType.STATIC, name, staticCount++);
+            Variable var = create(VariableType.STATIC, name, staticCount++, isConstant);
             var.staticClassName = bytecode.getClassName();
             return var;
         }
@@ -247,11 +247,12 @@ public final class VariablePool
         private VariableType type;
         private final String name;
         private final int ref;
+        private final boolean constant;
         private boolean initiated;
         private Variable upPointerRef;
         private String staticClassName;
 
-        private Variable(VariableType type, String name, int ref, boolean initiated)
+        private Variable(VariableType type, String name, int ref, boolean constant, boolean initiated)
         {
             if(type == null)
                 throw new NullPointerException();
@@ -260,6 +261,7 @@ public final class VariablePool
             this.type = type;
             this.name = name;
             this.ref = ref;
+            this.constant = constant;
             this.initiated = initiated;
             upPointerRef = null;
         }
@@ -268,6 +270,7 @@ public final class VariablePool
         public final int getReference() { return ref; }
         public final Variable getUpPointerReference() { return upPointerRef; }
         public final String getStaticClassName() { return staticClassName; }
+        public final boolean isConstant() { return constant; }
         public final boolean isInitiated() { return initiated; }
         
         public final void initiate()

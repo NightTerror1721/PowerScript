@@ -806,16 +806,12 @@ public final class BytecodeGenerator
     
     private InstructionHandle loadStatic(int reference, String className)
     {
-        if(!statics.containsKey(reference))
-            throw new IllegalStateException();
         String referenceName = STR_STATIC_PREFIX + reference;
         return mainInst.append(factory.createGetStatic(className, referenceName, TYPE_VALUE));
     }
     
     private InstructionHandle storeStatic(int reference, String className)
     {
-        if(!statics.containsKey(reference))
-            throw new IllegalStateException();
         String referenceName = STR_STATIC_PREFIX + reference;
         return mainInst.append(factory.createPutStatic(className, referenceName, TYPE_VALUE));
     }
@@ -846,6 +842,8 @@ public final class BytecodeGenerator
     
     public final InstructionHandle store(Variable var) throws CompilerError
     {
+        if(var.isConstant() && var.isInitiated())
+            throw new CompilerError("Cannot reassign a initiated consant variable");
         compiler.getStack().pop();
         switch(var.getVariableType())
         {
@@ -1194,9 +1192,16 @@ public final class BytecodeGenerator
     {
         if(statics.containsKey(var.getReference()))
             throw new IllegalStateException();
+        if(var.isInitiated())
+            throw new IllegalStateException();
+        if(!var.isStatic())
+            throw new IllegalStateException();
+        var.initiate();
         String name = STR_STATIC_PREFIX + var.getReference();
         FieldGen field = new FieldGen(
-                Constants.ACC_PRIVATE | Constants.ACC_STATIC | Constants.ACC_FINAL,
+                var.isConstant()
+                    ? Constants.ACC_PUBLIC | Constants.ACC_STATIC | Constants.ACC_FINAL
+                    : Constants.ACC_PUBLIC | Constants.ACC_STATIC,
                 TYPE_VALUE,
                 name,
                 constantPool

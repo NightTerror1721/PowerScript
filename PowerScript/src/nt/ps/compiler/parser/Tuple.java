@@ -65,6 +65,31 @@ public final class Tuple
         return new Tuple(array);
     }
     
+    public final Tuple insertAtStart(Tuple ct) { return insertAtStart(ct.code); }
+    public final Tuple insertAtStart(List<Code> code) { return insertAtStart(code.toArray(new Code[code.size()])); }
+    public final Tuple insertAtStart(Code... code)
+    {
+        Code[] array = new Code[this.code.length + code.length];
+        System.arraycopy(code, 0, array, 0, code.length);
+        System.arraycopy(this.code, 0, array, code.length, this.code.length);
+        return new Tuple(array);
+    }
+    
+    public final Tuple insert(int index, Code... code)
+    {
+        if(index < 0 || index > this.code.length)
+            throw new IllegalArgumentException("Index out of range: " + index);
+        if(index == 0)
+            return insertAtStart(code);
+        else if(index == this.code.length)
+            return concat(code);
+        Code[] array = new Code[this.code.length + code.length];
+        System.arraycopy(this.code, 0, array, 0, index);
+        System.arraycopy(code, 0, array, index, code.length);
+        System.arraycopy(this.code, index, array, index + code.length, this.code.length - index);
+        return new Tuple(array);
+    }
+    
     public final Tuple wrap(Tuple start, Tuple end) { return wrap(start.code, end.code); }
     public final Tuple wrap(Code start, Code end) { return wrap(new Code[]{start}, new Code[]{end}); }
     public final Tuple wrap(Code[] start, Code[] end)
