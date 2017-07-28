@@ -28,6 +28,7 @@ import nt.ps.lang.core.ImportFunction;
 import nt.ps.lang.core.PSArrayReference;
 import nt.ps.lang.core.PSBooleanReference;
 import nt.ps.lang.core.PSFunctionReference;
+import nt.ps.lang.core.PSIO;
 import nt.ps.lang.core.PSIteratorReference;
 import nt.ps.lang.core.PSMapReference;
 import nt.ps.lang.core.PSMath;
@@ -91,9 +92,22 @@ public final class PSState extends PSGlobals
         natives.put("eval", new EvalFunction(this));
     }
     
+    public final void insertDefaultIOUtils()
+    {
+        natives.put("IO", new PSIO(this));
+    }
+    
     public final void insertDefaultImportFunction()
     {
         natives.put("import", new ImportFunction(this));
+    }
+    
+    public final void setRootInImportFunction(File root)
+    {
+        ImportFunction imp = (ImportFunction) natives.get("import");
+        if(imp == null)
+            throw new IllegalStateException("ImportFunction has not initiated");
+        imp.setRoot(root);
     }
     
     public final Writer getStdout() { return stdout; }

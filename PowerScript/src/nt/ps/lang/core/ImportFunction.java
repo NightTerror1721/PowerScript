@@ -7,6 +7,7 @@ package nt.ps.lang.core;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.nio.file.Path;
 import java.util.HashMap;
 import nt.ps.PSState;
 import nt.ps.exception.PSRuntimeException;
@@ -23,6 +24,7 @@ public final class ImportFunction extends PSFunction.PSTwoArgsFunction
 {
     private final PSState state;
     private final HashMap<String, PSObject> cache = new HashMap<>();
+    private File root = new File(System.getProperty("user.dir"));
     
     public ImportFunction(PSState state)
     {
@@ -31,10 +33,19 @@ public final class ImportFunction extends PSFunction.PSTwoArgsFunction
         this.state = state;
     }
     
+    public final void setRoot(File file)
+    {
+        if(file == null)
+            throw new NullPointerException();
+        if(!file.exists() || !file.isDirectory())
+            throw new IllegalArgumentException("Require a valid directory for root import function");
+        this.root = file;
+    }
+    
     @Override
     public final PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1)
     {
-        File file = new File(arg0.toJavaString());
+        File file = adapt(arg0.toJavaString());
         return doImport(file, arg1.toJavaBoolean());
     }
     
@@ -63,5 +74,14 @@ public final class ImportFunction extends PSFunction.PSTwoArgsFunction
             {
                 throw new PSRuntimeException(th);
             }
+    }
+    
+    private File adapt(String strPath)
+    {
+        File file = new File(strPath);
+        Path path = file.toPath();
+        if(path.getRoot() != null)
+            return file;
+        return new File(root.getAbsolutePath() + File.separator + strPath);
     }
 }

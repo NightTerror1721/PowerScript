@@ -5,14 +5,10 @@
  */
 package nt.ps;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.PSCompilerException;
-import nt.ps.lang.core.PSIO;
 
 /**
  *
@@ -22,7 +18,11 @@ public final class Main
 {
     public static void main(String[] args) throws CompilerError, FileNotFoundException, PSCompilerException, IOException
     {
-        CompilerError.setDebugMode(true);
+        CommandLineInterpreter cli = new CommandLineInterpreter();
+        cli.execute(args);
+        return;
+        
+        //CompilerError.setDebugMode(true);
         
         
         /*File file = new File("test.pws");
@@ -33,7 +33,7 @@ public final class Main
         PSScript script = CompilerUnit.compile(fis, state, cl, "test");
         script.execute();*/
         
-        CompilerUnit.compileAsJar(new File("test.jar"), new File(System.getProperty("user.dir")),
+        /*CompilerUnit.compileAsJar(new File("test.jar"), new File(System.getProperty("user.dir")),
                 new File("test.pws"));
         
         File file = new File("test.pws");
@@ -54,6 +54,6 @@ public final class Main
         double t4 = System.nanoTime();
         
         System.out.println("Time to Compile: " + ((t2 - t1) / 1000000) + "ms");
-        System.out.println("Time to Execute: " + ((t4 - t3) / 1000000) + "ms");
+        System.out.println("Time to Execute: " + ((t4 - t3) / 1000000) + "ms");*/
     }
 }
