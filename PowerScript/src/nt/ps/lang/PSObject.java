@@ -27,9 +27,11 @@ public final class PSObject extends PSValue
             throw new NullPointerException();
         this.properties = properties;
         this.parent = parent;
+        this.frozen = frozen;
     }
     PSObject(PSValue parent, boolean frozen) { this(new HashMap<>(), parent, frozen); }
     public PSObject(Map<String, Property> properties) { this(properties, null, false); }
+    public PSObject(Map<String, Property> properties, boolean isFrozen) { this(properties, null, isFrozen); }
     public PSObject() { this(new HashMap<>(), null, false); }
     
     public final PSObject copy()

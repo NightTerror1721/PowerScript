@@ -657,20 +657,20 @@ final class CompilerBlock
         else if(literal.isLiteralObject())
         {
             if(literal.getItemCount() <= 0)
-                bytecode.emptyObjectLiteral();
+                bytecode.emptyObjectLiteral(literal.isConst());
             else
             {
                 bytecode.initObjectLiteral(literal);
                 int count = 0;
                 for(MutableLiteral.Item item : literal)
                 {
-                    bytecode.insertObjectLiteralItem(count++, () -> {
+                    bytecode.insertObjectLiteralItem(count++, item.isConstKey(), () -> {
                         bytecode.loadNativeString(item.getKey().toString());
                         //compileOperation(item.getKey(), isGlobal, false, false);
                         compileOperation(item.getValue(), isGlobal, false, false);
                     });
                 }
-                bytecode.endObjectLiteral();
+                bytecode.endObjectLiteral(literal.isConst());
             }
         }
         else throw new IllegalStateException();

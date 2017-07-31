@@ -17,11 +17,12 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
 {
     private final Item[] items;
     private final int type;
+    private boolean isConst;
     
     private MutableLiteral(Tuple tuple, int type) throws CompilerError
     {
         Tuple[] tuples = tuple.splitByToken(Separator.COMMA);
-        switch(type)
+        switch(this.type = type)
         {
             case TYPE_ARRAY:
             case TYPE_TUPLE:
@@ -44,7 +45,6 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
             default:
                 throw new IllegalStateException();
         }
-        this.type = type;
     }
     
     public final int getItemCount() { return items.length; }
@@ -54,6 +54,8 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
     public final boolean isLiteralTuple() { return type == TYPE_TUPLE; }
     public final boolean isLiteralMap() { return type == TYPE_MAP; }
     public final boolean isLiteralObject() { return type == TYPE_OBJECT; }
+    
+    public final boolean isConst() { return type == TYPE_OBJECT && isConst; }
     
     
     @Override
@@ -82,24 +84,50 @@ public final class MutableLiteral extends CodeObject implements Iterable<Mutable
     public static final MutableLiteral array(Tuple tuple)   throws CompilerError { return new MutableLiteral(tuple,TYPE_ARRAY); }
     public static final MutableLiteral tuple(Tuple tuple)   throws CompilerError { return new MutableLiteral(tuple,TYPE_TUPLE); }
     public static final MutableLiteral map(Tuple tuple)     throws CompilerError { return new MutableLiteral(tuple,TYPE_MAP); }
-    public static final MutableLiteral object(Tuple tuple)  throws CompilerError { return new MutableLiteral(tuple,TYPE_OBJECT); }
+    public static final MutableLiteral object(Tuple tuple, boolean isConst)  throws CompilerError
+    {
+        MutableLiteral ml = new MutableLiteral(tuple,TYPE_OBJECT);
+        ml.isConst = isConst;
+        return ml;
+    }
     
     
     public final class Item
     {
         private final ParsedCode key;
         private final ParsedCode value;
+        private final boolean constKey;
         
         private Item(Tuple key, Tuple value) throws CompilerError
         {
             if(value == null)
                 throw new NullPointerException();
-            this.key = key == null ? null : key.pack();
+            if(key == null)
+            {
+                this.key = null;
+                this.constKey = false;
+            }
+            else
+            {
+                if(key.get(0) == CommandWord.CONST)
+                {
+                    if(type != TYPE_OBJECT)
+                        throw new CompilerError("Invalid const command");
+                    this.key = key.subTuple(1).pack();
+                    this.constKey = true;
+                }
+                else
+                {
+                    this.key = key.pack();
+                    this.constKey = false;
+                }
+            }
             this.value = value.pack();
         }
         
         public final ParsedCode getKey() { return key; }
         public final ParsedCode getValue() { return value; }
+        public final boolean isConstKey() { return constKey; }
         
         @Override
         public final String toString()

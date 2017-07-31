@@ -20,7 +20,8 @@ public final class Main
     {
         CommandLineInterpreter cli = new CommandLineInterpreter();
         cli.execute(args);
-        return;
+        //cli.execute("test.pws");
+        //return;
         
         //CompilerError.setDebugMode(true);
         
@@ -42,7 +43,8 @@ public final class Main
         
         PSState state = PSState.createDefaultInstance();
         state.insertDefaultImportFunction();
-        state.setGlobalValue("IO", new PSIO(state));
+        state.insertDefaultIOUtils();
+        //state.setGlobalValue("IO", new PSIO(state));
         //state.setGlobalValue("Object", new PSObjectReference());
         
         double t1 = System.nanoTime();

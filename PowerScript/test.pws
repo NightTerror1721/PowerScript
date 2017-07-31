@@ -1,8 +1,6 @@
-
 var utils = import("utils.pwd");
 const static valuess = 65;
 const var CLAW = Object.freeze({ power: 50, dash: false });
-const NONNE;
 
 IO.print(valuess);
 
@@ -175,7 +173,7 @@ if(5 > 4 && (10 === 9 || 10 === 10))
 else if(IO === null)
 {
 	IO.print(650);
-	IO = Object;
+	//IO = Object;
 }
 else if(650 < 10 || IO !== null) {}
 else {

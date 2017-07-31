@@ -267,11 +267,14 @@ public final class CompilerUnit
                     case '{': {
                         CodeReader scopeSource = extractScope(source, '{', '}');
                         
-                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject() || sb.getLastCode().isElevatorCommand()) //Object
+                        if(sb.getCodeCount() <= 0 || !sb.getLastCode().isValidCodeObject() ||
+                                sb.getLastCode().isElevatorCommand() || sb.getLastCode() == CommandWord.CONST) //Object
                         {
                             Tuple tuple = parseInstruction(errors, scopeSource, true, ColonMode.ERROR);
                             sb.decode();
-                            sb.addCode(MutableLiteral.object(tuple));
+                            if(sb.getCodeCount() > 0 && sb.getLastCode() == CommandWord.CONST)
+                                sb.replaceCode(sb.getCodeCount() - 1, MutableLiteral.object(tuple, true));
+                            else sb.addCode(MutableLiteral.object(tuple, false));
                         }
                         else //Scope
                         {

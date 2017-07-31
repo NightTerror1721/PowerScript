@@ -1,5 +1,5 @@
 
-Query = Object.freeze({
+Query = const {
 	
 	constructor: function() {
 		self._id = Number.long(Math.random() * Number.MAX_INTEGER);
@@ -11,7 +11,7 @@ Query = Object.freeze({
 		return query instanceof Query && self._id == query._id;
 	},
 	notEquals: function(query) { return !(self == query); }
-});
+};
 
 IO.print(Object.toString(Query));
 IO.print(new Query());
@@ -25,13 +25,13 @@ function counter()
 
 
 
-Color = Object.extends(Query, Object.freeze({
+Color = Object.extends(Query, const {
 	constructor: function(r, g, b) {
 		Object.superConstructor(self);
 		
 		
 	}
-}));
+});
 
 IO.print(new Color()._id);
 

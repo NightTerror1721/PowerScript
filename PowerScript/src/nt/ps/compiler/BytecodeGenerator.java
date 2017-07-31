@@ -129,15 +129,18 @@ public final class BytecodeGenerator
             ARGS_LONG = { Type.LONG },
             ARGS_FLOAT = { Type.FLOAT },
             ARGS_DOUBLE = { Type.DOUBLE },
+            ARGS_BOOLEAN = { Type.BOOLEAN },
             ARGS_THROWABLE = { Type.THROWABLE },
             ARGS_VARARGS_INT = { TYPE_VARARGS, Type.INT },
             ARGS_VALUE_VARARGS_INT = { TYPE_VALUE, TYPE_VARARGS, Type.INT },
             ARGS_INT_VALUE = { Type.INT, TYPE_VALUE },
             ARGS_STRING_VALUE = ARGS_STRING_VALUE_1,
+            ARGS_STRING_VALUE_JBOOLEAN = { Type.STRING, TYPE_VALUE, Type.BOOLEAN },
             ARGS_VALUE_INT = { TYPE_VALUE, Type.INT },
             ARGS_JAVAMAP = { new ObjectType(Map.class.getName()) },
             ARGS_HASHMAP = { TYPE_HASHMAP },
             ARGS_JAVA_MAP = { new ObjectType(Map.class.getName()) },
+            ARGS_JAVA_MAP_BOOLEAN = { new ObjectType(Map.class.getName()), Type.BOOLEAN },
             ARGS_JAVA_OBJECT_2 = { Type.OBJECT, Type.OBJECT },
             ARGS_VALUE_GENERATOR_STATE = { TYPE_VALUE, TYPE_GENERATOR_STATE },
             ARGS_ARRAY_VALUE = { TYPE_ARRAY_VALUE };
@@ -1447,17 +1450,25 @@ public final class BytecodeGenerator
     }
     
     /* OBJECT LITERAL */
-    public final InstructionHandle emptyObjectLiteral() throws CompilerError
+    public final InstructionHandle emptyObjectLiteral(boolean isConst) throws CompilerError
     {
         compiler.getStack().push();
         mainInst.append(factory.createNew(TYPE_OBJECT));
         mainInst.append(InstructionConstants.DUP);
-        return mainInst.append(factory.createInvoke(
+        InstructionHandle ih = mainInst.append(factory.createInvoke(
                 STR_TYPE_OBJECT,
                 "<init>",
                 Type.VOID,
                 NO_ARGS,
                 Constants.INVOKESPECIAL));
+        if(isConst)
+        {
+            mainInst.append(InstructionConstants.DUP);
+            mainInst.append(new PUSH(constantPool, true));
+            ih = mainInst.append(factory.createInvoke(STR_TYPE_OBJECT, "setFrozen",
+                    Type.VOID, ARGS_BOOLEAN, Constants.INVOKEVIRTUAL));
+        }
+        return ih;
     }
     
     public final InstructionHandle initObjectLiteral(MutableLiteral literal) throws CompilerError
@@ -1476,17 +1487,28 @@ public final class BytecodeGenerator
                 Constants.INVOKESPECIAL));
     }
     
-    public final InstructionHandle insertObjectLiteralItem(int index, VoidOperation element) throws CompilerError
+    public final InstructionHandle insertObjectLiteralItem(int index, boolean isConst, VoidOperation element) throws CompilerError
     {
         mainInst.append(InstructionConstants.DUP);
         element.doOperation();
+        mainInst.append(new PUSH(constantPool, isConst));
         compiler.getStack().pop();
         return mainInst.append(factory.createInvoke(STR_TYPE_PROTOOBJECT, "put",
-                Type.VOID, ARGS_STRING_VALUE, Constants.INVOKEVIRTUAL));
+                Type.VOID, ARGS_STRING_VALUE_JBOOLEAN, Constants.INVOKEVIRTUAL));
     }
     
-    public final InstructionHandle endObjectLiteral()
+    public final InstructionHandle endObjectLiteral(boolean isConst)
     {
+        if(isConst)
+        {
+            mainInst.append(new PUSH(constantPool, true));
+            return mainInst.append(factory.createInvoke(
+                    STR_TYPE_OBJECT,
+                    "<init>",
+                    Type.VOID,
+                    ARGS_JAVA_MAP_BOOLEAN,
+                    Constants.INVOKESPECIAL));
+        }
         return mainInst.append(factory.createInvoke(
                 STR_TYPE_OBJECT,
                 "<init>",

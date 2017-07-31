@@ -45,6 +45,7 @@ public final class LangUtils
         public ProtoObject(int initialCapacity, float loadFactor) { super(initialCapacity, loadFactor); }
         
         public final void put(String name, PSValue value) { put(name, new Property(value, false)); }
+        public final void put(String name, PSValue value, boolean isFrozen) { put(name, new Property(value, isFrozen)); }
     }
     
     public static final PSValue operatorTypeof(PSValue value)
