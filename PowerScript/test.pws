@@ -1,4 +1,18 @@
-var utils = import("utils.pwd");
+
+function* range(from, to, increment) {
+	for(var i=from;i<to;i+=increment)
+		yield i;
+}
+
+function* pairs(to) {
+	yield* range(0, to, 2);
+}
+
+for(value : pairs(20))
+	IO.print(value);
+
+
+/*var utils = import("utils.pwd");
 const static valuess = 65;
 const var CLAW = Object.freeze({ power: 50, dash: false });
 
@@ -231,7 +245,7 @@ IO.print((65,)..["hola", "k", "ase"]);
 for(var it, pow = 0, 0; it < 12; it, pow = it + 1, it * it)
 {
 	IO.print("Iteration number: "..pow);
-}
+}*/
 
 
 

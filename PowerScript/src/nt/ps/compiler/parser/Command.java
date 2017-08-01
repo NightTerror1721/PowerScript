@@ -75,6 +75,7 @@ public final class Command extends ParsedCode
             case THROW: return THROW(line, tuple);
             case RETURN: return RETURN(line, tuple);
             case YIELD: return YIELD(line, tuple);
+            case DELEGATOR_YIELD: return DELEGATOR_YIELD(line, tuple);
             case STATIC: return STATIC(line, tuple);
             case CONST: return CONST(line, tuple);
         }
@@ -365,6 +366,14 @@ public final class Command extends ParsedCode
         }
         Block pars = Block.arguments(tuple, Separator.COMMA);
         return new Command(line, CommandWord.YIELD, pars);
+    }
+    
+    private static Command DELEGATOR_YIELD(int line, Tuple tuple) throws CompilerError
+    {
+        if(tuple.isEmpty())
+            throw CompilerError.expectedAny(CommandWord.DELEGATOR_YIELD);
+        ParsedCode code = tuple.pack();
+        return new Command(line, CommandWord.DELEGATOR_YIELD, code);
     }
     
     private static Command STATIC(int line, Tuple tuple) throws CompilerError

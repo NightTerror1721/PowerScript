@@ -53,6 +53,10 @@ public final class CommandWord extends Code
             CONST = new CommandWord(CommandName.CONST),
             STATIC = new CommandWord(CommandName.STATIC);
     
+    @CollectorIgnore
+    public static final CommandWord
+            DELEGATOR_YIELD = new CommandWord(CommandName.DELEGATOR_YIELD);
+    
     private static final HashMap<String, CommandWord> HASH = collect(CommandWord.class, k -> k.name.name);
     
     public static final boolean isCommand(String str) { return HASH.containsKey(str); }
@@ -61,7 +65,7 @@ public final class CommandWord extends Code
     public enum CommandName
     {
         VAR, IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, RETURN, YIELD, CONTINUE,
-        BREAK, GLOBAL, TRY, CATCH, THROW, CONST, STATIC;
+        BREAK, GLOBAL, TRY, CATCH, THROW, CONST, STATIC, DELEGATOR_YIELD;
         
         private final String name = name().toLowerCase();
     }

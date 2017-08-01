@@ -213,6 +213,9 @@ final class CompilerBlock
             case YIELD: {
                 compileYield(command);
             } break;
+            case DELEGATOR_YIELD: {
+                compileDelegatorYield(command);
+            } break;
             case STATIC: {
                 compileStatic(command);
             } break;
@@ -267,6 +270,14 @@ final class CompilerBlock
                 }
             }
         }
+    }
+    
+    private void compileDelegatorYield(Command command) throws CompilerError
+    {
+        if(!bytecode.isGenerator())
+            throw new CompilerError("\"yield*\" command only works on generator functions");
+        compileOperation(command.getCode(0), true, false, false);
+        bytecode.computeDelegatorYield();
     }
     
     private void compileYield(Command command) throws CompilerError

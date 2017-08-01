@@ -167,6 +167,7 @@ public final class LangUtils
     public static final class GeneratorState
     {
         private final PSValue[] vars;
+        private PSIterator delegated;
         private int state;
         private boolean end;
         
@@ -188,6 +189,25 @@ public final class LangUtils
         
         public final void setLocalVariable(int reference, PSValue value) { vars[reference] = value; }
         public final PSValue getLocalVariable(int reference) { return vars[reference]; }
+        
+        public final void createDeletated(PSIterator iterator)
+        {
+            if(delegated != null)
+                throw new IllegalStateException();
+            delegated = iterator;
+        }
+        public final PSIterator getDelegated()
+        {
+            if(delegated == null)
+                throw new IllegalStateException();
+            return delegated;
+        }
+        public final void destroyDelegated()
+        {
+            if(delegated == null)
+                throw new IllegalStateException();
+            delegated = null;
+        }
     }
     
     public static interface GeneratorCallable

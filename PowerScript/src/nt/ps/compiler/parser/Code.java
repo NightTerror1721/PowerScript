@@ -56,7 +56,8 @@ public abstract class Code
         HashMap<String, CP> map = new HashMap<>();
         for(Field field : clazz.getDeclaredFields())
         {
-            if(field.getType() != clazz || !Modifier.isStatic(field.getModifiers()))
+            if(field.getType() != clazz || !Modifier.isStatic(field.getModifiers()) ||
+                    field.isAnnotationPresent(CollectorIgnore.class))
                 continue;
             try
             {

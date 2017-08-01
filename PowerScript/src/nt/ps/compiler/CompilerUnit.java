@@ -660,6 +660,8 @@ public final class CompilerUnit
                             sb.decode();
                             if(sb.getCodeCount() > 0 && sb.getLastCode() == OperatorSymbol.FUNCTION)
                                 sb.addCode(GeneratorIdentifier.GENERATOR);
+                            else if(sb.getCodeCount() > 0 && sb.getLastCode() == CommandWord.YIELD)
+                                sb.replaceCode(sb.getCodeCount() - 1, CommandWord.DELEGATOR_YIELD);
                             else sb.addOperator(OperatorSymbol.MULTIPLY);
                             source.move(-1);
                         }

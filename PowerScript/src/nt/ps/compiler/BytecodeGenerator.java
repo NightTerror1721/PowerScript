@@ -143,7 +143,8 @@ public final class BytecodeGenerator
             ARGS_JAVA_MAP_BOOLEAN = { new ObjectType(Map.class.getName()), Type.BOOLEAN },
             ARGS_JAVA_OBJECT_2 = { Type.OBJECT, Type.OBJECT },
             ARGS_VALUE_GENERATOR_STATE = { TYPE_VALUE, TYPE_GENERATOR_STATE },
-            ARGS_ARRAY_VALUE = { TYPE_ARRAY_VALUE };
+            ARGS_ARRAY_VALUE = { TYPE_ARRAY_VALUE },
+            ARGS_ITERATOR = { TYPE_ITERATOR };
     
     private static final Type[][][] FUNC_ARGS = {
         { NO_ARGS, ARGS_VALUE_1, ARGS_VALUE_2, ARGS_VALUE_3, ARGS_VALUE_4, ARGS_VARARGS },
@@ -2093,6 +2094,40 @@ public final class BytecodeGenerator
         InstructionHandle ih = mainInst.append(InstructionConstants.NOP);
         yields.add(ih);
         return ih;
+    }
+    
+    public final InstructionHandle computeDelegatorYield() throws CompilerError
+    {
+        if(!generator)
+            throw new IllegalStateException();
+        createIteratorInstance();
+        mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+        mainInst.append(InstructionConstants.SWAP);
+        InstructionHandle base = mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "createDeletated",
+                Type.VOID, ARGS_ITERATOR, Constants.INVOKEVIRTUAL));
+        
+        IFEQ ifeq = new IFEQ(null);
+        mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+        mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "getDelegated",
+                TYPE_ITERATOR, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "hasNext",
+                Type.BOOLEAN, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.append(ifeq);
+        
+        mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+        mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "getDelegated",
+                TYPE_ITERATOR, NO_ARGS, Constants.INVOKEVIRTUAL));
+        mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "next",
+                TYPE_VARARGS, NO_ARGS, Constants.INVOKEVIRTUAL));
+        computeYield(1);
+        mainInst.append(new GOTO(base.getNext()));
+        
+        InstructionHandle afterYield = mainInst.append(new ALOAD(LOCAL_FIRST_ID));
+        InstructionHandle last = mainInst.append(factory.createInvoke(STR_TYPE_GENERATOR_STATE, "destroyDelegated",
+                Type.VOID, NO_ARGS, Constants.INVOKEVIRTUAL));
+        
+        ifeq.setTarget(afterYield);
+        return last;
     }
     
     
