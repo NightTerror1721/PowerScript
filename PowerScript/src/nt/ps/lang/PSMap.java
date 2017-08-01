@@ -179,22 +179,6 @@ public final class PSMap extends PSValue implements Iterable<Map.Entry<PSValue, 
         }
     }
     
-    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
-        switch(name)
-        {
-            default: return null;
-        }
-    }) {
-        @Override
-        protected final PSVarargs innerCall(PSValue self) { return new PSMap(); }
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self, PSValue arg0)
-        {
-            return new PSMap(arg0.toJavaMap());
-        }
-    };
-    
     private static final PSValue PUT = PSFunction.<PSMap>method((self, arg0, arg1) -> {
         if(arg0 == UNDEFINED)
             throw new PSRuntimeException("Key value cannot be a undefined value");

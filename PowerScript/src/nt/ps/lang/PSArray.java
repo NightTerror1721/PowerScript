@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.function.Supplier;
 import nt.ps.exception.PSRuntimeException;
-import nt.ps.lang.Utils.NativeObjectLibOneArg;
 
 /**
  *
@@ -197,26 +196,7 @@ public final class PSArray extends PSValue implements Iterable<PSValue>
             case "toString": return TO_STRING;
         }
     }
-    
-    
-    
-    public static final PSValue OBJECT_LIB = new NativeObjectLibOneArg(name -> {
-        switch(name)
-        {
-            default: return null;
-        }
-    }) {
-        @Override
-        protected final PSVarargs innerCall(PSValue self) { return new PSArray(); }
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self, PSValue arg0)
-        {
-            if(arg0.isNumber())
-                return new PSArray(arg0.toJavaInt());
-            return new PSArray(arg0.toJavaList());
-        }
-    };
+
     
     private static final PSValue CONCAT = PSFunction.<PSArray>method((self, arg0, arg1, arg2) -> {
         List<PSValue> list = self.toJavaList();

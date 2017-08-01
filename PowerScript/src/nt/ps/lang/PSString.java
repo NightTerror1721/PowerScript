@@ -106,20 +106,6 @@ public final class PSString extends PSValue
     }
     
     
-    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
-        switch(name)
-        {
-            default: return null;
-        }
-    }) {
-        @Override
-        protected final PSVarargs innerCall(PSValue self) { return new PSString(""); }
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self, PSValue arg0) { return new PSString(arg0.toJavaString()); }
-    };
-    
-    
     private static final PSValue CHAR_AT = PSFunction.<PSString>method((self, arg0) ->  {
         return new PSString(Character.toString(self.string.charAt(arg0.toJavaInt())));
     });

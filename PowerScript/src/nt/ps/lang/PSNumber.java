@@ -65,34 +65,6 @@ public abstract class PSNumber extends PSValue
         }
     }
     
-    
-    private static final PSValue MAX_INTEGER = new PSNumber.PSLong(Long.MAX_VALUE);
-    private static final PSValue MIN_INTEGER = new PSNumber.PSLong(Long.MIN_VALUE);
-    private static final PSValue MAX_FLOAT = new PSNumber.PSDouble(Double.MAX_VALUE);
-    private static final PSValue MIN_FLOAT = new PSNumber.PSDouble(Double.MIN_VALUE);
-    private static final PSValue POSITIVE_INFINITY = new PSNumber.PSDouble(Double.POSITIVE_INFINITY);
-    private static final PSValue NEGATIVE_INFINITY = new PSNumber.PSDouble(Double.NEGATIVE_INFINITY);
-    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
-        switch(name)
-        {
-            default: return null;
-            case "maxInteger": return MAX_INTEGER;
-            case "minInteger": return MIN_INTEGER;
-            case "maxFloat": return MAX_FLOAT;
-            case "minFloat": return MIN_FLOAT;
-            case "positiveInfinity": return POSITIVE_INFINITY;
-            case "negativeInfinity": return NEGATIVE_INFINITY;
-        }
-    }) {
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self) { return ZERO; }
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self, PSValue arg0) { return new PSDouble(arg0.toJavaDouble()); }
-    };
-    
-    
     private static final PSValue IS_FINITE = PSFunction.<PSNumber>method(self -> {
         if(self.isFloat())
             return Float.isFinite(((PSFloat)self).number) ? TRUE : FALSE;

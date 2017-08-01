@@ -8,8 +8,13 @@ function* pairs(to) {
 	yield* range(0, to, 2);
 }
 
-for(value : pairs(20))
-	IO.print(value);
+IO.print(pairs(20).pack());
+pairs(35).forEach(IO.print);
+	
+	
+var arrr = new Array(2, 4, 8);
+
+IO.print(arrr);
 
 
 /*var utils = import("utils.pwd");

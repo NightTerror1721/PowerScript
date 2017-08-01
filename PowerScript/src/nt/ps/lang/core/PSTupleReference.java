@@ -5,6 +5,7 @@
  */
 package nt.ps.lang.core;
 
+import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSTuple;
 import nt.ps.lang.PSValue;
 import nt.ps.lang.PSVarargs;
@@ -45,6 +46,14 @@ public final class PSTupleReference extends PrimitiveReference
         switch(name)
         {
             default: return UNDEFINED;
+            case "contract": return CONTRACT;
         }
     }
+    
+    private static final PSValue CONTRACT = PSFunction.function((args) -> {
+        PSValue[] array = new PSValue[args.numberOfArguments()];
+        for(int i=0;i<array.length;i++)
+            array[i] = args.arg(i);
+        return new PSTuple(array);
+    });
 }

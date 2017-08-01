@@ -218,24 +218,6 @@ public final class PSTuple extends PSValue implements Iterable<PSValue>
         }
     }
     
-    
-    
-    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
-        switch(name)
-        {
-            default: return null;
-        }
-    }) {
-        @Override
-        protected final PSVarargs innerCall(PSValue self) { return new PSTuple(); }
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self, PSValue arg0)
-        {
-            return new PSTuple(arg0.toJavaList());
-        }
-    };
-    
     private static final PSValue CONCAT = PSFunction.<PSTuple>method((self, arg0, arg1, arg2) -> {
         List<PSValue> list = self.toJavaList();
         String del = arg0 == UNDEFINED ? "" : arg0.toJavaString();

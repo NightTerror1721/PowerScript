@@ -85,19 +85,5 @@ public final class PSBoolean extends PSValue
     }
     
     
-    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
-        switch(name)
-        {
-            default: return null;
-        }
-    }) {
-        @Override
-        protected final PSVarargs innerCall(PSValue self) { return TRUE; }
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self, PSValue arg0) { return arg0.toJavaBoolean() ? TRUE : FALSE; }
-    };
-    
-    
     private static final PSValue TO_STRING = PSFunction.<PSBoolean>method((self) -> new PSString(self.bool ? "true" : "false"));
 }

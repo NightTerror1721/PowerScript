@@ -5,6 +5,8 @@
  */
 package nt.ps.lang;
 
+import java.util.LinkedList;
+
 /**
  *
  * @author Asus
@@ -38,6 +40,8 @@ public abstract class PSIterator extends PSValue
             default: return UNDEFINED;
             case "hasNext": return HAS_NEXT;
             case "next": return NEXT;
+            case "forEach": return FOR_EACH;
+            case "pack": return PACK;
         }
     }
     
@@ -46,20 +50,24 @@ public abstract class PSIterator extends PSValue
     @Override public abstract PSVarargs next();
     
     
-    public static final PSValue OBJECT_LIB = new Utils.NativeObjectLibOneArg(name -> {
-        switch(name)
-        {
-            default: return null;
-        }
-    }) {
-        @Override
-        protected final PSVarargs innerCall(PSValue self) { return innerCall(self,UNDEFINED); }
-        
-        @Override
-        protected final PSVarargs innerCall(PSValue self, PSValue arg0) { return arg0.createIterator(); }
-    };
-    
-    
     private static final PSValue HAS_NEXT = PSFunction.method((self) -> self.hasNext() ? TRUE : FALSE);
     private static final PSValue NEXT = PSFunction.method((self) -> self.next());
+    private static final PSValue FOR_EACH = PSFunction.voidMethod((self, consumer) -> {
+        while(self.hasNext())
+            consumer.call(self.next());
+    });
+    private static final PSValue PACK = PSFunction.method((self) -> {
+        LinkedList<PSValue> list = new LinkedList<>();
+        while(self.hasNext())
+        {
+            PSVarargs result = self.next();
+            switch(result.numberOfArguments())
+            {
+                case 0: list.add(NULL); break;
+                case 1: list.add(result.self()); break;
+                default: list.add(varargsAsPSArray(result, 0)); break;
+            }
+        }
+        return new PSArray(list);
+    });
 }
