@@ -154,7 +154,9 @@ public final class VariablePool
         VariableScope scope = vars.getLast();
         if(scope.exists(name))
             throw CompilerError.varAlreadyExists(name);
-        return scope.createLocal(name, false);
+        Variable var = scope.createLocal(name, false);
+        var.initiate();
+        return var;
     }
     
     public final Variable createStatic(String name, boolean isConstant) throws CompilerError

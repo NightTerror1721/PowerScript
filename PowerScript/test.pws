@@ -16,6 +16,15 @@ var arrr = new Array(2, 4, 8);
 
 IO.print(arrr);
 
+const var Obj = {
+	//claw: Obj
+	dos: function() {
+		IO.print(typeof(Obj));
+	}
+};
+
+Obj.dos();
+
 
 /*var utils = import("utils.pwd");
 const static valuess = 65;

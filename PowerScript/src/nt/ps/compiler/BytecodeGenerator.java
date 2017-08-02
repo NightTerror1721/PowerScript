@@ -552,8 +552,8 @@ public final class BytecodeGenerator
                 new Type[] { TYPE_VALUE },
                 Constants.INVOKESPECIAL));
         InstructionHandle ih = storeLocal(var.getReference());
-        if(!var.isInitiated())
-            var.initiate();
+        /*if(!var.isInitiated())
+            var.initiate();*/
         pointerVars.add(var.getReference());
         return ih;
     }
@@ -831,6 +831,8 @@ public final class BytecodeGenerator
     
     public final InstructionHandle load(Variable var) throws CompilerError
     {
+        if(!var.isInitiated())
+            throw new CompilerError("Cannot load an uninitiated variable: " + var.getName());
         compiler.getStack().push();
         switch(var.getVariableType())
         {
@@ -847,7 +849,7 @@ public final class BytecodeGenerator
     public final InstructionHandle store(Variable var) throws CompilerError
     {
         if(var.isConstant() && var.isInitiated())
-            throw new CompilerError("Cannot reassign a initiated consant variable");
+            throw new CompilerError("Cannot reassign a initiated consant variable: " + var.getName());
         compiler.getStack().pop();
         switch(var.getVariableType())
         {
@@ -859,7 +861,12 @@ public final class BytecodeGenerator
                     var.initiate();
                 return ih;
             }
-            case LOCAL_POINTER: return storeLocalPointer(var.getReference());
+            case LOCAL_POINTER: {
+                InstructionHandle ih = storeLocalPointer(var.getReference());
+                if(!var.isInitiated())
+                    var.initiate();
+                return ih;
+            }
             case UP_POINTER: return storeUpPointer(var.getReference());
             case GLOBAL: return storeGlobal(var.getName());
             case STATIC: return storeStatic(var.getReference(), var.getStaticClassName());
