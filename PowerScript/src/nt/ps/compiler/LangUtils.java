@@ -13,6 +13,7 @@ import nt.ps.exception.PSRuntimeException;
 import nt.ps.lang.PSDataType;
 import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSIterator;
+import nt.ps.lang.PSMap;
 import nt.ps.lang.PSNumber;
 import nt.ps.lang.PSObject;
 import nt.ps.lang.PSObject.Property;
@@ -36,6 +37,8 @@ public final class LangUtils
         public ProtoMap() { super(); }
         public ProtoMap(int initialCapacity) { super(initialCapacity); }
         public ProtoMap(int initialCapacity, float loadFactor) { super(initialCapacity, loadFactor); }
+        
+        public final PSMap build() { return new PSMap(this); }
     }
     
     public static final class ProtoObject extends HashMap<String, Property>
@@ -46,6 +49,8 @@ public final class LangUtils
         
         public final void put(String name, PSValue value) { put(name, new Property(value, false)); }
         public final void put(String name, PSValue value, boolean isFrozen) { put(name, new Property(value, isFrozen)); }
+        
+        public final PSObject build(boolean frozen) { return new PSObject(this, frozen); }
     }
     
     public static final PSValue operatorTypeof(PSValue value)
