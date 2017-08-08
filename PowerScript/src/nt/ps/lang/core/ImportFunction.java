@@ -38,7 +38,7 @@ public final class ImportFunction extends PSFunction.PSTwoArgsFunction
         if(file == null)
             throw new NullPointerException();
         if(!file.exists() || !file.isDirectory())
-            throw new IllegalArgumentException("Require a valid directory for root import function");
+            throw new IllegalArgumentException("Require a valid directory for root import function: " + file.getAbsolutePath());
         this.root = file;
     }
     

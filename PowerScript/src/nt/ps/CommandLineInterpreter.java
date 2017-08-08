@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import nt.ps.compiler.exception.CompilerError;
@@ -84,6 +85,8 @@ public final class CommandLineInterpreter
             return;
         }
         
+        Path base = file.toPath();
+        state.setRootInImportFunction(base.subpath(0, base.getNameCount() - 1).toFile());
         globals.put("ARGS", psArgs);
         if(hasModifier(mods, TIME_MODIFIER))
         {
