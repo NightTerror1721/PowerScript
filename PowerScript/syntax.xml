@@ -24,7 +24,7 @@
             <Keywords name="Folders in comment, open"></Keywords>
             <Keywords name="Folders in comment, middle"></Keywords>
             <Keywords name="Folders in comment, close"></Keywords>
-            <Keywords name="Keywords1">var if else while for switch case default return yield continue break global static try catch throw const function typeof instanceof new true false null</Keywords>
+            <Keywords name="Keywords1">var if else while for switch case default return yield continue break global static try catch throw const function typeof import instanceof new true false null</Keywords>
             <Keywords name="Keywords2">self Infinity NaN Object Array Tuple Boolean Number String Map Iterator Function Math System eval toNumber toBoolean toString toArray toMap __plus__ __minus__ __multiply__ __divide__ __module__ __negative__ __increase__ __decrease__ __sfleft__ __sfright__ __and__ __or__ __not__ __xor__ equals notEquals __greater__ __smaller__ __greatereq__ __smallereq__ __negate__ contains __set__ __get__ __call__ iterator constructor hashCode</Keywords>
             <Keywords name="Keywords3"></Keywords>
             <Keywords name="Keywords4"></Keywords>

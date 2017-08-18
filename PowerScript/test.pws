@@ -25,6 +25,9 @@ const var Obj = {
 
 Obj.dos();
 
+const var utils = import "utils.pwd";
+IO.print(Object.toString(utils));
+
 
 /*var utils = import("utils.pwd");
 const static valuess = 65;

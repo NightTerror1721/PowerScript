@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +25,6 @@ import nt.ps.compiler.exception.PSCompilerException;
 import nt.ps.lang.PSValue;
 import nt.ps.lang.PSVarargs;
 import nt.ps.lang.core.EvalFunction;
-import nt.ps.lang.core.ImportFunction;
 import nt.ps.lang.core.PSArrayReference;
 import nt.ps.lang.core.PSBooleanReference;
 import nt.ps.lang.core.PSFunctionReference;
@@ -57,6 +57,8 @@ public final class PSState extends PSGlobals
     private static final PrintWriter DEFAULT_STDERR = new PrintWriter(System.err);
     private static final InputStreamReader DEFAULT_STDIN = new InputStreamReader(System.in);
     
+    private File root = new File(System.getProperty("user.dir"));
+    
     public PSState()
     {
         super(null);
@@ -67,7 +69,8 @@ public final class PSState extends PSGlobals
         stdin = DEFAULT_STDIN;
     }
     
-    public final PSClassLoader getClassLoader() { return classLoader; }
+    @Override
+    final PSClassLoader getClassLoader0() { return classLoader; }
     
     public static final PSState createDefaultInstance()
     {
@@ -97,17 +100,13 @@ public final class PSState extends PSGlobals
         natives.put("IO", new PSIO(this));
     }
     
-    public final void insertDefaultImportFunction()
-    {
-        natives.put("import", new ImportFunction(this));
-    }
-    
     public final void setRootInImportFunction(File root)
     {
-        ImportFunction imp = (ImportFunction) natives.get("import");
-        if(imp == null)
-            throw new IllegalStateException("ImportFunction has not initiated");
-        imp.setRoot(root);
+        if(root == null)
+            throw new NullPointerException();
+        if(!root.exists() || !root.isDirectory())
+            throw new IllegalArgumentException("Require a valid directory for root import function");
+        this.root = root;
     }
     
     public final Writer getStdout() { return stdout; }
@@ -233,6 +232,16 @@ public final class PSState extends PSGlobals
     final boolean hasNativeValue0(String name)
     {
         return natives.containsKey(name);
+    }
+    
+    @Override
+    final File adaptPath(String strPath)
+    {
+        File file = new File(strPath);
+        Path path = file.toPath();
+        if(path.getRoot() != null)
+            return file;
+        return new File(root.getAbsolutePath() + File.separator + strPath);
     }
     
     private static String randomName()

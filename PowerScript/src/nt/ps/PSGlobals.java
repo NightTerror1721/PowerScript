@@ -5,12 +5,18 @@
  */
 package nt.ps;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import nt.ps.compiler.CompilerUnit;
+import nt.ps.exception.PSRuntimeException;
+import nt.ps.lang.PSFunction;
+import nt.ps.lang.PSObject;
 import nt.ps.lang.PSValue;
 
 /**
@@ -46,6 +52,10 @@ public abstract class PSGlobals
     public Collection<PSValue> values() { throw new UnsupportedOperationException(); }
     
     
+    public final PSClassLoader getClassLoader() { return getClassLoader0(); }
+    PSClassLoader getClassLoader0() { return parent == null ? new PSClassLoader(getClass().getClassLoader()) : parent.getClassLoader(); }
+    
+    
     public final PSValue getNativeValue(String name) { return getNativeValue0(name); }
     PSValue getNativeValue0(String name)
     {
@@ -62,6 +72,25 @@ public abstract class PSGlobals
     boolean hasNativeValue0(String name)
     {
         return parent == null ? false : parent.hasNativeValue0(name);
+    }
+    
+    File adaptPath(String strPath) { return parent == null ? new File(strPath) : parent.adaptPath(strPath); }
+    public final PSValue importScript(String strPath)
+    {
+        File file = adaptPath(strPath);
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            PSObject wrapper = new PSObject();
+            PSGlobals globals = wrap(this, wrapper);
+            PSFunction callable = CompilerUnit.compile(fis, globals, getClassLoader(), file.getName().replace('.','_'), false);
+            callable.call();
+            wrapper.setFrozen(true);
+            return wrapper;
+        }
+        catch(Throwable th)
+        {
+            throw new PSRuntimeException(th);
+        }
     }
     
     

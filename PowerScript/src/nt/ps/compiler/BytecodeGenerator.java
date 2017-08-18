@@ -144,7 +144,8 @@ public final class BytecodeGenerator
             ARGS_JAVA_OBJECT_2 = { Type.OBJECT, Type.OBJECT },
             ARGS_VALUE_GENERATOR_STATE = { TYPE_VALUE, TYPE_GENERATOR_STATE },
             ARGS_ARRAY_VALUE = { TYPE_ARRAY_VALUE },
-            ARGS_ITERATOR = { TYPE_ITERATOR };
+            ARGS_ITERATOR = { TYPE_ITERATOR },
+            ARGS_VALUE_GLOBALS = { TYPE_VALUE, TYPE_GLOBALS };
     
     private static final Type[][][] FUNC_ARGS = {
         { NO_ARGS, ARGS_VALUE_1, ARGS_VALUE_2, ARGS_VALUE_3, ARGS_VALUE_4, ARGS_VARARGS },
@@ -1541,6 +1542,8 @@ public final class BytecodeGenerator
             {
                 if(symbol == OperatorSymbol.TYPEOF)
                     return callTypeofOperator();
+                else if(symbol == OperatorSymbol.IMPORT)
+                    return callImportOperator();
                 throw new IllegalStateException();
             }
             return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, symbol.getAssociatedFunction(),
@@ -1570,6 +1573,14 @@ public final class BytecodeGenerator
     {
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorTypeof",
                 TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKESTATIC));
+    }
+    
+    private InstructionHandle callImportOperator()
+    {
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className, STR_GLOBALS_ATTRIBUTE, TYPE_GLOBALS));
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorImport",
+                TYPE_VALUE, ARGS_VALUE_GLOBALS, Constants.INVOKESTATIC));
     }
     
     private InstructionHandle callInstanceofOperator()

@@ -8,6 +8,7 @@ package nt.ps.compiler;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;
+import nt.ps.PSGlobals;
 import nt.ps.exception.PSException;
 import nt.ps.exception.PSRuntimeException;
 import nt.ps.lang.PSDataType;
@@ -56,6 +57,11 @@ public final class LangUtils
     public static final PSValue operatorTypeof(PSValue value)
     {
         return new PSString(value.getPSType().getTypeName());
+    }
+    
+    public static final PSValue operatorImport(PSValue value, PSGlobals globals)
+    {
+        return globals.importScript(value.toJavaString());
     }
     
     public static final PSValue operatorInstanceof(PSValue object, PSValue parent)

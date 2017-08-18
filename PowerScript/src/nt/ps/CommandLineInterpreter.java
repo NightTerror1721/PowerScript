@@ -28,7 +28,6 @@ public final class CommandLineInterpreter
     {
         state = PSState.createDefaultInstance();
         state.insertDefaultIOUtils();
-        state.insertDefaultImportFunction();
     }
     
     public final void execute(String... args)
