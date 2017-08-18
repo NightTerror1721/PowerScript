@@ -75,9 +75,9 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             TO_STRING = PSFunction.function((arg0) -> new PSString(toString(arg0, false))),
             DEEP_TO_STRING = PSFunction.function((arg0) -> new PSString(toString(arg0, true))),
             SET_PROPERTY = PSFunction.voidFunction((arg0, arg1, arg2) -> {
-                arg0.toPSObject().setProperty(arg1.toJavaString(), arg2);
+                arg0.setProperty(arg1.toJavaString(), arg2);
             }),
-            GET_PROPERTY = PSFunction.function((arg0, arg1) -> arg0.toPSObject().getProperty(arg1.toJavaString())),
+            GET_PROPERTY = PSFunction.function((arg0, arg1) -> arg0.getProperty(arg1.toJavaString())),
             PROPERTIES = PSFunction.function((arg0) -> {
                 return new PSIterator()
                 {
