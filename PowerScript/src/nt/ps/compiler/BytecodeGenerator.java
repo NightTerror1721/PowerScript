@@ -1696,7 +1696,7 @@ public final class BytecodeGenerator
         }
         compiler.getStack().push();
         
-        if(isTailed)
+        if(args > 4)
             wrapArgsToArray(args);
         return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
                 TYPE_VALUE, targs, Constants.INVOKEVIRTUAL));
@@ -1723,7 +1723,7 @@ public final class BytecodeGenerator
         }
         compiler.getStack().push();
         
-        if(isTailed)
+        if(args > 4)
             wrapArgsToArray(args);
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "callSuperConstructor",
                 TYPE_VARARGS, targs, Constants.INVOKESTATIC));
@@ -1750,7 +1750,7 @@ public final class BytecodeGenerator
         }
         compiler.getStack().push();
         
-        if(isTailed)
+        if(args > 4)
             wrapArgsToArray(args);
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "invokeSuperMethod",
                 TYPE_VARARGS, targs, Constants.INVOKESTATIC));

@@ -46,7 +46,9 @@ const var ObjExtended = extends(Obj) const {
 	toString: function() { return Object.toString(self, true); }
 };
 
-var testvar = new ObjExtended(35, true);
+var argggs = [35, true];
+
+var testvar = new ObjExtended(argggs.expand());
 IO.print(testvar);
 
 testvar.dos();
