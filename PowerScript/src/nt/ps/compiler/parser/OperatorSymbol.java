@@ -48,6 +48,7 @@ public abstract class OperatorSymbol extends Code
     public boolean isInvoke() { return false; }
     public boolean isNew() { return false; }
     public boolean isFunction() { return false; }
+    public boolean isExtends() { return false; }
     
     public final boolean isCallable() { return isCall() || isInvoke(); }
     
@@ -70,6 +71,7 @@ public abstract class OperatorSymbol extends Code
             CALL = new CallOperatorSymbol("()",14,null),
             
             FUNCTION = new FunctionOperatorSymbol("function",13,null),
+            EXTENDS = new ExtendsOperatorSymbol("extends",13,null),
             
             NEGATE = new UnaryOperatorSymbol("!",12,"negate"),
             LOGIC_NOT = new UnaryOperatorSymbol("~",12,"logicNot"),
@@ -132,7 +134,7 @@ public abstract class OperatorSymbol extends Code
                     array = new OperatorSymbol[2];
                     HASH.put(cp.symbol,array);
                 }
-                array[cp.isUnary() || cp.isNew() || cp.isFunction() ? 1 : 0] = cp;
+                array[cp.isUnary() || cp.isNew() || cp.isFunction() || cp.isExtends() ? 1 : 0] = cp;
             }
             catch(IllegalAccessException | IllegalArgumentException ex)
             {
@@ -163,7 +165,8 @@ public abstract class OperatorSymbol extends Code
         CALL(1),
         INVOKE(1),
         NEW(1),
-        FUNCTION(3);
+        FUNCTION(3),
+        EXTENDS(3);
         
         private int priority;
         private Type(int priority) { this.priority = priority; }
@@ -256,5 +259,16 @@ public abstract class OperatorSymbol extends Code
         
         @Override
         public final boolean isFunction() { return true; }
+    }
+    
+    private static class ExtendsOperatorSymbol extends OperatorSymbol
+    {
+        public ExtendsOperatorSymbol(String symbol, int priority, String functionName)
+        {
+            super(symbol, Type.EXTENDS, priority, functionName);
+        }
+        
+        @Override
+        public final boolean isExtends() { return true; }
     }
 }

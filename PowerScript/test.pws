@@ -20,13 +20,36 @@ const var Obj = {
 	//claw: Obj
 	dos: function() {
 		IO.print(typeof(Obj));
+	},
+	
+	constructor: function(value = 50) {
+		self.scalar = value;
 	}
 };
 
 Obj.dos();
 
-const var utils = import "utils.pwd";
-IO.print(Object.toString(utils));
+//const var utils = import "utils.pwd";
+//IO.print(Object.toString(utils));
+
+const var ObjExtended = extends(Obj) const {
+	constructor: function(power, dash) {
+		super(power);
+		self.dash = dash;
+	},
+	
+	dos: function() {
+		super.dos();
+		IO.print("Tested");
+	},
+	
+	toString: function() { return Object.toString(self, true); }
+};
+
+var testvar = new ObjExtended(35, true);
+IO.print(testvar);
+
+testvar.dos();
 
 
 /*var utils = import("utils.pwd");

@@ -120,6 +120,12 @@ public final class BytecodeGenerator
             ARGS_STRING_VALUE_3 = { Type.STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
             ARGS_STRING_VALUE_4 = { Type.STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
             ARGS_STRING_VARARGS = { Type.STRING, TYPE_VARARGS },
+            ARGS_VALUE_STRING = { TYPE_VALUE, Type.STRING },
+            ARGS_VALUE_STRING_VALUE_1 = { TYPE_VALUE, Type.STRING, TYPE_VALUE },
+            ARGS_VALUE_STRING_VALUE_2 = { TYPE_VALUE, Type.STRING, TYPE_VALUE, TYPE_VALUE },
+            ARGS_VALUE_STRING_VALUE_3 = { TYPE_VALUE, Type.STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
+            ARGS_VALUE_STRING_VALUE_4 = { TYPE_VALUE, Type.STRING, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE, TYPE_VALUE },
+            ARGS_VALUE_STRING_VARARGS = { TYPE_VALUE, Type.STRING, TYPE_VARARGS },
             ARGS_VALUE_VARARGS = { TYPE_VALUE, TYPE_VARARGS },
             ARGS_A_VALUE = { new ArrayType(TYPE_VALUE, 1) },
             ARGS_GLOBALS_A_VALUE = { TYPE_GLOBALS, new ArrayType(TYPE_VALUE, 1) },
@@ -149,7 +155,9 @@ public final class BytecodeGenerator
     
     private static final Type[][][] FUNC_ARGS = {
         { NO_ARGS, ARGS_VALUE_1, ARGS_VALUE_2, ARGS_VALUE_3, ARGS_VALUE_4, ARGS_VARARGS },
-        { ARGS_STRING, ARGS_STRING_VALUE_1, ARGS_STRING_VALUE_2, ARGS_STRING_VALUE_3, ARGS_STRING_VALUE_4, ARGS_STRING_VARARGS }
+        { ARGS_STRING, ARGS_STRING_VALUE_1, ARGS_STRING_VALUE_2, ARGS_STRING_VALUE_3, ARGS_STRING_VALUE_4, ARGS_STRING_VARARGS },
+        { ARGS_VALUE_1, ARGS_VALUE_2, ARGS_VALUE_3, ARGS_VALUE_4, ARGS_VALUE_5, ARGS_VALUE_VARARGS },
+        { ARGS_VALUE_STRING, ARGS_VALUE_STRING_VALUE_1, ARGS_VALUE_STRING_VALUE_2, ARGS_VALUE_STRING_VALUE_3, ARGS_VALUE_STRING_VALUE_4, ARGS_VALUE_STRING_VARARGS }
     };
     
     public static final String
@@ -696,6 +704,13 @@ public final class BytecodeGenerator
     {
         compiler.getStack().push();
         return mainInst.append(new ALOAD(SELF_ID));
+    }
+    
+    public final InstructionHandle loadSuper() throws CompilerError
+    {
+        loadSelf();
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "getSuper",
+                TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKESTATIC));
     }
     
     private InstructionHandle storeLocal(int reference)
@@ -1526,6 +1541,14 @@ public final class BytecodeGenerator
                 Constants.INVOKESPECIAL));
     }
     
+    public final InstructionHandle extendObject() throws CompilerError
+    {
+        compiler.getStack().pop(2);
+        compiler.getStack().push();
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "extendObject",
+                TYPE_VALUE, ARGS_VALUE_2, Constants.INVOKESTATIC));
+    }
+    
     
     
     
@@ -1677,6 +1700,60 @@ public final class BytecodeGenerator
             wrapArgsToArray(args);
         return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, "createNewInstance",
                 TYPE_VALUE, targs, Constants.INVOKEVIRTUAL));
+    }
+    
+    
+    public final InstructionHandle callSuperConstructor(Operator operator, boolean isTailed) throws CompilerError
+    {
+        int args;
+        Type[] targs;
+        if(isTailed)
+        {
+            args = -1;
+            targs = FUNC_ARGS[2][5];
+            compiler.getStack().pop(2);
+        }
+        else
+        {
+            args = operator.getOperandCount() - 1;
+            targs = FUNC_ARGS[2][args > 5 ? 5 : args];
+            if(args > 0)
+                compiler.getStack().pop(args);
+            compiler.getStack().pop();
+        }
+        compiler.getStack().push();
+        
+        if(isTailed)
+            wrapArgsToArray(args);
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "callSuperConstructor",
+                TYPE_VARARGS, targs, Constants.INVOKESTATIC));
+    }
+    
+    
+    public final InstructionHandle invokeSuperMethod(Operator operator, boolean isTailed) throws CompilerError
+    {
+        int args;
+        Type[] targs;
+        if(isTailed)
+        {
+            args = -1;
+            targs = FUNC_ARGS[3][5];
+            compiler.getStack().pop(2);
+        }
+        else
+        {
+            args = operator.getOperandCount() - 2;
+            targs = FUNC_ARGS[3][args > 5 ? 5 : args];
+            if(args > 0)
+                compiler.getStack().pop(args);
+            compiler.getStack().pop();
+        }
+        compiler.getStack().push();
+        
+        if(isTailed)
+            wrapArgsToArray(args);
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "invokeSuperMethod",
+                TYPE_VARARGS, targs, Constants.INVOKESTATIC));
     }
     
     

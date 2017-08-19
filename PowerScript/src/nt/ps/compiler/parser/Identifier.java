@@ -59,6 +59,7 @@ public class Identifier extends CodeObject
         {
             default: return new Identifier(word);
             case "self": return new SelfWord();
+            case "super": return new SuperWord();
         }
     }
     
@@ -67,5 +68,12 @@ public class Identifier extends CodeObject
         private SelfWord() { super("self"); }
         @Override
         public final CodeType getCodeType() { return CodeType.SELF; }
+    }
+    
+    public static final class SuperWord extends Identifier
+    {
+        private SuperWord() { super("super"); }
+        @Override
+        public final CodeType getCodeType() { return CodeType.SUPER; }
     }
 }

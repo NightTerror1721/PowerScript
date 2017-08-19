@@ -24,6 +24,7 @@ import nt.ps.compiler.parser.Code.CodeType;
 import nt.ps.compiler.parser.Command;
 import nt.ps.compiler.parser.CommandWord.CommandName;
 import nt.ps.compiler.parser.Declaration;
+import nt.ps.compiler.parser.Extends;
 import nt.ps.compiler.parser.FunctionLiteral;
 import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
@@ -598,9 +599,21 @@ final class CompilerBlock
                     bytecode.pop();
                 }
             } break;
+            case EXTENDS: {
+                compileExtends((Extends) code, true);
+                if(pop)
+                {
+                    stack.pop();
+                    bytecode.pop();
+                }
+            } break;
             case SELF: {
                 if(!pop)
                     bytecode.loadSelf();
+            } break;
+            case SUPER: {
+                if(!pop)
+                    bytecode.loadSuper();
             } break;
             case OPERATOR: {
                 compileOperator((Operator) code, true, multiresult || pop);
@@ -685,6 +698,13 @@ final class CompilerBlock
             }
         }
         else throw new IllegalStateException();
+    }
+    
+    private void compileExtends(Extends ext, boolean isGlobal) throws CompilerError
+    {
+        compileOperation(ext.getParent(), isGlobal, false, false);
+        compileMutableLiteral(ext.getObject(), isGlobal);
+        bytecode.extendObject();
     }
     
     private void compileFunction(FunctionLiteral function, boolean isGlobal) throws CompilerError
@@ -877,19 +897,29 @@ final class CompilerBlock
     
     private void compileCallsOperator(Operator operator, boolean isInvoke, boolean isGlobal, boolean multiresult) throws CompilerError
     {
-        compileOperation(operator.getOperand(0), isGlobal, false, false);
+        boolean isSuper = false;
+        if(operator.getOperand(0).is(CodeType.SUPER))
+        {
+            bytecode.loadSelf();
+            isSuper = true;
+        }
+        else compileOperation(operator.getOperand(0), isGlobal, false, false);
         if(isInvoke)
         {
             bytecode.loadNativeString(operator.getOperand(1).toString());
             int parsCount = compileParameters(operator, 2, isGlobal);
-            if(parsCount < 0)
+            if(isSuper)
+                bytecode.invokeSuperMethod(operator, parsCount < 0);
+            else if(parsCount < 0)
                 bytecode.doTailedCall(operator, true, multiresult);
             else bytecode.doCall(operator, true, multiresult);
         }
         else
         {
             int parsCount = compileParameters(operator, 1, isGlobal);
-            if(parsCount < 0)
+            if(isSuper)
+                bytecode.callSuperConstructor(operator, parsCount < 0);
+            else if(parsCount < 0)
                 bytecode.doTailedCall(operator, false, multiresult);
             else bytecode.doCall(operator, false, multiresult);
         }

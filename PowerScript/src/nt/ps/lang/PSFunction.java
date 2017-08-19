@@ -649,4 +649,33 @@ public abstract class PSFunction extends PSValue
         arg0 = arg0 == UNDEFINED ? NULL : arg0;
         return self.innerCall(arg0, args);
     });
+    
+    public static PSVarargs anonymousCall(PSValue callable, PSValue self)
+    {
+        return callable.innerCall(self);
+    }
+    public static PSVarargs anonymousCall(PSValue callable, PSValue self, PSValue arg0)
+    {
+        return callable.innerCall(self, arg0);
+    }
+    public static PSVarargs anonymousCall(PSValue callable, PSValue self, PSValue arg0, PSValue arg1)
+    {
+        return callable.innerCall(self, arg0, arg1);
+    }
+    public static PSVarargs anonymousCall(PSValue callable, PSValue self, PSValue arg0, PSValue arg1, PSValue arg2)
+    {
+        return callable.innerCall(self, arg0, arg1, arg2);
+    }
+    public static PSVarargs anonymousCall(PSValue callable, PSValue self, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+    {
+        return callable.innerCall(self, arg0, arg1, arg2, arg3);
+    }
+    public static PSVarargs anonymousCall(PSValue callable, PSValue self, PSVarargs args)
+    {
+        return callable.innerCall(self, args);
+    }
+    public static PSVarargs anonymousCall(PSValue callable, PSValue self, PSValue... args)
+    {
+        return callable.innerCall(self, varargsOf(args));
+    }
 }

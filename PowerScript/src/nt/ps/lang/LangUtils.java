@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package nt.ps.compiler;
+package nt.ps.lang;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -11,18 +11,7 @@ import java.util.HashMap;
 import nt.ps.PSGlobals;
 import nt.ps.exception.PSException;
 import nt.ps.exception.PSRuntimeException;
-import nt.ps.lang.PSDataType;
-import nt.ps.lang.PSFunction;
-import nt.ps.lang.PSIterator;
-import nt.ps.lang.PSMap;
-import nt.ps.lang.PSNumber;
-import nt.ps.lang.PSObject;
 import nt.ps.lang.PSObject.Property;
-import nt.ps.lang.PSString;
-import nt.ps.lang.PSTuple;
-import nt.ps.lang.PSUserdata;
-import nt.ps.lang.PSValue;
-import nt.ps.lang.PSVarargs;
 import nt.ps.lang.core.PSObjectReference;
 
 /**
@@ -84,6 +73,93 @@ public final class LangUtils
         return value0.getPSType() == value1.getPSType()
                 ? value0.notEquals(value1)
                 : PSValue.TRUE;
+    }
+    
+    public static final PSValue getBase(PSValue object)
+    {
+        PSValue proto = object.toPSObject().getParent();
+        return proto == null ? PSValue.NULL : proto;
+    }
+    
+    public static final PSValue getSuper(PSValue object)
+    {
+        PSValue proto = object.toPSObject().getParent();
+        proto = proto == null ? null : proto.toPSObject().getParent();
+        return proto == null ? PSValue.NULL : proto;
+    }
+    
+    public static final PSVarargs callSuperConstructor(PSValue object)
+    {
+        PSValue proto = getSuper(object);
+        proto = proto.getProperty(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(proto != PSValue.UNDEFINED)
+            return PSFunction.anonymousCall(proto, object);
+        return PSValue.EMPTY;
+    }
+    public static final PSVarargs callSuperConstructor(PSValue object, PSValue arg0)
+    {
+        PSValue proto = getSuper(object).getProperty(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(proto != PSValue.UNDEFINED)
+            return PSFunction.anonymousCall(proto, object, arg0);
+        return PSValue.EMPTY;
+    }
+    public static final PSVarargs callSuperConstructor(PSValue object, PSValue arg0, PSValue arg1)
+    {
+        PSValue proto = getSuper(object).getProperty(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(proto != PSValue.UNDEFINED)
+            return PSFunction.anonymousCall(proto, object, arg0, arg1);
+        return PSValue.EMPTY;
+    }
+    public static final PSVarargs callSuperConstructor(PSValue object, PSValue arg0, PSValue arg1, PSValue arg2)
+    {
+        PSValue proto = getSuper(object).getProperty(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(proto != PSValue.UNDEFINED)
+            return PSFunction.anonymousCall(proto, object, arg0, arg1, arg2);
+        return PSValue.EMPTY;
+    }
+    public static final PSVarargs callSuperConstructor(PSValue object, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+    {
+        PSValue proto = getSuper(object).getProperty(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(proto != PSValue.UNDEFINED)
+            return PSFunction.anonymousCall(proto, object, arg0, arg1, arg2, arg3);
+        return PSValue.EMPTY;
+    }
+    public static final PSVarargs callSuperConstructor(PSValue object, PSVarargs args)
+    {
+        PSValue proto = getSuper(object).getProperty(ObjectSpecialOpsNames.OPERATOR_NEW);
+        if(proto != PSValue.UNDEFINED)
+            return PSFunction.anonymousCall(proto, object, args);
+        return PSValue.EMPTY;
+    }
+    
+    public static final PSVarargs invokeSuperMethod(PSValue object, String property)
+    {
+        return getSuper(object).getProperty(property).innerCall(object);
+    }
+    public static final PSVarargs invokeSuperMethod(PSValue object, String property, PSValue arg0)
+    {
+        return getSuper(object).getProperty(property).innerCall(object, arg0);
+    }
+    public static final PSVarargs invokeSuperMethod(PSValue object, String property, PSValue arg0, PSValue arg1)
+    {
+        return getSuper(object).getProperty(property).innerCall(object, arg0, arg1);
+    }
+    public static final PSVarargs invokeSuperMethod(PSValue object, String property, PSValue arg0, PSValue arg1, PSValue arg2)
+    {
+        return getSuper(object).getProperty(property).innerCall(object, arg0, arg1, arg2);
+    }
+    public static final PSVarargs invokeSuperMethod(PSValue object, String property, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+    {
+        return getSuper(object).getProperty(property).innerCall(object, arg0, arg1, arg2, arg3);
+    }
+    public static final PSVarargs invokeSuperMethod(PSValue object, String property, PSVarargs args)
+    {
+        return getSuper(object).getProperty(property).innerCall(object, args);
+    }
+    
+    public static final PSValue extendObject(PSValue parent, PSValue object)
+    {
+        return PSObject.createExtended(parent.toPSObject(), object.toPSObject());
     }
     
     public static final boolean switchComparisonInteger(PSValue value)

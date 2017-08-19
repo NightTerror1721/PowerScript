@@ -282,6 +282,19 @@ public final class Tuple
         return function;
     }
     
+    private ParsedCode packExtendsOperator(Counter it) throws CompilerError
+    {
+        Code parent = code[it.value];
+        if(!parent.isValidCodeObject())
+            throw new CompilerError("Expected a valid identifier in extends operator");
+        it.increase();
+        Code object = code[it.value];
+        if(!object.is(CodeType.MUTABLE_LITERAL))
+            throw new CompilerError("Expected a valid literal object in extends operator");
+        it.increase();
+        return new Extends((ParsedCode) parent, (MutableLiteral) object);
+    }
+    
     private ParsedCode packPreUnary(Counter it) throws CompilerError
     {
         Code part = code[it.value];
@@ -297,6 +310,8 @@ public final class Tuple
                     return packNewOperator(it);
                 if(prefix.isFunction())
                     return packFunctionOperator(it);
+                if(prefix.isExtends())
+                    return packExtendsOperator(it);
                 throw new CompilerError("Operator " + prefix + " cannot be a non unary prefix operator");
             }
             part = packPreUnary(it);
