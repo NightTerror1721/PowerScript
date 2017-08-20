@@ -5,7 +5,9 @@
  */
 package nt.ps.lang.core;
 
+import java.util.Collections;
 import java.util.HashMap;
+import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSMap;
 import nt.ps.lang.PSNumber;
 import nt.ps.lang.PSObject.PropertyEntry;
@@ -58,6 +60,10 @@ public final class PSMapReference extends PrimitiveReference
         switch(name)
         {
             default: return UNDEFINED;
+            case "immutable": return IMMUTABLE;
         }
     }
+    
+    private static final PSValue
+            IMMUTABLE = PSFunction.function((arg0) -> new PSMap(Collections.unmodifiableMap(arg0.toJavaMap())));
 }

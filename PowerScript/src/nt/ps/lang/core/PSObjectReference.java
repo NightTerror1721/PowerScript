@@ -13,6 +13,7 @@ import nt.ps.lang.ObjectSpecialOpsNames;
 import nt.ps.lang.PSDataType;
 import nt.ps.lang.PSFunction;
 import nt.ps.lang.PSIterator;
+import nt.ps.lang.PSNumber;
 import nt.ps.lang.PSObject;
 import nt.ps.lang.PSObject.Property;
 import nt.ps.lang.PSObject.PropertyEntry;
@@ -58,6 +59,7 @@ public final class PSObjectReference extends ImmutableCoreLibrary
             case "deepToString": return DEEP_TO_STRING;
             case "setProperty": return SET_PROPERTY;
             case "getProperty": return GET_PROPERTY;
+            case "getPropertyCount": return GET_PROPERTY_COUNT;
             case "properties": return PROPERTIES;
             case "freeze": return FREEZE;
             case "freezeProperty": return FREEZE_PROPERTY;
@@ -78,6 +80,7 @@ public final class PSObjectReference extends ImmutableCoreLibrary
                 arg0.setProperty(arg1.toJavaString(), arg2);
             }),
             GET_PROPERTY = PSFunction.function((arg0, arg1) -> arg0.getProperty(arg1.toJavaString())),
+            GET_PROPERTY_COUNT = PSFunction.function((arg0) -> new PSNumber.PSInteger(arg0.toPSObject().getPropertyCount())),
             PROPERTIES = PSFunction.function((arg0) -> {
                 return new PSIterator()
                 {

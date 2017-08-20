@@ -1,5 +1,8 @@
 
-function* range(from, to, increment) {
+return other instanceof Color && self.r === other1.r && self.g === other2.g && self.b === other3.b;
+
+
+/*function* range(from, to, increment) {
 	for(var i=from;i<to;i+=increment)
 		yield i;
 }
@@ -51,11 +54,11 @@ var argggs = [35, true];
 var testvar = new ObjExtended(argggs.expand());
 IO.print(testvar);
 
-testvar.dos();
+testvar.dos();*/
 
 
-/*var utils = import("utils.pwd");
-const static valuess = 65;
+//var utils = import("utils.pwd");
+/*const static valuess = 65;
 const var CLAW = Object.freeze({ power: 50, dash: false });
 
 IO.print(valuess);

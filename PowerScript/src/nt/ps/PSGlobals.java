@@ -48,6 +48,12 @@ public abstract class PSGlobals
     
     public abstract void removeGlobalValue(String name);
     
+    public final boolean hasGlobalValue(String name)
+    {
+        PSValue value = innerGetGlobalValue(name);
+        return value != null && value != PSValue.UNDEFINED;
+    }
+    
     public Collection<String> keys() { throw new UnsupportedOperationException(); }
     public Collection<PSValue> values() { throw new UnsupportedOperationException(); }
     

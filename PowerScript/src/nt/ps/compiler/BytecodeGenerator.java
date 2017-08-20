@@ -1586,6 +1586,8 @@ public final class BytecodeGenerator
                     return callNotEqualsReferenceOperator();
                 throw new IllegalStateException();
             }
+            if(symbol == OperatorSymbol.CONTAINS)
+                mainInst.append(InstructionConstants.SWAP);
             return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, symbol.getAssociatedFunction(),
                 TYPE_VALUE, ARGS_VALUE_1, Constants.INVOKEVIRTUAL));
         }

@@ -91,7 +91,7 @@ public final class PSState extends PSGlobals
         natives.put("Iterator", new PSIteratorReference());
         natives.put("Function", new PSFunctionReference(this));
         natives.put("Math", new PSMath());
-        natives.put("System", new PSSystem());
+        natives.put("System", new PSSystem(this));
         natives.put("eval", new EvalFunction(this));
     }
     
@@ -108,6 +108,10 @@ public final class PSState extends PSGlobals
             throw new IllegalArgumentException("Require a valid directory for root import function");
         this.root = root;
     }
+    
+    public final File getRootInImportFunction() { return root; }
+    
+    public final File adaptPathToRoot(String path) { return adaptPath(path); }
     
     public final Writer getStdout() { return stdout; }
     public final Writer getStderr() { return stderr; }

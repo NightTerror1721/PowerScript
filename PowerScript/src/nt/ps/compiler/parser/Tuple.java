@@ -370,8 +370,8 @@ public final class Tuple
             OperatorSymbol op = (OperatorSymbol) code[it.value];
             if(opBase.comparePriority(op) > 0)
             {
-                it.decrease();
-                return subTuple(start,start - it.value).pack();
+                //it.decrease();
+                return subTuple(start, it.value - start).pack();
             }
         }
         return subTuple(start).pack();
