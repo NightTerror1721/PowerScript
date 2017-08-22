@@ -1017,6 +1017,8 @@ public final class BytecodeGenerator
         mainInst.append(new ALOAD(createExpand()));
         String func = index == 0 ? STR_FUNC_SELF : STR_FUNC_ARG;
         Type[] args = index == 0 ? NO_ARGS : ARGS_INT;
+        if(index > 0)
+            mainInst.append(new PUSH(constantPool, index));
         return mainInst.append(factory.createInvoke(STR_TYPE_VARARGS, func,
                 TYPE_VALUE, args, Constants.INVOKEVIRTUAL));
     }

@@ -186,6 +186,7 @@ public final class PSArray extends PSValue implements Iterable<PSValue>
         switch(name)
         {
             default: return UNDEFINED;
+            case "length": return new PSNumber.PSInteger(array.size());
             case "concat": return CONCAT;
             case "add": return ADD;
             case "addAll": return ADD_ALL;

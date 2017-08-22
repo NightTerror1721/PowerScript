@@ -210,6 +210,7 @@ public final class PSTuple extends PSValue implements Iterable<PSValue>
         switch(name)
         {
             default: return UNDEFINED;
+            case "length": return new PSNumber.PSInteger(tuple.length);
             case "concat": return CONCAT;
             case "getSorted": return SORT;
             case "subTuple": return SUB_TUPLE;

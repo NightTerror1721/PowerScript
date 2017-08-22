@@ -952,6 +952,7 @@ final class CompilerBlock
                 {
                     Location loc = part.getLocation(j);
                     final int index = j;
+                    stack.push();
                     assign(symbol, loc.getCode(), isGlobal, createVars, isConstant, false, () -> bytecode.loadExpand(index));
                 }
                 if(!pop && len == 1)
@@ -1111,6 +1112,7 @@ final class CompilerBlock
             throw new CompilerError("Expected valid identifier in property assignation: " + operator);
         if(asymbol.containsOperator())
         {
+            stack.push(1);
             bytecode.dup();
             bytecode.callPropertyAccessOperator(code2.toString());
             loader.load();
