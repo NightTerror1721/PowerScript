@@ -61,7 +61,7 @@ public abstract class PSNumber extends PSValue
             case "isNaN": return IS_NAN;
             case "int": case "int32": case "integer": return new PSInteger(toJavaInt());
             case "long": case "int64": return new PSLong(toJavaLong());
-            case "float": case "float32": case "toFloat": return new PSFloat(toJavaFloat());
+            case "float": case "float32": return new PSFloat(toJavaFloat());
             case "double": case "float64": return new PSDouble(toJavaDouble());
             case "toString": return TO_STRING;
         }
