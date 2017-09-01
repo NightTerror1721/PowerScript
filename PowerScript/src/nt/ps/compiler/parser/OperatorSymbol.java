@@ -161,7 +161,7 @@ public abstract class OperatorSymbol extends Code
     {
         TERNARY(0),
         BINARY(1),
-        UNARY(2),
+        UNARY(1),
         CALL(1),
         INVOKE(1),
         NEW(1),

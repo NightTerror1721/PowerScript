@@ -314,7 +314,8 @@ public final class Tuple
                     return packExtendsOperator(it);
                 throw new CompilerError("Operator " + prefix + " cannot be a non unary prefix operator");
             }
-            part = packPreUnary(it);
+            //part = packPreUnary(it);
+            part = packNextOperatorPart(it, (OperatorSymbol) part);
             if(!part.isValidCodeObject())
                 throw CompilerError.unexpectedCode(part);
             return new Operator(prefix, (ParsedCode) part);
@@ -437,17 +438,7 @@ public final class Tuple
         }
         else if(operator.isBinary())
         {
-            OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
-            if(nextOperator != null && operator.comparePriority(nextOperator) >= 0)
-                nextOperator = null;
-            
-            ParsedCode operand2;
-            if(nextOperator != null)
-                operand2 = getSuperOperatorScope(it, operator);
-            else operand2 = packPart(it);
-            if(operator == OperatorSymbol.PROPERTY_ACCESS &&
-                    !operand2.is(CodeType.IDENTIFIER))
-                throw new CompilerError("Expected a valid identifier in PropertyAccess operator: " + operand2);
+            ParsedCode operand2 = packNextOperatorPart(it, operator);
             operation = new Operator(operator, operand1, operand2);
         }
         else throw new CompilerError("Invalid operator type: " + operator);
@@ -456,6 +447,23 @@ public final class Tuple
         if(it.end())
             return operation;
         return packOperation(it, operation);
+    }
+    
+    private ParsedCode packNextOperatorPart(Counter it, OperatorSymbol operator) throws CompilerError
+    {
+        OperatorSymbol nextOperator = findNextOperatorSymbol(it.value);
+        if(nextOperator != null && operator.comparePriority(nextOperator) >= 0)
+            nextOperator = null;
+
+        ParsedCode operand2;
+        if(nextOperator != null)
+            operand2 = getSuperOperatorScope(it, operator);
+        else operand2 = packPart(it);
+        
+        if(operator == OperatorSymbol.PROPERTY_ACCESS &&
+                !operand2.is(CodeType.IDENTIFIER))
+            throw new CompilerError("Expected a valid identifier in PropertyAccess operator: " + operand2);
+        return operand2;
     }
     
     public final ParsedCode pack() throws CompilerError { return pack(false); }

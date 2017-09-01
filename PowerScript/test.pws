@@ -1,5 +1,8 @@
 
-return other instanceof Color && self.r === other1.r && self.g === other2.g && self.b === other3.b;
+//return other instanceof Color && self.r === other1.r && self.g === other2.g && self.b === other3.b;
+
+IO.print(!Number.int(65));
+IO.print(65 + 2 * 4 / 5 > 5 ? !Number.float(30) : (!Number.int(30)) + 4);
 
 
 /*function* range(from, to, increment) {
