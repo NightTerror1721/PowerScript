@@ -291,10 +291,15 @@ final class CompilerBlock
     
     private void compileReturn(Command command) throws CompilerError
     {
-        int pars = compileMultipleRaises(command.getCode(0));
-        if(bytecode.isGenerator() && pars > 0)
-            throw new CompilerError("\"return\" command cannot return any in generator functions");
-        bytecode.computeReturn(pars);
+        if(command.size() < 1)
+            bytecode.computeReturn(0);
+        else
+        {
+            int pars = compileMultipleRaises(command.getCode(0));
+            if(bytecode.isGenerator() && pars > 0)
+                throw new CompilerError("\"return\" command cannot return any in generator functions");
+            bytecode.computeReturn(pars);
+        }
     }
     
     private void compileThrow(Command command) throws CompilerError

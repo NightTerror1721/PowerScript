@@ -604,14 +604,14 @@ public final class CompilerUnit
                         c = source.next();
                         if(c == '=')
                         {
-                            sb.addOperator(OperatorSymbol.MODULE);
+                            sb.addAssignation(AssignationSymbol.ASSIGNATION_MODULE);
                             source.move(-1);
                         }
                         else
                         {
                             if(!source.canPeek(0))
                                 throw CompilerError.invalidEndChar('=');
-                            sb.addAssignation(AssignationSymbol.ASSIGNATION_MODULE);
+                            sb.addOperator(OperatorSymbol.MODULE);
                         }
                     } break;
                     
