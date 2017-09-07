@@ -6,6 +6,7 @@
 package nt.ps.lang;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  *
@@ -70,6 +71,20 @@ public abstract class PSFunction extends PSValue
             }
         };
     }
+    public static final <T extends PSValue> PSFunction voidGlobalMethod(Supplier<T> selfGetter, VoidZeroArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSZeroArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self)
+            {
+                closure.invoke(self == NULL ? selfGetter.get() : (T) self);
+                return EMPTY;
+            }
+        };
+    }
     public static final PSFunction function(ZeroArgsF closure)
     {
         if(closure == null)
@@ -93,6 +108,19 @@ public abstract class PSFunction extends PSValue
             public PSVarargs innerCall(PSValue self)
             {
                 return closure.invoke((T)self);
+            }
+        };
+    }
+    public static final <T extends PSValue> PSFunction globalMethod(Supplier<T> selfGetter, ZeroArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSZeroArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self)
+            {
+                return closure.invoke(self == NULL ? selfGetter.get() : (T) self);
             }
         };
     }
@@ -126,6 +154,20 @@ public abstract class PSFunction extends PSValue
             }
         };
     }
+    public static final <T extends PSValue> PSFunction voidGlobalMethod(Supplier<T> selfGetter, VoidOneArgM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSOneArgFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0)
+            {
+                closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0);
+                return EMPTY;
+            }
+        };
+    }
     public static final PSFunction function(OneArgF closure)
     {
         if(closure == null)
@@ -149,6 +191,19 @@ public abstract class PSFunction extends PSValue
             public PSVarargs innerCall(PSValue self, PSValue arg0)
             {
                 return closure.invoke((T)self, arg0);
+            }
+        };
+    }
+    public static final <T extends PSValue> PSFunction globalMethod(Supplier<T> selfGetter, OneArgM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSOneArgFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0)
+            {
+                return closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0);
             }
         };
     }
@@ -182,6 +237,20 @@ public abstract class PSFunction extends PSValue
             }
         };
     }
+    public static final <T extends PSValue> PSFunction voidGlobalMethod(Supplier<T> selfGetter, VoidTwoArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSTwoArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1)
+            {
+                closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0, arg1);
+                return EMPTY;
+            }
+        };
+    }
     public static final PSFunction function(TwoArgsF closure)
     {
         if(closure == null)
@@ -205,6 +274,19 @@ public abstract class PSFunction extends PSValue
             public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1)
             {
                 return closure.invoke((T)self, arg0, arg1);
+            }
+        };
+    }
+    public static final <T extends PSValue> PSFunction globalMethod(Supplier<T> selfGetter, TwoArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSTwoArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1)
+            {
+                return closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0, arg1);
             }
         };
     }
@@ -238,6 +320,20 @@ public abstract class PSFunction extends PSValue
             }
         };
     }
+    public static final <T extends PSValue> PSFunction voidGlobalMethod(Supplier<T> selfGetter, VoidThreeArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSThreeArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2)
+            {
+                closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0, arg1, arg2);
+                return EMPTY;
+            }
+        };
+    }
     public static final PSFunction function(ThreeArgsF closure)
     {
         if(closure == null)
@@ -261,6 +357,19 @@ public abstract class PSFunction extends PSValue
             public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2)
             {
                 return closure.invoke((T)self, arg0, arg1, arg2);
+            }
+        };
+    }
+    public static final <T extends PSValue> PSFunction globalMethod(Supplier<T> selfGetter, ThreeArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSThreeArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2)
+            {
+                return closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0, arg1, arg2);
             }
         };
     }
@@ -294,6 +403,20 @@ public abstract class PSFunction extends PSValue
             }
         };
     }
+    public static final <T extends PSValue> PSFunction voidGlobalMethod(Supplier<T> selfGetter, VoidFourArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSFourArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+            {
+                closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0, arg1, arg2, arg3);
+                return EMPTY;
+            }
+        };
+    }
     public static final PSFunction function(FourArgsF closure)
     {
         if(closure == null)
@@ -317,6 +440,19 @@ public abstract class PSFunction extends PSValue
             public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
             {
                 return closure.invoke((T)self, arg0, arg1, arg2, arg3);
+            }
+        };
+    }
+    public static final <T extends PSValue> PSFunction globalMethod(Supplier<T> selfGetter, FourArgsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSFourArgsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSValue arg0, PSValue arg1, PSValue arg2, PSValue arg3)
+            {
+                return closure.invoke(self == NULL ? selfGetter.get() : (T) self, arg0, arg1, arg2, arg3);
             }
         };
     }
@@ -350,6 +486,20 @@ public abstract class PSFunction extends PSValue
             }
         };
     }
+    public static final <T extends PSValue> PSFunction voidVarGlobalMethod(Supplier<T> selfGetter, VoidVarargsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSVarargsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSVarargs args)
+            {
+                closure.invoke(self == NULL ? selfGetter.get() : (T) self, args);
+                return EMPTY;
+            }
+        };
+    }
     public static final PSFunction varFunction(VarargsF closure)
     {
         if(closure == null)
@@ -373,6 +523,19 @@ public abstract class PSFunction extends PSValue
             public PSVarargs innerCall(PSValue self, PSVarargs args)
             {
                 return closure.invoke((T)self, args);
+            }
+        };
+    }
+    public static final <T extends PSValue> PSFunction varGlobalMethod(Supplier<T> selfGetter, VarargsM<T> closure)
+    {
+        if(closure == null)
+            throw new IllegalArgumentException();
+        return new PSVarargsFunction()
+        {
+            @Override
+            public PSVarargs innerCall(PSValue self, PSVarargs args)
+            {
+                return closure.invoke(self == NULL ? selfGetter.get() : (T) self, args);
             }
         };
     }
