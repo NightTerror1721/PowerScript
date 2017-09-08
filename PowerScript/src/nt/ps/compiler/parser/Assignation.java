@@ -5,6 +5,7 @@
  */
 package nt.ps.compiler.parser;
 
+import java.util.StringJoiner;
 import nt.ps.compiler.exception.CompilerError;
 
 /**
@@ -48,8 +49,18 @@ public final class Assignation extends ParsedCode
 
     
     @Override
-    public String toString() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final String toString()
+    {
+        StringJoiner locs = new StringJoiner(", ");
+        StringJoiner vals = new StringJoiner(", ");
+        for(AssignationPart part : parts)
+        {
+            for(Location loc : part.locations)
+                locs.add(loc.location.toString());
+            vals.add(part.assignation.toString());
+        }
+        
+        return locs + " " + symbol + " " + vals;
     }
     
     public static final Assignation parse(Tuple tuple) throws CompilerError

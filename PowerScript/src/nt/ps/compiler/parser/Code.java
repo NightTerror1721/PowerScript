@@ -44,6 +44,9 @@ public abstract class Code
         return this == CommandWord.RETURN || this == CommandWord.THROW || this == CommandWord.YIELD;
     }
     
+    @Override
+    public String toString() { return getCodeType().name(); }
+    
     public enum CodeType
     {
         IDENTIFIER, COMMAND_WORD, LITERAL, MUTABLE_LITERAL, SEPARATOR, BLOCK, FUNCTION,

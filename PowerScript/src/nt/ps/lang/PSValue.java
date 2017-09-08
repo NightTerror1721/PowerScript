@@ -88,7 +88,7 @@ public abstract class PSValue extends PSVarargs
     public PSValue smallerThan(PSValue value) { throw new PSUnsupportedOperationException(this,"<"); }
     public PSValue greaterOrEqualsThan(PSValue value) { throw new PSUnsupportedOperationException(this,">="); }
     public PSValue smallerOrEqualsThan(PSValue value) { throw new PSUnsupportedOperationException(this,"<="); }
-    public PSValue negate() { throw new PSUnsupportedOperationException(this,"!"); }
+    public PSValue negate() { return FALSE; }
     
     /* Data Structure Operations */
     public PSValue contains(PSValue value) { throw new PSUnsupportedOperationException(this,"in"); }
@@ -168,6 +168,7 @@ public abstract class PSValue extends PSVarargs
         @Override public final int hashCode() { return 0; }
         @Override public final boolean toJavaBoolean() { return false; }
         @Override public final String toJavaString() { return "undefined"; }
+        @Override public PSValue negate() { return TRUE; }
     }
     private static final class PSNull extends PSValue
     {
@@ -178,6 +179,7 @@ public abstract class PSValue extends PSVarargs
         @Override public final int hashCode() { return 0; }
         @Override public final boolean toJavaBoolean() { return false; }
         @Override public final String toJavaString() { return "null"; }
+        @Override public PSValue negate() { return TRUE; }
     }
     
     

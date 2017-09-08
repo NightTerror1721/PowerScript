@@ -43,7 +43,12 @@ public final class Command extends ParsedCode
     public final CodeType getCodeType() { return CodeType.COMMAND; }
     
     @Override
-    public String toString() { return command.getName().name().toLowerCase() + " " + Arrays.toString(code); }
+    public String toString()
+    {
+        return command == null
+                ? Arrays.toString(code)
+                : command.getName().name().toLowerCase() + " " + Arrays.toString(code);
+    }
     
     public static final Command parseErrorCommand(int line) { return new Command(line, null); }
     
