@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.parser.AssignationSymbol;
 import nt.ps.compiler.parser.Code;
+import nt.ps.compiler.parser.CommandWord;
 import nt.ps.compiler.parser.Identifier;
 import nt.ps.compiler.parser.Literal;
 import nt.ps.compiler.parser.OperatorSymbol;
@@ -89,7 +90,10 @@ final class InstructionBuilder
     public final InstructionBuilder addOperator(String operator) throws CompilerError
     {
         decode();
-        boolean unary = !codes.isEmpty() && !codes.getLast().isValidCodeObject();
+        boolean unary = !codes.isEmpty() && (!codes.getLast().isValidCodeObject() ||
+                codes.getLast() == CommandWord.RETURN ||
+                codes.getLast() == CommandWord.YIELD ||
+                codes.getLast() == CommandWord.DELEGATOR_YIELD);
         OperatorSymbol symbol = OperatorSymbol.getOperator(operator, unary);
         if(symbol == null)
             throw new CompilerError("Invalid operator: " + symbol);
