@@ -132,5 +132,9 @@ public final class PSMath extends ImmutableCoreLibrary
             TRUNC = PSFunction.function((arg0) -> new PSNumber.PSLong(arg0.toJavaLong()));
     
     private final PSValue
-            RANDOM = PSFunction.function((arg0) -> new PSNumber.PSDouble(rand.nextDouble()));
+            RANDOM = PSFunction.function((arg0) -> {
+                if(arg0 == UNDEFINED)
+                    return new PSNumber.PSDouble(rand.nextDouble());
+                return new PSNumber.PSLong((long) (rand.nextDouble() * arg0.toJavaLong()));
+            });
 }
