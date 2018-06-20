@@ -4,6 +4,11 @@
 IO.print(!Number.int(65));
 IO.print(65 + 2 * 4 / 5 > 5 ? !Number.float(30) : (!Number.int(30)) + 4);
 
+Utils = import "utils.pwd";
+include Utils;
+
+IO.print(Query);
+
 return;
 
 

@@ -78,6 +78,11 @@ public final class CompilerUnit
         JarBuilder.createJar(jarFile, sourceRoot, sources);
     }
     
+    public static final PSFunction createCompiledClassInstance(Class<? extends PSFunction> baseClass, PSGlobals globals)
+    {
+        return CompilerBlock.buildFunctionInstance(baseClass, globals);
+    }
+    
     public static final PSFunction compileFunction(PSGlobals globals, PSClassLoader classLoader, String name, String code, String... args) throws IOException, PSCompilerException
     {
         CodeReader sourceBase;

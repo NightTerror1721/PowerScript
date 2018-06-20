@@ -25,15 +25,15 @@ function counter()
 
 
 
-Color = Object.extends(Query, const {
+/*Color = Object.extends(Query, const {
 	constructor: function(r, g, b) {
 		Object.superConstructor(self);
 		
 		
 	}
-});
+});*/
 
-IO.print(new Color()._id);
+//IO.print(new Color()._id);
 
 for(var i=0;i<100;i++)
 	IO.print("count: "..counter());

@@ -1,0 +1,8 @@
+lists: [1, "pesao", "lacra", true, undefined, null],
+obj: {
+    max: 50,
+    power: 135,
+    dash: false
+},
+val1: 50,
+str__: "ola k ase"

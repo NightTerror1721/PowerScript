@@ -12,6 +12,7 @@ import nt.ps.PSGlobals;
 import nt.ps.exception.PSException;
 import nt.ps.exception.PSRuntimeException;
 import nt.ps.lang.PSObject.Property;
+import nt.ps.lang.PSObject.PropertyEntry;
 import nt.ps.lang.core.PSObjectReference;
 
 /**
@@ -51,6 +52,18 @@ public final class LangUtils
     public static final PSValue operatorImport(PSValue value, PSGlobals globals)
     {
         return globals.importScript(value.toJavaString());
+    }
+    
+    public static final PSValue operatorInclude(PSValue value, PSGlobals globals)
+    {
+        if(value.isObject())
+        {
+            PSObject obj = value.toPSObject();
+            for(PropertyEntry prop : obj.properties())
+                globals.setGlobalValue(prop.getName(), prop.getValue());
+        }
+        else globals.includeScript(value.toJavaString());
+        return PSValue.UNDEFINED;
     }
     
     public static final PSValue operatorInstanceof(PSValue object, PSValue parent)
