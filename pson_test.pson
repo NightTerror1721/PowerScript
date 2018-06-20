@@ -1,0 +1,15 @@
+val1: 50,
+str__: "ola k ase",
+lists: [
+	1,
+	"pesao",
+	"lacra",
+	true,
+	undefined,
+	null
+],
+obj: {
+	max: 50,
+	dash: false,
+	power: 135
+}

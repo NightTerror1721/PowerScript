@@ -80,6 +80,7 @@ public abstract class OperatorSymbol extends Code
             DECREMENT = new UnaryOperatorSymbol("--",12,true,"decrease"),
             TYPEOF = new UnaryOperatorSymbol("typeof",12,null),
             IMPORT = new UnaryOperatorSymbol("import",12,null),
+            INCLUDE = new UnaryOperatorSymbol("include", 12, null),
             
             MULTIPLY = new BinaryOperatorSymbol("*",11,"multiply"),
             DIVIDE = new BinaryOperatorSymbol("/",11,"divide"),

@@ -84,19 +84,36 @@ public abstract class PSGlobals
     public final PSValue importScript(String strPath)
     {
         File file = adaptPath(strPath);
+        PSObject wrapper = new PSObject();
+        PSGlobals globals = wrap(this, wrapper);
+        PSFunction callable = getCompiledCallable(file, globals, getClassLoader());
+        callable.call();
+        wrapper.setFrozen(true);
+        return wrapper;
+    }
+    
+    public final void includeScript(String strPath)
+    {
+        File file = adaptPath(strPath);
+        PSFunction callable = getCompiledCallable(file, this, getClassLoader());
+        callable.call();
+    }
+    
+    private static PSFunction getCompiledCallable(File file, PSGlobals globals, PSClassLoader classLoader)
+    {
+        String name = file.getName().replace('.','_');
+        Class<? extends PSFunction> clazz = classLoader.findClassInCache(name);
+        if(clazz != null)
+            return CompilerUnit.createCompiledClassInstance(clazz, globals);
+        
         try(FileInputStream fis = new FileInputStream(file))
         {
-            PSObject wrapper = new PSObject();
-            PSGlobals globals = wrap(this, wrapper);
-            PSFunction callable = CompilerUnit.compile(fis, globals, getClassLoader(), file.getName().replace('.','_'), false);
-            callable.call();
-            wrapper.setFrozen(true);
-            return wrapper;
+            return CompilerUnit.compile(fis, globals, classLoader, file.getName().replace('.','_'), false);
         }
         catch(Throwable th)
         {
             throw new PSRuntimeException(th);
-        }
+        } 
     }
     
     

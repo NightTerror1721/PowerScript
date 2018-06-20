@@ -1569,6 +1569,8 @@ public final class BytecodeGenerator
                     return callTypeofOperator();
                 else if(symbol == OperatorSymbol.IMPORT)
                     return callImportOperator();
+                else if(symbol == OperatorSymbol.INCLUDE)
+                    return callIncludeOperator();
                 throw new IllegalStateException();
             }
             return mainInst.append(factory.createInvoke(STR_TYPE_VALUE, symbol.getAssociatedFunction(),
@@ -1607,6 +1609,14 @@ public final class BytecodeGenerator
         mainInst.append(InstructionConstants.THIS);
         mainInst.append(factory.createGetField(className, STR_GLOBALS_ATTRIBUTE, TYPE_GLOBALS));
         return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorImport",
+                TYPE_VALUE, ARGS_VALUE_GLOBALS, Constants.INVOKESTATIC));
+    }
+    
+    private InstructionHandle callIncludeOperator()
+    {
+        mainInst.append(InstructionConstants.THIS);
+        mainInst.append(factory.createGetField(className, STR_GLOBALS_ATTRIBUTE, TYPE_GLOBALS));
+        return mainInst.append(factory.createInvoke(STR_TYPE_UTILS, "operatorInclude",
                 TYPE_VALUE, ARGS_VALUE_GLOBALS, Constants.INVOKESTATIC));
     }
     
