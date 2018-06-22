@@ -12,6 +12,9 @@ import java.io.IOException;
 import nt.ps.compiler.CompilerUnit;
 import nt.ps.compiler.exception.CompilerError;
 import nt.ps.compiler.exception.PSCompilerException;
+import nt.ps.lang.PSObject;
+import nt.ps.pson.PSON;
+import nt.ps.pson.PSONException;
 
 /**
  *
@@ -19,8 +22,11 @@ import nt.ps.compiler.exception.PSCompilerException;
  */
 public final class Main
 {
-    public static void main(String[] args) throws CompilerError, FileNotFoundException, PSCompilerException, IOException
+    public static void main(String[] args) throws CompilerError, FileNotFoundException, PSCompilerException, IOException, PSONException
     {
+        PSObject psonObj = PSON.read(new File("pson_test.pson"));
+        PSON.write(psonObj, false, new File("pson_test2.pson"));
+        
         /*CommandLineInterpreter cli = new CommandLineInterpreter();
         cli.execute(args);*/
         //cli.execute("test.pws");
